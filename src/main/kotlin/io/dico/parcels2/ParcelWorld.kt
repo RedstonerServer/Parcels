@@ -2,7 +2,9 @@ package io.dico.parcels2
 
 import io.dico.parcels2.math.Vec2i
 import io.dico.parcels2.math.floor
+import io.dico.parcels2.storage.Storage
 import io.dico.parcels2.util.doAwait
+import kotlinx.coroutines.experimental.launch
 import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.World
@@ -10,15 +12,14 @@ import org.bukkit.WorldCreator
 import org.bukkit.block.Block
 import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
-import org.bukkit.plugin.Plugin
 import java.util.*
 import kotlin.coroutines.experimental.buildSequence
 
-class Worlds(private val plugin: Plugin) {
+class Worlds(private val plugin: ParcelsPlugin) {
     val worlds: Map<String, ParcelWorld> get() = _worlds
     private val _worlds: MutableMap<String, ParcelWorld> = HashMap()
 
-    fun getWorld(name: String): ParcelWorld? = _worlds.get(name)
+    fun getWorld(name: String): ParcelWorld? = _worlds[name]
 
     fun getWorld(world: World): ParcelWorld? = getWorld(world.name)
 
@@ -40,7 +41,16 @@ class Worlds(private val plugin: Plugin) {
         for ((worldName, worldOptions) in options.worlds.entries) {
             val world: ParcelWorld
             try {
-                world = ParcelWorld(worldName, worldOptions, worldOptions.generator.getGenerator(this, worldName))
+                val containerFactory: ParcelContainerFactory = { parcelWorld ->
+                    DefaultParcelContainer(parcelWorld, plugin.storage)
+                }
+
+                world = ParcelWorld(
+                        worldName,
+                        worldOptions,
+                        worldOptions.generator.getGenerator(this, worldName),
+                        containerFactory)
+
             } catch (ex: Exception) {
                 ex.printStackTrace()
                 continue
@@ -89,18 +99,12 @@ interface ParcelProvider {
     fun parcelAt(block: Block): Parcel? = parcelAt(block.x, block.z)
 }
 
-class ParcelWorld(val name: String,
-                  val options: WorldOptions,
-                  val generator: ParcelGenerator) : ParcelProvider by generator {
-    val world: World by lazy {
-        val tmp = Bukkit.getWorld(name)
-        if (tmp == null) {
-            throw NullPointerException("World $name does not appear to be loaded")
-        }
-        tmp
-    }
-
-    val container: ParcelContainer = DefaultParcelContainer(this)
+class ParcelWorld constructor(val name: String,
+                              val options: WorldOptions,
+                              val generator: ParcelGenerator,
+                              containerFactory: ParcelContainerFactory) : ParcelProvider by generator {
+    val world: World by lazy { Bukkit.getWorld(name) ?: throw NullPointerException("World $name does not appear to be loaded") }
+    val container: ParcelContainer = containerFactory(this)
 
     fun parcelByID(x: Int, z: Int): Parcel? {
         TODO("not implemented")
@@ -135,7 +139,10 @@ abstract class ParcelContainer {
 
 }
 
-class DefaultParcelContainer(private val world: ParcelWorld) : ParcelContainer() {
+typealias ParcelContainerFactory = (ParcelWorld) -> ParcelContainer
+
+class DefaultParcelContainer(private val world: ParcelWorld,
+                             private val storage: Storage) : ParcelContainer() {
     private var parcels: Array<Array<Parcel>>
 
     init {
@@ -154,13 +161,13 @@ class DefaultParcelContainer(private val world: ParcelWorld) : ParcelContainer()
 
     fun initArray(axisLimit: Int, world: ParcelWorld, cur: DefaultParcelContainer? = null): Array<Array<Parcel>> {
         val arraySize = 2 * axisLimit + 1
-        return Array(arraySize, {
+        return Array(arraySize) {
             val x = it - axisLimit
-            Array(arraySize, {
+            Array(arraySize) {
                 val z = it - axisLimit
                 cur?.ployByID(x, z) ?: Parcel(world, Vec2i(x, z))
-            })
-        })
+            }
+        }
     }
 
     override fun ployByID(x: Int, z: Int): Parcel? {
@@ -178,17 +185,12 @@ class DefaultParcelContainer(private val world: ParcelWorld) : ParcelContainer()
     }
 
     fun loadAllData() {
-        /*
-        val channel = Main.instance.storage.readParcelData(allParcels(), 100).channel
-        launch(Main.instance.storage.asyncDispatcher) {
+        val channel = storage.readParcelData(allParcels(), 100)
+        launch(storage.asyncDispatcher) {
             for ((parcel, data) in channel) {
-                if (data != null) {
-                    parcel.data = data
-                }
+                data?.let { parcel.data = it }
             }
         }
-        */
-        TODO()
     }
 
 }
