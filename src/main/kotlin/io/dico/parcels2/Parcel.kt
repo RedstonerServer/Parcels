@@ -8,7 +8,8 @@ import java.util.*
 
 class Parcel(val world: ParcelWorld,
              val pos: Vec2i,
-             val data: ParcelData = ParcelData()) {
+             var data: ParcelData = ParcelData()) {
+
 
 
 }
