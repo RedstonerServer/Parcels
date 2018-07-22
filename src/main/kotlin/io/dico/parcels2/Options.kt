@@ -22,8 +22,6 @@ class Options {
 
     fun addWorld(name: String, options: WorldOptions) = (worlds as MutableMap).put(name, options)
 
-    fun addDefaultWorld() = addWorld("plotworld", WorldOptions())
-
     fun writeTo(writer: Writer) = yamlObjectMapper.writeValue(writer, this)
 
     fun mergeFrom(reader: Reader) = yamlObjectMapper.readerForUpdating(this).readValue<Options>(reader)
@@ -50,7 +48,7 @@ abstract class GeneratorOptions {
 
     abstract fun generatorFactory(): GeneratorFactory
 
-    fun getGenerator(worldName: String) = generatorFactory().newParcelGenerator(worldName, this)
+    fun getGenerator(worlds: Worlds, worldName: String) = generatorFactory().newParcelGenerator(worlds, worldName, this)
 
 }
 

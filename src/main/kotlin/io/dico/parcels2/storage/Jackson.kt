@@ -34,10 +34,8 @@ val yamlObjectMapper = ObjectMapper(YAMLFactory()).apply {
         addSerializer(BlockDataSerializer())
         addDeserializer(BlockData::class.java, BlockDataDeserializer())
 
-        /*
         addSerializer(StorageOptionsSerializer())
         addDeserializer(StorageOptions::class.java, StorageOptionsDeserializer())
-        */
 
         addDeserializer(GeneratorOptions::class.java, GeneratorOptionsDeserializer())
     }
@@ -65,7 +63,6 @@ private class BlockDataDeserializer : StdDeserializer<BlockData>(BlockData::clas
 
 }
 
-/*
 class StorageOptionsDeserializer : JsonDeserializer<StorageOptions>() {
 
     override fun deserialize(p: JsonParser?, ctxt: DeserializationContext?): StorageOptions {
@@ -74,7 +71,7 @@ class StorageOptionsDeserializer : JsonDeserializer<StorageOptions>() {
         val optionsNode = node.get("options")
         val factory = StorageFactory.getFactory(dialect) ?: throw IllegalStateException("Unknown storage dialect: $dialect")
         val options = p.codec.treeToValue(optionsNode, factory.optionsClass.java)
-        return StorageOptions(dialect, factory, options)
+        return StorageOptions(dialect, options)
     }
 
 }
@@ -92,8 +89,6 @@ class StorageOptionsSerializer : StdSerializer<StorageOptions>(StorageOptions::c
     }
 
 }
-*/
-
 
 class GeneratorOptionsDeserializer : JsonDeserializer<GeneratorOptions>() {
 

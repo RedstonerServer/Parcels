@@ -3,3 +3,4 @@ author: Dico
 main: io.dico.parcels2.ParcelsPlugin
 version: 0.1
 api-version: 1.13
+load: STARTUP

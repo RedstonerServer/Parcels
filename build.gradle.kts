@@ -1,10 +1,5 @@
-import com.github.jengelman.gradle.plugins.shadow.relocation.RelocateClassContext
-import com.github.jengelman.gradle.plugins.shadow.relocation.RelocatePathContext
-import com.github.jengelman.gradle.plugins.shadow.relocation.Relocator
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-import com.github.jengelman.gradle.plugins.shadow.transformers.TransformerContext
 import org.jetbrains.kotlin.gradle.dsl.Coroutines
-import shadow.org.apache.tools.zip.ZipOutputStream
 
 plugins {
     kotlin("jvm") version "1.2.51"
@@ -33,14 +28,16 @@ dependencies {
     compile("org.jetbrains.exposed:exposed:0.10.3")
     compile("org.jetbrains.kotlinx:kotlinx-coroutines-core:0.23.4")
     compile("com.zaxxer:HikariCP:3.2.0")
+    compile(files("../h2/bin/h2-client-1.4.197.jar"))
 
     val jacksonVersion = "2.9.6"
     compile("com.fasterxml.jackson.core:jackson-core:$jacksonVersion")
     compile("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
-    compile("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jacksonVersion")
     compile("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
+    //compile("org.yaml:snakeyaml:1.21")
+    compile("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jacksonVersion")
 
-    compile("org.slf4j:slf4j-api:1.7.25")
+    shadow("org.slf4j:slf4j-api:1.7.25")
     compile("ch.qos.logback:logback-classic:1.2.3")
 
     testCompile("junit:junit:4.12")
@@ -72,5 +69,14 @@ tasks {
         }
 
         relocate("kotlin", "kotlin")
+    }
+
+    val relocateSnakeyamlJar by creating(ShadowJar::class) {
+        destinationDir = file("$rootDir/debug/plugins")
+        baseName = "parcels2-shaded"
+        relocate("org.yaml", "shadow.org.yaml")
+
+        from(*project.configurations.compile.map(::zipTree).toTypedArray())
+        with(jar)
     }
 }

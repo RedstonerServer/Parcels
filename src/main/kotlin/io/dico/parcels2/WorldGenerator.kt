@@ -71,19 +71,19 @@ interface GeneratorFactory {
 
     val optionsClass: KClass<out GeneratorOptions>
 
-    fun newParcelGenerator(worldName: String, options: GeneratorOptions): ParcelGenerator
+    fun newParcelGenerator(worlds: Worlds, worldName: String, options: GeneratorOptions): ParcelGenerator
 
 }
 
-class DefaultParcelGenerator(name: String, private val o: DefaultGeneratorOptions) : ParcelGenerator() {
-    override val world: ParcelWorld by lazy { TODO() }
+class DefaultParcelGenerator(val worlds: Worlds, val name: String, private val o: DefaultGeneratorOptions) : ParcelGenerator() {
+    override val world: ParcelWorld by lazy { worlds.getWorld(name)!! }
     override val factory = Factory
 
     companion object Factory : GeneratorFactory {
         override val name get() = "default"
         override val optionsClass get() = DefaultGeneratorOptions::class
-        override fun newParcelGenerator(worldName: String, options: GeneratorOptions): ParcelGenerator {
-            return DefaultParcelGenerator(worldName, options as DefaultGeneratorOptions)
+        override fun newParcelGenerator(worlds: Worlds, worldName: String, options: GeneratorOptions): ParcelGenerator {
+            return DefaultParcelGenerator(worlds, worldName, options as DefaultGeneratorOptions)
         }
     }
 

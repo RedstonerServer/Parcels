@@ -27,6 +27,11 @@ fun getHikariDataSource(dialectName: String,
     // copied from github.com/lucko/LuckPerms
     if (dialectName.toLowerCase() == "mariadb") {
         addDataSourceProperty("properties", "useUnicode=true;characterEncoding=utf8")
+    } else if (dialectName.toLowerCase() == "h2") {
+        dataSourceProperties.remove("serverName")
+        dataSourceProperties.remove("port")
+        dataSourceProperties.remove("databaseName")
+        addDataSourceProperty("url", "jdbc:h2:tcp://$address/~/${dco.database}")
     } else {
         // doesn't exist on the MariaDB driver
         addDataSourceProperty("cachePrepStmts", "true")

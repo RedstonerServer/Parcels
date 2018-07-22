@@ -13,47 +13,49 @@ import org.bukkit.entity.Player
 import java.util.*
 import kotlin.coroutines.experimental.buildSequence
 
-val worlds: Map<String, ParcelWorld> get() = _worlds
-private val _worlds: MutableMap<String, ParcelWorld> = HashMap()
+class Worlds {
+    val worlds: Map<String, ParcelWorld> get() = _worlds
+    private val _worlds: MutableMap<String, ParcelWorld> = HashMap()
 
-fun getWorld(name: String): ParcelWorld? = _worlds.get(name)
+    fun getWorld(name: String): ParcelWorld? = _worlds.get(name)
 
-fun getWorld(world: World): ParcelWorld? = getWorld(world.name)
+    fun getWorld(world: World): ParcelWorld? = getWorld(world.name)
 
-fun getParcelAt(block: Block): Parcel? = getParcelAt(block.world, block.x, block.z)
+    fun getParcelAt(block: Block): Parcel? = getParcelAt(block.world, block.x, block.z)
 
-fun getParcelAt(player: Player): Parcel? = getParcelAt(player.location)
+    fun getParcelAt(player: Player): Parcel? = getParcelAt(player.location)
 
-fun getParcelAt(location: Location): Parcel? = getParcelAt(location.world, location.x.floor(), location.z.floor())
+    fun getParcelAt(location: Location): Parcel? = getParcelAt(location.world, location.x.floor(), location.z.floor())
 
-fun getParcelAt(world: World, x: Int, z: Int): Parcel? = getParcelAt(world.name, x, z)
+    fun getParcelAt(world: World, x: Int, z: Int): Parcel? = getParcelAt(world.name, x, z)
 
-fun getParcelAt(world: String, x: Int, z: Int): Parcel? {
-    with (getWorld(world) ?: return null) {
-        return generator.parcelAt(x, z)
-    }
-}
-
-fun loadWorlds(options: Options) {
-    for ((worldName, worldOptions) in options.worlds.entries) {
-        val world: ParcelWorld
-        try {
-            world = ParcelWorld(worldName, worldOptions, worldOptions.generator.getGenerator(worldName))
-        } catch (ex: Exception) {
-            ex.printStackTrace()
-            continue
+    fun getParcelAt(world: String, x: Int, z: Int): Parcel? {
+        with(getWorld(world) ?: return null) {
+            return generator.parcelAt(x, z)
         }
-
-        _worlds.put(worldName, world)
-
-        if (Bukkit.getWorld(worldName) == null) {
-            val bworld = WorldCreator(worldName).generator(world.generator).createWorld()
-            val spawn = world.generator.getFixedSpawnLocation(bworld, null)
-            bworld.setSpawnLocation(spawn.x.floor(), spawn.y.floor(), spawn.z.floor())
-        }
-
     }
 
+    fun loadWorlds(options: Options) {
+        for ((worldName, worldOptions) in options.worlds.entries) {
+            val world: ParcelWorld
+            try {
+                world = ParcelWorld(worldName, worldOptions, worldOptions.generator.getGenerator(this, worldName))
+            } catch (ex: Exception) {
+                ex.printStackTrace()
+                continue
+            }
+
+            _worlds.put(worldName, world)
+
+            if (Bukkit.getWorld(worldName) == null) {
+                val bworld = WorldCreator(worldName).generator(world.generator).createWorld()
+                val spawn = world.generator.getFixedSpawnLocation(bworld, null)
+                bworld.setSpawnLocation(spawn.x.floor(), spawn.y.floor(), spawn.z.floor())
+            }
+
+        }
+
+    }
 }
 
 interface ParcelProvider {
