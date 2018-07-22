@@ -1,69 +1,65 @@
 package io.dico.parcels2.storage
 
-import kotlinx.coroutines.experimental.CoroutineDispatcher
-import kotlinx.coroutines.experimental.CoroutineScope
-import kotlinx.coroutines.experimental.CoroutineStart
-import kotlinx.coroutines.experimental.asCoroutineDispatcher
-import kotlinx.coroutines.experimental.channels.ProducerJob
+import io.dico.parcels2.Parcel
+import io.dico.parcels2.ParcelData
+import io.dico.parcels2.ParcelOwner
+import kotlinx.coroutines.experimental.*
+import kotlinx.coroutines.experimental.channels.ReceiveChannel
 import kotlinx.coroutines.experimental.channels.produce
 import java.util.*
-import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 
-/*
 interface Storage {
-
     val name: String
-
     val syncDispatcher: CoroutineDispatcher
-
     val asyncDispatcher: CoroutineDispatcher
 
-    fun init(): CompletableFuture<Unit>
+    fun init(): Deferred<Unit>
 
-    fun shutdown(): CompletableFuture<Unit>
+    fun shutdown(): Deferred<Unit>
 
-    fun readPlotData(plotFor: Plot): CompletableFuture<PlotData?>
+    fun readParcelData(parcelFor: Parcel): Deferred<ParcelData?>
 
-    fun readPlotData(plotsFor: Sequence<Plot>, channelCapacity: Int): ProducerJob<Pair<Plot, PlotData?>>
+    fun readParcelData(parcelsFor: Sequence<Parcel>, channelCapacity: Int): ReceiveChannel<Pair<Parcel, ParcelData?>>
 
-    fun getOwnedPlots(user: PlotOwner): CompletableFuture<List<SerializablePlot>>
+    fun getOwnedParcels(user: ParcelOwner): Deferred<List<SerializableParcel>>
 
-    fun setPlotOwner(plotFor: Plot, owner: PlotOwner?): CompletableFuture<Unit>
+    fun setParcelOwner(parcelFor: Parcel, owner: ParcelOwner?): Deferred<Unit>
 
-    fun setPlotPlayerState(plotFor: Plot, player: UUID, state: Boolean?): CompletableFuture<Unit>
+    fun setParcelPlayerState(parcelFor: Parcel, player: UUID, state: Boolean?): Deferred<Unit>
 
-    fun setPlotAllowsInteractInventory(plot: Plot, value: Boolean): CompletableFuture<Unit>
+    fun setParcelAllowsInteractInventory(parcel: Parcel, value: Boolean): Deferred<Unit>
 
-    fun setPlotAllowsInteractInputs(plot: Plot, value: Boolean): CompletableFuture<Unit>
+    fun setParcelAllowsInteractInputs(parcel: Parcel, value: Boolean): Deferred<Unit>
 
 }
 
-class StorageWithBacking internal constructor(val backing: Backing) : Storage {
+class StorageWithCoroutineBacking internal constructor(val backing: Backing) : Storage {
     override val name get() = backing.name
     override val syncDispatcher = Executor { it.run() }.asCoroutineDispatcher()
-    override val asyncDispatcher = Executors.newFixedThreadPool(4) { Thread(it, "AbstractStorageThread") }.asCoroutineDispatcher()
+    val poolSize: Int get() = 4
+    override val asyncDispatcher = Executors.newFixedThreadPool(poolSize) { Thread(it, "Parcels2_StorageThread") }.asCoroutineDispatcher()
 
-    private fun <T> future(block: suspend CoroutineScope.() -> T) = kotlinx.coroutines.experimental.future.future(asyncDispatcher, CoroutineStart.ATOMIC, block)
+    private fun <T> future(block: suspend CoroutineScope.() -> T) = async(context = asyncDispatcher, start = CoroutineStart.ATOMIC, block = block)
 
-    override fun init(): CompletableFuture<Unit> = future { backing.init() }
+    override fun init() = future { backing.init() }
 
-    override fun shutdown(): CompletableFuture<Unit> = future { backing.shutdown() }
+    override fun shutdown() = future { backing.shutdown() }
 
-    override fun readPlotData(plotFor: Plot) = future { backing.readPlotData(plotFor) }
+    override fun readParcelData(parcelFor: Parcel) = future { backing.readParcelData(parcelFor) }
 
-    override fun readPlotData(plotsFor: Sequence<Plot>, channelCapacity: Int) =
-            produce<Pair<Plot, PlotData?>>(asyncDispatcher, capacity = channelCapacity) { backing.producePlotData(this, plotsFor) }
+    override fun readParcelData(parcelsFor: Sequence<Parcel>, channelCapacity: Int) = produce(asyncDispatcher, capacity = channelCapacity) {
+        with(backing) { produceParcelData(parcelsFor) }
+    }
 
-    override fun getOwnedPlots(user: PlotOwner) = future { backing.getOwnedPlots(user) }
+    override fun getOwnedParcels(user: ParcelOwner) = future { backing.getOwnedParcels(user) }
 
-    override fun setPlotOwner(plotFor: Plot, owner: PlotOwner?) = future { backing.setPlotOwner(plotFor, owner) }
+    override fun setParcelOwner(parcelFor: Parcel, owner: ParcelOwner?) = future { backing.setParcelOwner(parcelFor, owner) }
 
-    override fun setPlotPlayerState(plotFor: Plot, player: UUID, state: Boolean?) = future { backing.setPlotPlayerState(plotFor, player, state) }
+    override fun setParcelPlayerState(parcelFor: Parcel, player: UUID, state: Boolean?) = future { backing.setParcelPlayerState(parcelFor, player, state) }
 
-    override fun setPlotAllowsInteractInventory(plot: Plot, value: Boolean) = future { backing.setPlotAllowsInteractInventory(plot, value) }
+    override fun setParcelAllowsInteractInventory(parcel: Parcel, value: Boolean) = future { backing.setParcelAllowsInteractInventory(parcel, value) }
 
-    override fun setPlotAllowsInteractInputs(plot: Plot, value: Boolean) = future { backing.setPlotAllowsInteractInputs(plot, value) }
+    override fun setParcelAllowsInteractInputs(parcel: Parcel, value: Boolean) = future { backing.setParcelAllowsInteractInputs(parcel, value) }
 }
-        */
