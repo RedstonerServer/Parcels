@@ -2,7 +2,7 @@ package io.dico.parcels2
 
 import io.dico.parcels2.math.Vec2i
 import io.dico.parcels2.math.floor
-import kotlinx.coroutines.experimental.launch
+import io.dico.parcels2.util.doAwait
 import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.World
@@ -10,10 +10,11 @@ import org.bukkit.WorldCreator
 import org.bukkit.block.Block
 import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
+import org.bukkit.plugin.Plugin
 import java.util.*
 import kotlin.coroutines.experimental.buildSequence
 
-class Worlds {
+class Worlds(private val plugin: Plugin) {
     val worlds: Map<String, ParcelWorld> get() = _worlds
     private val _worlds: MutableMap<String, ParcelWorld> = HashMap()
 
@@ -48,9 +49,26 @@ class Worlds {
             _worlds.put(worldName, world)
 
             if (Bukkit.getWorld(worldName) == null) {
-                val bworld = WorldCreator(worldName).generator(world.generator).createWorld()
-                val spawn = world.generator.getFixedSpawnLocation(bworld, null)
-                bworld.setSpawnLocation(spawn.x.floor(), spawn.y.floor(), spawn.z.floor())
+                plugin.doAwait {
+                    cond = {
+                        try {
+                            // server.getDefaultGameMode() throws an error before any worlds are initialized.
+                            // createWorld() below calls that method.
+                            // Plugin needs to load on STARTUP for generators to be registered correctly.
+                            // Means we need to await the initial worlds getting loaded.
+
+                            plugin.server.defaultGameMode; true
+                        } catch (ex: Throwable) {
+                            false
+                        }
+                    }
+
+                    onSuccess = {
+                        val bworld = WorldCreator(worldName).generator(world.generator).createWorld()
+                        val spawn = world.generator.getFixedSpawnLocation(bworld, null)
+                        bworld.setSpawnLocation(spawn.x.floor(), spawn.y.floor(), spawn.z.floor())
+                    }
+                }
             }
 
         }
@@ -72,8 +90,8 @@ interface ParcelProvider {
 }
 
 class ParcelWorld(val name: String,
-                val options: WorldOptions,
-                val generator: ParcelGenerator) : ParcelProvider by generator {
+                  val options: WorldOptions,
+                  val generator: ParcelGenerator) : ParcelProvider by generator {
     val world: World by lazy {
         val tmp = Bukkit.getWorld(name)
         if (tmp == null) {

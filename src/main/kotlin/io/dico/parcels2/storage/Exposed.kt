@@ -8,8 +8,10 @@ import kotlinx.coroutines.experimental.channels.ProducerScope
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.ReferenceOption
 import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.sql.transactions.transaction
 import java.util.*
 import javax.sql.DataSource
+import org.jetbrains.exposed.sql.SchemaUtils.create
 
 object ParcelsTable : Table() {
     val id = integer("id").autoIncrement().primaryKey()
@@ -39,6 +41,9 @@ class ExposedBacking(val dataSource: DataSource) : Backing {
 
     override suspend fun init() {
         database = Database.connect(dataSource)
+        transaction(database) {
+            create(ParcelsTable, ParcelsAddedTable)
+        }
     }
 
     override suspend fun shutdown() {
