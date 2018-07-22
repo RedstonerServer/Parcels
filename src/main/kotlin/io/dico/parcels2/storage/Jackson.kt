@@ -93,3 +93,31 @@ class StorageOptionsSerializer : StdSerializer<StorageOptions>(StorageOptions::c
 
 }
 */
+
+
+class GeneratorOptionsDeserializer : JsonDeserializer<GeneratorOptions>() {
+
+    override fun deserialize(parser: JsonParser?, ctx: DeserializationContext?): GeneratorOptions? {
+        val node = parser!!.readValueAsTree<JsonNode>()
+        val name = node.get("name").asText()
+        val optionsNode = node.get("options")
+        val factory = GeneratorFactory.getFactory(name) ?: throw IllegalStateException("Unknown generator: $name")
+
+        return parser.codec.treeToValue(optionsNode, factory.optionsClass.java)
+    }
+
+}
+
+class GeneratorOptionsSerializer(private val defaultSerializer: JsonSerializer<GeneratorOptions>) : JsonSerializer<GeneratorOptions>() {
+
+    override fun serialize(input: GeneratorOptions?, generator: JsonGenerator?, provider: SerializerProvider?) {
+        with(generator!!) {
+            writeStartObject()
+            writeStringField("name", input!!.generatorFactory().name)
+            writeFieldName("options")
+            defaultSerializer.serialize(input, generator, provider)
+            writeEndObject()
+        }
+    }
+
+}

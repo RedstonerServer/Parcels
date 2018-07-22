@@ -65,9 +65,12 @@ tasks {
         }
 
         relocate("", "io.dico.parcels2.util.") {
+            exclude("kotlin*")
             exclude("META-INF/*")
-            exclude("logback*")
-            exclude("plugin*")
+            exclude("logback*xml")
+            exclude("plugin*yml")
         }
+
+        relocate("kotlin", "kotlin")
     }
 }
