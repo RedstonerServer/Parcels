@@ -22,7 +22,7 @@ data class SerializableWorld(val name: String? = null,
  * Used by storage backing options to encompass the location of a parcel
  */
 data class SerializableParcel(val world: SerializableWorld,
-                              val coord: Vec2i) {
+                              val pos: Vec2i) {
 
     val parcel: Parcel? by lazy { TODO() }
 }

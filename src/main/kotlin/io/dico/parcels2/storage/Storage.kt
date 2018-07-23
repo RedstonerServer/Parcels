@@ -19,11 +19,15 @@ interface Storage {
 
     fun shutdown(): Deferred<Unit>
 
+
     fun readParcelData(parcelFor: Parcel): Deferred<ParcelData?>
 
     fun readParcelData(parcelsFor: Sequence<Parcel>, channelCapacity: Int): ReceiveChannel<Pair<Parcel, ParcelData?>>
 
     fun getOwnedParcels(user: ParcelOwner): Deferred<List<SerializableParcel>>
+
+
+    fun setParcelData(parcelFor: Parcel, data: ParcelData?): Deferred<Unit>
 
     fun setParcelOwner(parcelFor: Parcel, owner: ParcelOwner?): Deferred<Unit>
 
@@ -41,25 +45,32 @@ class StorageWithCoroutineBacking internal constructor(val backing: Backing) : S
     val poolSize: Int get() = 4
     override val asyncDispatcher = Executors.newFixedThreadPool(poolSize) { Thread(it, "Parcels2_StorageThread") }.asCoroutineDispatcher()
 
-    private fun <T> future(block: suspend CoroutineScope.() -> T) = async(context = asyncDispatcher, start = CoroutineStart.ATOMIC, block = block)
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun <T> defer(noinline block: suspend CoroutineScope.() -> T): Deferred<T> {
+        return async(context = asyncDispatcher, start = CoroutineStart.ATOMIC, block = block)
+    }
 
-    override fun init() = future { backing.init() }
+    override fun init() = defer { backing.init() }
 
-    override fun shutdown() = future { backing.shutdown() }
+    override fun shutdown() = defer { backing.shutdown() }
 
-    override fun readParcelData(parcelFor: Parcel) = future { backing.readParcelData(parcelFor) }
+
+    override fun readParcelData(parcelFor: Parcel) = defer { backing.readParcelData(parcelFor) }
 
     override fun readParcelData(parcelsFor: Sequence<Parcel>, channelCapacity: Int) = produce(asyncDispatcher, capacity = channelCapacity) {
         with(backing) { produceParcelData(parcelsFor) }
     }
 
-    override fun getOwnedParcels(user: ParcelOwner) = future { backing.getOwnedParcels(user) }
 
-    override fun setParcelOwner(parcelFor: Parcel, owner: ParcelOwner?) = future { backing.setParcelOwner(parcelFor, owner) }
+    override fun setParcelData(parcelFor: Parcel, data: ParcelData?) = defer { backing.setParcelData(parcelFor, data) }
 
-    override fun setParcelPlayerState(parcelFor: Parcel, player: UUID, state: Boolean?) = future { backing.setParcelPlayerState(parcelFor, player, state) }
+    override fun getOwnedParcels(user: ParcelOwner) = defer { backing.getOwnedParcels(user) }
 
-    override fun setParcelAllowsInteractInventory(parcel: Parcel, value: Boolean) = future { backing.setParcelAllowsInteractInventory(parcel, value) }
+    override fun setParcelOwner(parcelFor: Parcel, owner: ParcelOwner?) = defer { backing.setParcelOwner(parcelFor, owner) }
 
-    override fun setParcelAllowsInteractInputs(parcel: Parcel, value: Boolean) = future { backing.setParcelAllowsInteractInputs(parcel, value) }
+    override fun setParcelPlayerState(parcelFor: Parcel, player: UUID, state: Boolean?) = defer { backing.setParcelPlayerState(parcelFor, player, state) }
+
+    override fun setParcelAllowsInteractInventory(parcel: Parcel, value: Boolean) = defer { backing.setParcelAllowsInteractInventory(parcel, value) }
+
+    override fun setParcelAllowsInteractInputs(parcel: Parcel, value: Boolean) = defer { backing.setParcelAllowsInteractInputs(parcel, value) }
 }

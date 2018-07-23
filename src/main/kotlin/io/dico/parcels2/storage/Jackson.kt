@@ -22,12 +22,15 @@ val yamlObjectMapper = ObjectMapper(YAMLFactory()).apply {
     with(kotlinModule) {
         setSerializerModifier(object : BeanSerializerModifier() {
             @Suppress("UNCHECKED_CAST")
-            override fun modifySerializer(config: SerializationConfig?, beanDesc: BeanDescription?, serializer: JsonSerializer<*>?): JsonSerializer<*> {
-                if (GeneratorOptions::class.isSuperclassOf(beanDesc?.beanClass?.kotlin as KClass<*>)) {
-                    return GeneratorOptionsSerializer(serializer as JsonSerializer<GeneratorOptions>)
+            override fun modifySerializer(config: SerializationConfig?, beanDesc: BeanDescription, serializer: JsonSerializer<*>): JsonSerializer<*> {
+
+                val newSerializer = if (GeneratorOptions::class.isSuperclassOf(beanDesc.beanClass.kotlin)) {
+                    GeneratorOptionsSerializer(serializer as JsonSerializer<GeneratorOptions>)
+                } else {
+                    serializer
                 }
 
-                return super.modifySerializer(config, beanDesc, serializer)
+                return super.modifySerializer(config, beanDesc, newSerializer)
             }
         })
 
