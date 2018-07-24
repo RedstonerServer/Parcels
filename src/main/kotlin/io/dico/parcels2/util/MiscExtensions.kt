@@ -1,9 +1,7 @@
 package io.dico.parcels2.util
 
 import io.dico.parcels2.logger
-import org.slf4j.Logger
 import java.io.File
-import java.io.PrintWriter
 
 fun File.tryCreate(): Boolean {
     val parent = parentFile
@@ -12,4 +10,8 @@ fun File.tryCreate(): Boolean {
         return false
     }
     return true
+}
+
+inline fun <R> Any.synchronized(block: () -> R): R {
+    return synchronized(this, block)
 }

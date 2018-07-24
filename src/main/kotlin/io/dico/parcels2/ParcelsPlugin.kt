@@ -1,8 +1,8 @@
 package io.dico.parcels2
 
-import io.dico.dicore.command.CommandBuilder
 import io.dico.dicore.command.EOverridePolicy
 import io.dico.dicore.command.ICommandDispatcher
+import io.dico.parcels2.command.getParcelCommands
 import io.dico.parcels2.storage.Storage
 import io.dico.parcels2.storage.yamlObjectMapper
 import io.dico.parcels2.util.tryCreate
@@ -14,6 +14,7 @@ import java.io.File
 val logger = LoggerFactory.getLogger("ParcelsPlugin")
 
 private inline val plogger get() = logger
+const val debugging = true
 
 class ParcelsPlugin : JavaPlugin() {
     lateinit var optionsFile: File
@@ -73,15 +74,9 @@ class ParcelsPlugin : JavaPlugin() {
     }
 
     private fun registerCommands() {
-        //@formatting:off
-        cmdDispatcher = CommandBuilder()
-            .group("parcel", "plot", "plots", "p")
-                .registerCommands(PlotCommands(this))
-                .parent()
-            .getDispatcher()
-        //@formatting:on
-
-        cmdDispatcher!!.registerToCommandMap("parcels:", EOverridePolicy.FALLBACK_ONLY)
+        cmdDispatcher = getParcelCommands(this).apply {
+            registerToCommandMap("parcels:", EOverridePolicy.FALLBACK_ONLY)
+        }
     }
 
 }

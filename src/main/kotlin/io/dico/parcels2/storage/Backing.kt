@@ -10,6 +10,8 @@ interface Backing {
 
     val name: String
 
+    val isConnected: Boolean
+
     suspend fun init()
 
     suspend fun shutdown()
@@ -24,6 +26,8 @@ interface Backing {
     suspend fun readParcelData(parcelFor: Parcel): ParcelData?
 
     suspend fun getOwnedParcels(user: ParcelOwner): List<SerializableParcel>
+
+    suspend fun getNumParcels(user: ParcelOwner): Int = getOwnedParcels(user).size
 
 
     suspend fun setParcelData(parcelFor: Parcel, data: ParcelData?)

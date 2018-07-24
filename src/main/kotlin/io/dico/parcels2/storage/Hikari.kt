@@ -31,7 +31,7 @@ fun getHikariDataSource(dialectName: String,
         dataSourceProperties.remove("serverName")
         dataSourceProperties.remove("port")
         dataSourceProperties.remove("databaseName")
-        addDataSourceProperty("url", "jdbc:h2:tcp://$address/~/${dco.database}")
+        addDataSourceProperty("url", "jdbc:h2:${if (address.isBlank()) "" else "tcp://$address/"}~/${dco.database}")
     } else {
         // doesn't exist on the MariaDB driver
         addDataSourceProperty("cachePrepStmts", "true")

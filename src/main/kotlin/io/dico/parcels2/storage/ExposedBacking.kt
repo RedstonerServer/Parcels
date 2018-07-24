@@ -3,6 +3,7 @@ package io.dico.parcels2.storage
 import com.zaxxer.hikari.HikariDataSource
 import io.dico.parcels2.*
 import io.dico.parcels2.math.Vec2i
+import io.dico.parcels2.util.synchronized
 import io.dico.parcels2.util.toByteArray
 import io.dico.parcels2.util.toUUID
 import kotlinx.coroutines.experimental.channels.ProducerScope
@@ -16,7 +17,7 @@ object WorldsT : Table("worlds") {
     val id = integer("id").autoIncrement().primaryKey()
     val name = varchar("name", 50)
     val uid = binary("uid", 16)
-            .also { uniqueIndex("index_uid", it) }
+        .also { uniqueIndex("index_uid", it) }
 }
 
 object ParcelsT : Table("parcels") {
@@ -24,31 +25,31 @@ object ParcelsT : Table("parcels") {
     val px = integer("px")
     val pz = integer("pz")
     val world_id = integer("id")
-            .also { uniqueIndex("index_location", it, px, pz) }
-            .references(WorldsT.id)
+        .also { uniqueIndex("index_location", it, px, pz) }
+        .references(WorldsT.id)
     val owner_uuid = binary("owner_uuid", 16).nullable()
     val owner_name = varchar("owner_name", 16).nullable()
 }
 
 object AddedLocalT : Table("parcels_added_local") {
     val parcel_id = integer("parcel_id")
-            .references(ParcelsT.id, ReferenceOption.CASCADE)
+        .references(ParcelsT.id, ReferenceOption.CASCADE)
     val player_uuid = binary("player_uuid", 16)
-            .also { uniqueIndex("index_pair", parcel_id, it) }
+        .also { uniqueIndex("index_pair", parcel_id, it) }
     val allowed_flag = bool("allowed_flag")
 }
 
 object AddedGlobalT : Table("parcels_added_global") {
     val owner_uuid = binary("owner_uuid", 16)
     val player_uuid = binary("player_uuid", 16)
-            .also { uniqueIndex("index_pair", owner_uuid, it) }
+        .also { uniqueIndex("index_pair", owner_uuid, it) }
     val allowed_flag = bool("allowed_flag")
 }
 
 object ParcelOptionsT : Table("parcel_options") {
     val parcel_id = integer("parcel_id")
-            .also { uniqueIndex("index_parcel_id", it) }
-            .references(ParcelsT.id, ReferenceOption.CASCADE)
+        .also { uniqueIndex("index_parcel_id", it) }
+        .references(ParcelsT.id, ReferenceOption.CASCADE)
     val interact_inventory = bool("interact_inventory").default(false)
     val interact_inputs = bool("interact_inputs").default(false)
 }
@@ -58,18 +59,29 @@ private class ExposedDatabaseException(message: String? = null) : Exception(mess
 @Suppress("NOTHING_TO_INLINE")
 class ExposedBacking(val dataSource: DataSource) : Backing {
     override val name get() = "Exposed"
-    lateinit var database: Database
+    private var database: Database? = null
+    private var isShutdown: Boolean = false
+
+    override val isConnected get() = database != null
 
     override suspend fun init() {
-        database = Database.connect(dataSource)
-        transaction(database) {
-            create(ParcelsT, AddedLocalT)
+        synchronized {
+            if (isShutdown) throw IllegalStateException()
+            database = Database.connect(dataSource)
+            transaction(database) {
+                create(WorldsT, ParcelsT, AddedLocalT, ParcelOptionsT)
+            }
         }
     }
 
     override suspend fun shutdown() {
-        if (dataSource is HikariDataSource) {
-            dataSource.close()
+        synchronized {
+            if (isShutdown) throw IllegalStateException()
+            if (dataSource is HikariDataSource) {
+                dataSource.close()
+            }
+            database = null
+            isShutdown = true
         }
     }
 
@@ -86,13 +98,13 @@ class ExposedBacking(val dataSource: DataSource) : Backing {
     private inline fun Transaction.getOrInitWorldId(worldUid: UUID, worldName: String): Int {
         val binaryUid = worldUid.toByteArray()!!
         return getWorldId(binaryUid)
-                ?: WorldsT.insertIgnore { it[uid] = binaryUid; it[name] = worldName }.get(WorldsT.id)
-                ?: throw ExposedDatabaseException("This should not happen - failed to insert world named $worldName and get its id")
+            ?: WorldsT.insertIgnore { it[uid] = binaryUid; it[name] = worldName }.get(WorldsT.id)
+            ?: throw ExposedDatabaseException("This should not happen - failed to insert world named $worldName and get its id")
     }
 
     private inline fun Transaction.getParcelId(worldId: Int, parcelX: Int, parcelZ: Int): Int? {
         return ParcelsT.select { (ParcelsT.world_id eq worldId) and (ParcelsT.px eq parcelX) and (ParcelsT.pz eq parcelZ) }
-                .firstOrNull()?.let { it[ParcelsT.id] }
+            .firstOrNull()?.let { it[ParcelsT.id] }
     }
 
     private inline fun Transaction.getParcelId(worldUid: UUID, parcelX: Int, parcelZ: Int): Int? {
@@ -102,8 +114,8 @@ class ExposedBacking(val dataSource: DataSource) : Backing {
     private inline fun Transaction.getOrInitParcelId(worldUid: UUID, worldName: String, parcelX: Int, parcelZ: Int): Int {
         val worldId = getOrInitWorldId(worldUid, worldName)
         return getParcelId(worldId, parcelX, parcelZ)
-                ?: ParcelsT.insertIgnore { it[world_id] = worldId; it[px] = parcelX; it[pz] = parcelZ }.get(ParcelsT.id)
-                ?: throw ExposedDatabaseException("This should not happen - failed to insert parcel at $worldName($parcelX, $parcelZ)")
+            ?: ParcelsT.insertIgnore { it[world_id] = worldId; it[px] = parcelX; it[pz] = parcelZ }.get(ParcelsT.id)
+            ?: throw ExposedDatabaseException("This should not happen - failed to insert parcel at $worldName($parcelX, $parcelZ)")
     }
 
     private inline fun Transaction.getParcelRow(id: Int): ResultRow? {
@@ -144,8 +156,8 @@ class ExposedBacking(val dataSource: DataSource) : Backing {
         ParcelDataHolder().apply {
 
             owner = ParcelOwner.create(
-                    uuid = row[ParcelsT.owner_uuid]?.toUUID(),
-                    name = row[ParcelsT.owner_name]
+                uuid = row[ParcelsT.owner_uuid]?.toUUID(),
+                name = row[ParcelsT.owner_name]
             )
 
             val parcelId = row[ParcelsT.id]
@@ -176,16 +188,16 @@ class ExposedBacking(val dataSource: DataSource) : Backing {
         }
 
         ParcelsT.select(where)
-                .map { parcelRow ->
-                    val worldId = parcelRow[ParcelsT.world_id]
-                    val worldRow = WorldsT.select({ WorldsT.id eq worldId }).firstOrNull()
-                            ?: return@map null
+            .map { parcelRow ->
+                val worldId = parcelRow[ParcelsT.world_id]
+                val worldRow = WorldsT.select({ WorldsT.id eq worldId }).firstOrNull()
+                    ?: return@map null
 
-                    val world = SerializableWorld(worldRow[WorldsT.name], worldRow[WorldsT.uid].toUUID())
-                    SerializableParcel(world, Vec2i(parcelRow[ParcelsT.px], parcelRow[ParcelsT.pz]))
-                }
-                .filterNotNull()
-                .toList()
+                val world = SerializableWorld(worldRow[WorldsT.name], worldRow[WorldsT.uid].toUUID())
+                SerializableParcel(world, Vec2i(parcelRow[ParcelsT.px], parcelRow[ParcelsT.pz]))
+            }
+            .filterNotNull()
+            .toList()
     }
 
 

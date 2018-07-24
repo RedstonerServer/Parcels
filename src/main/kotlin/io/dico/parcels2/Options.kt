@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import io.dico.parcels2.storage.Storage
 import io.dico.parcels2.storage.StorageFactory
 import io.dico.parcels2.storage.yamlObjectMapper
-import org.bukkit.Bukkit
 import org.bukkit.Bukkit.createBlockData
 import org.bukkit.GameMode
 import org.bukkit.Material

@@ -3,7 +3,7 @@ package io.dico.parcels2.math
 fun Double.floor(): Int {
     val down = toInt()
     if (down.toDouble() != this && (java.lang.Double.doubleToRawLongBits(this).ushr(63).toInt()) == 1) {
-        return down-1
+        return down - 1
     }
     return down
 }

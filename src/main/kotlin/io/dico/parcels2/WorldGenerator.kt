@@ -179,7 +179,7 @@ class DefaultParcelGenerator(val worlds: Worlds, val name: String, private val o
     }
 
     override fun getBottomCoord(parcel: Parcel): Vec2i = Vec2i(sectionSize * parcel.pos.x + pathOffset + o.offsetX,
-            sectionSize * parcel.pos.z + pathOffset + o.offsetZ)
+        sectionSize * parcel.pos.z + pathOffset + o.offsetZ)
 
     override fun getHomeLocation(parcel: Parcel): Location {
         val bottom = getBottomCoord(parcel)

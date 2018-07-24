@@ -8,8 +8,8 @@ import java.util.*
 @Suppress("UsePropertyAccessSyntax")
 fun getPlayerName(uuid: UUID?, ifUnknown: String? = null): String {
     return uuid?.let { Bukkit.getOfflinePlayer(uuid)?.takeIf { it.isOnline() || it.hasPlayedBefore() }?.name }
-            ?: ifUnknown
-            ?: ":unknown_name:"
+        ?: ifUnknown
+        ?: ":unknown_name:"
 }
 
 @Contract("null -> null; !null -> !null", pure = true)

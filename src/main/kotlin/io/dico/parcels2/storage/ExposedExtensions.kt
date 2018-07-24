@@ -10,15 +10,15 @@ import org.jetbrains.exposed.sql.transactions.TransactionManager
  * insertOrUpdate from https://github.com/JetBrains/Exposed/issues/167#issuecomment-403837917
  */
 inline fun <T : Table> T.insertOrUpdate(vararg onDuplicateUpdateKeys: Column<*>, body: T.(InsertStatement<Number>) -> Unit) =
-        InsertOrUpdate<Number>(onDuplicateUpdateKeys, this).apply {
-            body(this)
-            execute(TransactionManager.current())
-        }
+    InsertOrUpdate<Number>(onDuplicateUpdateKeys, this).apply {
+        body(this)
+        execute(TransactionManager.current())
+    }
 
 class InsertOrUpdate<Key : Any>(
-        private val onDuplicateUpdateKeys: Array<out Column<*>>,
-        table: Table,
-        isIgnore: Boolean = false
+    private val onDuplicateUpdateKeys: Array<out Column<*>>,
+    table: Table,
+    isIgnore: Boolean = false
 ) : InsertStatement<Key>(table, isIgnore) {
     override fun prepareSQL(transaction: Transaction): String {
         val onUpdateSQL = if (onDuplicateUpdateKeys.isNotEmpty()) {

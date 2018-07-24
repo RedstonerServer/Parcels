@@ -19,6 +19,15 @@ interface ParcelData {
 
     var allowInteractInputs: Boolean
     var allowInteractInventory: Boolean
+
+    fun isOwner(uuid: UUID): Boolean {
+        return owner?.uuid == uuid
+    }
+
+    val infoString: String
+        get() {
+            TODO()
+        }
 }
 
 /**
@@ -88,14 +97,14 @@ class ParcelDataHolder : ParcelData {
 
     override fun getAddedStatus(uuid: UUID): AddedStatus = added.getOrDefault(uuid, AddedStatus.DEFAULT)
     override fun setAddedStatus(uuid: UUID, status: AddedStatus): Boolean = status.takeIf { it != AddedStatus.DEFAULT }
-            ?.let { added.put(uuid, it) != it }
-            ?: added.remove(uuid) != null
+        ?.let { added.put(uuid, it) != it }
+        ?: added.remove(uuid) != null
 
     override fun isBanned(uuid: UUID) = getAddedStatus(uuid) == AddedStatus.BANNED
     override fun isAllowed(uuid: UUID) = getAddedStatus(uuid) == AddedStatus.ALLOWED
     override fun canBuild(player: Player) = isAllowed(player.uniqueId)
-            || owner?.matches(player, allowNameMatch = false) ?: false
-            || player.hasBuildAnywhere
+        || owner?.matches(player, allowNameMatch = false) ?: false
+        || player.hasBuildAnywhere
 
     override var allowInteractInputs = true
     override var allowInteractInventory = true
@@ -121,7 +130,7 @@ class ParcelOwner(val uuid: UUID? = null,
     companion object {
         fun create(uuid: UUID?, name: String?): ParcelOwner? {
             return uuid?.let { ParcelOwner(uuid, name) }
-                    ?: name?.let { ParcelOwner(uuid, name) }
+                ?: name?.let { ParcelOwner(uuid, name) }
         }
     }
 
@@ -141,7 +150,7 @@ class ParcelOwner(val uuid: UUID? = null,
 
     fun matches(player: Player, allowNameMatch: Boolean = false): Boolean {
         return uuid?.let { it == player.uniqueId } ?: false
-                || (allowNameMatch && name?.let { it == player.name } ?: false)
+            || (allowNameMatch && name?.let { it == player.name } ?: false)
     }
 
     val onlinePlayer: Player? get() = uuid?.let { Bukkit.getPlayer(uuid) }
@@ -150,5 +159,5 @@ class ParcelOwner(val uuid: UUID? = null,
     @Suppress("DEPRECATION")
     val offlinePlayer
         get() = (uuid?.let { Bukkit.getOfflinePlayer(it) } ?: Bukkit.getOfflinePlayer(name))
-                ?.takeIf { it.isOnline() || it.hasPlayedBefore() }
+            ?.takeIf { it.isOnline() || it.hasPlayedBefore() }
 }

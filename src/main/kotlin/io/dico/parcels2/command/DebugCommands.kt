@@ -1,11 +1,12 @@
-package io.dico.parcels2
+package io.dico.parcels2.command
+
 import io.dico.dicore.command.CommandException
 import io.dico.dicore.command.annotation.Cmd
+import io.dico.parcels2.ParcelsPlugin
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 
-
-class PlotCommands(val plugin: ParcelsPlugin) {
+class DebugCommands(val plugin: ParcelsPlugin) {
 
     @Cmd("reloadoptions")
     fun reloadOptions() {

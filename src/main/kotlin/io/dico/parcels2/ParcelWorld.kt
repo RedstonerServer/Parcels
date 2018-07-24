@@ -53,10 +53,10 @@ class Worlds(private val plugin: ParcelsPlugin) {
             try {
 
                 world = ParcelWorld(
-                        worldName,
-                        worldOptions,
-                        worldOptions.generator.getGenerator(this, worldName),
-                        plugin.storage)
+                    worldName,
+                    worldOptions,
+                    worldOptions.generator.getGenerator(this, worldName),
+                    plugin.storage)
 
             } catch (ex: Exception) {
                 ex.printStackTrace()

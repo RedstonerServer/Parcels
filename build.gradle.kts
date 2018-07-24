@@ -28,7 +28,7 @@ dependencies {
     compile("org.jetbrains.exposed:exposed:0.10.3")
     compile("org.jetbrains.kotlinx:kotlinx-coroutines-core:0.23.4")
     compile("com.zaxxer:HikariCP:3.2.0")
-    compile(files("../h2/bin/h2-client-1.4.197.jar"))
+    compile(files("../h2/bin/h2-1.4.197.jar"))
 
     val jacksonVersion = "2.9.6"
     compile("com.fasterxml.jackson.core:jackson-core:$jacksonVersion")
@@ -44,9 +44,12 @@ dependencies {
 }
 
 tasks {
-    val jar by getting(Jar::class)
+    val jar by getting(Jar::class) {
+        group = "artifacts"
+    }
 
     val fatJar by creating(Jar::class) {
+        group = "artifacts"
         destinationDir = file("$rootDir/debug/plugins")
         baseName = "parcels2-all"
         from(*configurations.compile.map(::zipTree).toTypedArray())
@@ -54,6 +57,7 @@ tasks {
     }
 
     val shadowJar by getting(ShadowJar::class) {
+        group = "artifacts"
         destinationDir = file("$rootDir/debug/plugins")
         baseName = "parcels2-shaded"
 
@@ -72,6 +76,7 @@ tasks {
     }
 
     val relocateSnakeyamlJar by creating(ShadowJar::class) {
+        group = "artifacts"
         destinationDir = file("$rootDir/debug/plugins")
         baseName = "parcels2-shaded"
         relocate("org.yaml", "shadow.org.yaml")
