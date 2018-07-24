@@ -40,7 +40,7 @@ interface ParcelData {
  */
 class Parcel(val world: ParcelWorld, val pos: Vec2i) : ParcelData {
     val id get() = "${pos.x}:${pos.z}"
-
+    val homeLocation get() = world.generator.getHomeLocation(this)
 
     var data: ParcelData = ParcelDataHolder(); private set
 

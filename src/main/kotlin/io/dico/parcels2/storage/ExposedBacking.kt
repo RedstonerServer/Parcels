@@ -176,6 +176,7 @@ class ExposedBacking(val dataSource: DataSource) : Backing {
 
     }
 
+    // TODO order by some new column
     override suspend fun getOwnedParcels(user: ParcelOwner): List<SerializableParcel> = transaction {
         val where: SqlExpressionBuilder.() -> Op<Boolean>
 
