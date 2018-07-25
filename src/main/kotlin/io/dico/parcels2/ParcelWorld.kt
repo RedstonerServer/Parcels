@@ -182,10 +182,11 @@ class DefaultParcelContainer(private val world: ParcelWorld,
     }
 
     override fun parcelByID(x: Int, z: Int): Parcel? {
-        return parcels[x][z]
+        return parcels.getOrNull(x)?.getOrNull(z)
     }
 
     override fun nextEmptyParcel(): Parcel? {
+        return parcels[0][0]
         TODO()
     }
 

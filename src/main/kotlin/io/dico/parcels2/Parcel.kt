@@ -24,10 +24,6 @@ interface ParcelData {
         return owner?.uuid == uuid
     }
 
-    val infoString: String
-        get() {
-            TODO()
-        }
 }
 
 /**
@@ -41,6 +37,11 @@ interface ParcelData {
 class Parcel(val world: ParcelWorld, val pos: Vec2i) : ParcelData {
     val id get() = "${pos.x}:${pos.z}"
     val homeLocation get() = world.generator.getHomeLocation(this)
+
+    val infoString: String
+        get() {
+            return "$id; owned by ${owner?.let { it.name ?: Bukkit.getOfflinePlayer(it.uuid).name }}"
+        }
 
     var data: ParcelData = ParcelDataHolder(); private set
 

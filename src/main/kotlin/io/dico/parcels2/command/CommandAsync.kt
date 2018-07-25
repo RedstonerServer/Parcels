@@ -23,7 +23,7 @@ class CommandAsyncScope {
 
     suspend fun <T> HasPlugin.awaitSynchronousTask(delay: Int = 0, task: () -> T): T {
         return suspendCoroutine { cont: Continuation<T> ->
-            plugin.server.scheduler.runTaskLater(plugin, l@ {
+            plugin.server.scheduler.runTaskLater(plugin, l@{
                 val result = try {
                     task()
                 } catch (ex: CommandException) {
@@ -45,7 +45,7 @@ class CommandAsyncScope {
 }
 
 fun <T : Any?> HasPlugin.delegateCommandAsync(context: ExecutionContext,
-                                   block: suspend CommandAsyncScope.() -> T) {
+                                              block: suspend CommandAsyncScope.() -> T) {
 
     val job: Deferred<Any?> = async(/*context = plugin.storage.asyncDispatcher, */start = CoroutineStart.ATOMIC) {
         CommandAsyncScope().block()

@@ -75,8 +75,19 @@ class ParcelCommands(override val plugin: ParcelsPlugin) : HasWorlds, HasPlugin 
                     ?: error("The specified parcel could not be matched")
 
                 player.teleport(targetMatch.homeLocation)
+                ""
             }
         }
     }
+
+    @Cmd("claim")
+    @Desc("If this parcel is unowned, makes you the owner",
+        shortVersion = "claims this parcel")
+    fun cmdClaim(player: Player) {
+
+    }
+
+
+
 
 }

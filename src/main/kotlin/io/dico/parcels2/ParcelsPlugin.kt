@@ -46,6 +46,7 @@ class ParcelsPlugin : JavaPlugin() {
 
             try {
                 storage = options.storage.newStorageInstance()
+                storage.init()
             } catch (ex: Exception) {
                 plogger.error("Failed to connect to database", ex)
                 return false

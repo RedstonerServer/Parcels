@@ -14,14 +14,14 @@ import java.util.*
 import javax.sql.DataSource
 
 object WorldsT : Table("worlds") {
-    val id = integer("id").autoIncrement().primaryKey()
+    val id = integer("world_id").autoIncrement().primaryKey()
     val name = varchar("name", 50)
     val uid = binary("uid", 16)
         .also { uniqueIndex("index_uid", it) }
 }
 
 object ParcelsT : Table("parcels") {
-    val id = integer("id").autoIncrement().primaryKey()
+    val id = integer("parcel_id").autoIncrement().primaryKey()
     val px = integer("px")
     val pz = integer("pz")
     val world_id = integer("id")
@@ -98,7 +98,7 @@ class ExposedBacking(val dataSource: DataSource) : Backing {
     private inline fun Transaction.getOrInitWorldId(worldUid: UUID, worldName: String): Int {
         val binaryUid = worldUid.toByteArray()!!
         return getWorldId(binaryUid)
-            ?: WorldsT.insertIgnore { it[uid] = binaryUid; it[name] = worldName }.get(WorldsT.id)
+            ?: WorldsT.insert /*Ignore*/ { it[uid] = binaryUid; it[name] = worldName }.get(WorldsT.id)
             ?: throw ExposedDatabaseException("This should not happen - failed to insert world named $worldName and get its id")
     }
 
@@ -114,7 +114,7 @@ class ExposedBacking(val dataSource: DataSource) : Backing {
     private inline fun Transaction.getOrInitParcelId(worldUid: UUID, worldName: String, parcelX: Int, parcelZ: Int): Int {
         val worldId = getOrInitWorldId(worldUid, worldName)
         return getParcelId(worldId, parcelX, parcelZ)
-            ?: ParcelsT.insertIgnore { it[world_id] = worldId; it[px] = parcelX; it[pz] = parcelZ }.get(ParcelsT.id)
+            ?: ParcelsT.insert /*Ignore*/ { it[world_id] = worldId; it[px] = parcelX; it[pz] = parcelZ }.get(ParcelsT.id)
             ?: throw ExposedDatabaseException("This should not happen - failed to insert parcel at $worldName($parcelX, $parcelZ)")
     }
 
