@@ -20,11 +20,14 @@ allprojects {
     }
     repositories {
         mavenCentral()
-        mavenLocal()
-        maven("https://dl.bintray.com/kotlin/exposed")
+        maven("https://hub.spigotmc.org/nexus/content/repositories/snapshots")
+        maven("https://hub.spigotmc.org/nexus/content/repositories/sonatype-nexus-snapshots")
     }
     dependencies {
-        compile(files("${rootProject.rootDir.parentFile}/res/spigot-1.13-pre7.jar"))
+        val spigotVersion = "1.13-R0.1-SNAPSHOT"
+        compile("org.bukkit:bukkit:$spigotVersion")
+        compile("org.spigotmc:spigot-api:$spigotVersion")
+
         compile("net.sf.trove4j:trove4j:3.0.3")
         testCompile("junit:junit:4.12")
     }
@@ -35,6 +38,10 @@ project(":dicore3:dicore3-command") {
         compile(project(":dicore3:dicore3-core"))
         compile("com.thoughtworks.paranamer:paranamer:2.8")
     }
+}
+
+repositories {
+    maven("https://dl.bintray.com/kotlin/exposed")
 }
 
 dependencies {

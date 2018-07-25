@@ -17,7 +17,7 @@ public class InventoryEventUtil {
     }
     
     public static ItemStack getNewItem(InventoryClickEvent event) {
-        Inventory clicked = event.getClickedInventory();
+        Inventory clicked = event.getInventory();
         switch (event.getAction()) {
             case SWAP_WITH_CURSOR:
             case PLACE_ALL:
