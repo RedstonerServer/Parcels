@@ -16,6 +16,8 @@ import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
 import java.util.*
 import kotlin.coroutines.experimental.buildSequence
+import kotlin.reflect.jvm.javaMethod
+import kotlin.reflect.jvm.kotlinFunction
 
 class Worlds(private val plugin: ParcelsPlugin) {
     val worlds: Map<String, ParcelWorld> get() = _worlds
@@ -37,6 +39,11 @@ class Worlds(private val plugin: ParcelsPlugin) {
         with(getWorld(world) ?: return null) {
             return generator.parcelAt(x, z)
         }
+    }
+
+    init {
+        val function = ::loadWorlds
+        function.javaMethod!!.kotlinFunction
     }
 
     operator fun SerializableParcel.invoke(): Parcel? {

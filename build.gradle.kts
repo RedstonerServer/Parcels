@@ -1,23 +1,28 @@
 @file:Suppress("UNUSED_VARIABLE")
 
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-import org.jetbrains.kotlin.gradle.dsl.Coroutines
+import org.jetbrains.kotlin.gradle.dsl.Coroutines.ENABLE
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformJvmPlugin
 import java.io.PrintWriter
 
-plugins {
-    kotlin("jvm") version "1.2.51"
-    id("com.github.johnrengelman.plugin-shadow") version "2.0.3"
-}
+val stdout = PrintWriter(File("$rootDir/gradle-output.txt"))
 
-kotlin.experimental.coroutines = Coroutines.ENABLE
+buildscript {
+    dependencies {
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.2.51")
+    }
+}
 
 group = "io.dico"
 version = "0.1"
 
+inline fun <reified T : Plugin<out Project>> Project.apply() =
+    (this as PluginAware).apply<T>()
+
 allprojects {
-    apply {
-        plugin(JavaPlugin::class.java)
-    }
+    apply<JavaPlugin>()
+
     repositories {
         mavenCentral()
         maven("https://hub.spigotmc.org/nexus/content/repositories/snapshots")
@@ -34,11 +39,27 @@ allprojects {
 }
 
 project(":dicore3:dicore3-command") {
+    apply<KotlinPlatformJvmPlugin>()
+
+    kotlin.experimental.coroutines = ENABLE
+
     dependencies {
+        // why the fuck does it need reflect explicitly?
+        compile("org.jetbrains.kotlinx:kotlinx-coroutines-core:0.23.4")
+        compile(kotlin("reflect", version = "1.2.50"))
+        compile(kotlin("stdlib-jdk8", version = "1.2.51"))
         compile(project(":dicore3:dicore3-core"))
         compile("com.thoughtworks.paranamer:paranamer:2.8")
     }
 }
+
+
+plugins {
+    kotlin("jvm") version "1.2.51"
+    id("com.github.johnrengelman.plugin-shadow") version "2.0.3"
+}
+
+kotlin.experimental.coroutines = ENABLE
 
 repositories {
     maven("https://dl.bintray.com/kotlin/exposed")
@@ -65,14 +86,22 @@ dependencies {
 }
 
 tasks {
+    val compileKotlin by getting(KotlinCompile::class) {
+        //this.setupPlugins()
+
+        //serializedCompilerArguments.add("-java-parameters")
+    }
+
     fun Jar.packageDependencies(vararg names: String) {
-        from(*project.configurations.compile.resolvedConfiguration.firstLevelModuleDependencies
-            .filter { it.moduleName in names }
-            .flatMap { it.allModuleArtifacts }
-            .map { it.file }
-            .map(::zipTree)
-            .toTypedArray()
-        )
+        //afterEvaluate {
+            from(*project.configurations.compile.resolvedConfiguration.firstLevelModuleDependencies
+                .filter { it.moduleName in names }
+                .flatMap { it.allModuleArtifacts }
+                .map { it.file }
+                .map(::zipTree)
+                .toTypedArray()
+            )
+        //}
     }
 
     fun Jar.packageDependency(name: String, configure: ModuleDependency.() -> Unit) {
@@ -92,18 +121,18 @@ tasks {
     }
 
     fun Jar.packageArtifacts(vararg names: String) {
-        val stream = PrintWriter(File("$rootDir/gradle-output.txt"))
-        from(*project.configurations.compile.resolvedConfiguration.resolvedArtifacts
-            .filter {
-                val id = it.moduleVersion.id
-                (id.name in names).also {
-                    if (!it) stream.println("Not including artifact: ${id.group}:${id.name}")
+        //afterEvaluate {
+            from(*project.configurations.compile.resolvedConfiguration.resolvedArtifacts
+                .filter {
+                    val id = it.moduleVersion.id
+                    (id.name in names).also {
+                        if (!it) stdout.println("Not including artifact: ${id.group}:${id.name}")
+                    }
                 }
-            }
-            .map { it.file }
-            .map(::zipTree)
-            .toTypedArray())
-        stream.flush()
+                .map { it.file }
+                .map(::zipTree)
+                .toTypedArray())
+        //}
     }
 
     val serverDir = "$rootDir/debug"
@@ -151,7 +180,13 @@ tasks {
 
             "trove4j",
             "joda-time",
-            "annotations"
+
+            "annotations",
+            "kotlin-stdlib-common",
+            "kotlin-stdlib",
+            "kotlin-stdlib-jdk7",
+            "kotlin-stdlib-jdk8",
+            "kotlin-reflect"
         )
 
         relocate("org.yaml.snakeyaml", "io.dico.parcels2.util.snakeyaml")
@@ -165,3 +200,5 @@ tasks {
 allprojects {
     tasks.filter { it is Jar }.forEach { it.group = "artifacts" }
 }
+
+stdout.flush()

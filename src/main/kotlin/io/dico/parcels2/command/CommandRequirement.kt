@@ -1,46 +1,57 @@
-@file:Suppress("NOTHING_TO_INLINE")
-
 package io.dico.parcels2.command
 
-import io.dico.dicore.command.CommandException
-import io.dico.dicore.command.Validate
+import io.dico.dicore.command.*
 import io.dico.parcels2.Parcel
 import io.dico.parcels2.ParcelWorld
 import io.dico.parcels2.Worlds
+import io.dico.parcels2.logger
 import io.dico.parcels2.util.hasAdminManage
 import io.dico.parcels2.util.uuid
 import org.bukkit.entity.Player
+import java.lang.reflect.Method
+import kotlin.reflect.full.extensionReceiverParameter
+import kotlin.reflect.full.findAnnotation
+import kotlin.reflect.jvm.javaType
+import kotlin.reflect.jvm.jvmErasure
+import kotlin.reflect.jvm.kotlinFunction
 
-/*
- * Scope types for extension lambdas
- */
-sealed class BaseScope
+@Target(AnnotationTarget.FUNCTION)
+@Retention(AnnotationRetention.RUNTIME)
+annotation class ParcelRequire(val admin: Boolean = false, val owner: Boolean = false)
 
-class WorldOnlyScope(val world: ParcelWorld) : BaseScope()
+sealed class BaseScope(private var _timeout: Int = 0) : ICommandSuspendReceiver {
+    override fun getTimeout() = _timeout
+    fun setTimeout(timeout: Int) {
+        _timeout = timeout
+    }
+}
+
+class SuspendOnlyScope : BaseScope()
 class ParcelScope(val world: ParcelWorld, val parcel: Parcel) : BaseScope()
+class WorldOnlyScope(val world: ParcelWorld) : BaseScope()
 
-/*
- * Interface to implicitly access worlds object by creating extension functions for it
- */
-interface HasWorlds {
-    val worlds: Worlds
-}
+fun getParcelCommandReceiver(worlds: Worlds, context: ExecutionContext, method: Method, cmdName: String): ICommandReceiver {
+    val function = method.kotlinFunction!!
+    val receiverType = function.extensionReceiverParameter!!.type
+    logger.info("Receiver type: ${receiverType.javaType.typeName}")
 
-/*
- * Functions to be used by command implementations
- */
-inline fun <T> HasWorlds.requireInWorld(player: Player,
-                                        admin: Boolean = false,
-                                        block: WorldOnlyScope.() -> T): T {
-    return WorldOnlyScope(worlds.getWorldRequired(player, admin = admin)).block()
-}
+    val require = function.findAnnotation<ParcelRequire>()
+    val admin = require?.admin == true
+    val owner = require?.owner == true
 
-inline fun <T> HasWorlds.requireInParcel(player: Player,
-                                         admin: Boolean = false,
-                                         own: Boolean = false,
-                                         block: ParcelScope.() -> T): T {
-    val parcel = worlds.getParcelRequired(player, admin = admin, own = own)
-    return ParcelScope(parcel.world, parcel).block()
+    val player = context.sender as Player
+
+    return when (receiverType.jvmErasure) {
+        ParcelScope::class -> worlds.getParcelRequired(player, admin = admin, own = owner).let {
+            ParcelScope(it.world, it)
+        }
+        WorldOnlyScope::class -> worlds.getWorldRequired(player, admin = admin).let {
+            WorldOnlyScope(it)
+        }
+        SuspendOnlyScope::class -> SuspendOnlyScope()
+        else -> throw InternalError("Invalid command receiver type")
+
+    }
 }
 
 /*
@@ -59,5 +70,4 @@ fun Worlds.getParcelRequired(player: Player, admin: Boolean = false, own: Boolea
         "You must own this parcel to use that command")
     return parcel
 }
-
 

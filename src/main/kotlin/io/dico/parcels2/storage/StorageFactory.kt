@@ -7,9 +7,9 @@ interface StorageFactory {
     companion object StorageFactories {
         private val map: MutableMap<String, StorageFactory> = HashMap()
 
-        fun registerFactory(method: String, generator: StorageFactory): Boolean = map.putIfAbsent(method.toLowerCase(), generator) == null
+        fun registerFactory(dialect: String, generator: StorageFactory): Boolean = map.putIfAbsent(dialect.toLowerCase(), generator) == null
 
-        fun getFactory(method: String): StorageFactory? = map[method.toLowerCase()]
+        fun getFactory(dialect: String): StorageFactory? = map[dialect.toLowerCase()]
 
         init {
             // have to write the code like this in kotlin.
@@ -20,7 +20,7 @@ interface StorageFactory {
 
     val optionsClass: KClass<out Any>
 
-    fun newStorageInstance(method: String, options: Any): Storage
+    fun newStorageInstance(dialect: String, options: Any): Storage
 
 }
 

@@ -10,7 +10,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
-final class ReflectiveCommand extends Command {
+public final class ReflectiveCommand extends Command {
+    private final Cmd cmdAnnotation;
     private final Method method;
     private final Object instance;
     private String[] parameterOrder;
@@ -20,6 +21,7 @@ final class ReflectiveCommand extends Command {
         if (!method.isAnnotationPresent(Cmd.class)) {
             throw new CommandParseException("No @Cmd present for the method " + method.toGenericString());
         }
+        cmdAnnotation = method.getAnnotation(Cmd.class);
 
         java.lang.reflect.Parameter[] parameters = method.getParameters();
 
@@ -46,6 +48,14 @@ final class ReflectiveCommand extends Command {
         this.flags = ReflectiveRegistration.parseCommandAttributes(selector, method, this, parameters);
     }
 
+    public Method getMethod() {
+        return method;
+    }
+
+    public Object getInstance() {
+        return instance;
+    }
+
     void setParameterOrder(String[] parameterOrder) {
         this.parameterOrder = parameterOrder;
     }
@@ -54,7 +64,7 @@ final class ReflectiveCommand extends Command {
         ChildCommandAddress result = new ChildCommandAddress();
         result.setCommand(this);
 
-        Cmd cmd = method.getAnnotation(Cmd.class);
+        Cmd cmd = cmdAnnotation;
         result.getNames().add(cmd.value());
         for (String alias : cmd.aliases()) {
             result.getNames().add(alias);
@@ -71,54 +81,86 @@ final class ReflectiveCommand extends Command {
 
     @Override
     public String execute(CommandSender sender, ExecutionContext context) throws CommandException {
-        //System.out.println("In ReflectiveCommand.execute()");
-
         String[] parameterOrder = this.parameterOrder;
         int start = Integer.bitCount(flags);
-        //System.out.println("start = " + start);
         Object[] args = new Object[parameterOrder.length + start];
 
         int i = 0;
         if ((flags & 1) != 0) {
-            args[i++] = sender;
+            try {
+                args[i++] = ((ICommandReceiver.Factory) instance).getReceiver(context, method, cmdAnnotation.value());
+            } catch (Exception ex) {
+                handleException(ex);
+                return null; // unreachable
+            }
         }
         if ((flags & 2) != 0) {
+            args[i++] = sender;
+        }
+        if ((flags & 4) != 0) {
             args[i++] = context;
         }
-        //System.out.println("i = " + i);
-        //System.out.println("parameterOrder = " + Arrays.toString(parameterOrder));
 
         for (int n = args.length; i < n; i++) {
-            //System.out.println("n = " + n);
             args[i] = context.get(parameterOrder[i - start]);
-            //System.out.println("context.get(parameterOrder[i - start]) = " + context.get(parameterOrder[i - start]));
-            //System.out.println("context.get(parameterOrder[i - start]).getClass() = " + context.get(parameterOrder[i - start]).getClass());
         }
 
-        //System.out.println("args = " + Arrays.toString(args));
+        if (!isSuspendFunction()) {
+            return callSynchronously(args);
+        }
 
-        Object result;
+        return callAsCoroutine(context, args);
+    }
+
+    private boolean isSuspendFunction() {
         try {
-            result = method.invoke(instance, args);
-        } catch (InvocationTargetException ex) {
+            return KotlinReflectiveRegistrationKt.isSuspendFunction(method);
+        } catch (Throwable ex) {
+            return false;
+        }
+    }
+
+    public String callSynchronously(Object[] args) throws CommandException {
+        try {
+            return getResult(method.invoke(instance, args), null);
+        } catch (Exception ex) {
+            return getResult(null, ex);
+        }
+    }
+
+    public static String getResult(Object returned, Exception ex) throws CommandException {
+        if (ex != null) {
+            handleException(ex);
+            return null; // unreachable
+        }
+
+        if (returned instanceof String) {
+            return (String) returned;
+        }
+        if (returned instanceof CommandResult) {
+            return ((CommandResult) returned).getMessage();
+        }
+        return null;
+    }
+
+    public static void handleException(Exception ex) throws CommandException {
+        if (ex instanceof InvocationTargetException) {
             if (ex.getCause() instanceof CommandException) {
                 throw (CommandException) ex.getCause();
             }
 
             ex.printStackTrace();
             throw new CommandException("An internal error occurred while executing this command.", ex);
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            throw new CommandException("An internal error occurred while executing this command.", ex);
         }
+        if (ex instanceof CommandException) {
+            throw (CommandException) ex;
+        }
+        ex.printStackTrace();
+        throw new CommandException("An internal error occurred while executing this command.", ex);
+    }
 
-        if (result instanceof String) {
-            return (String) result;
-        }
-        if (result instanceof CommandResult) {
-            return ((CommandResult) result).getMessage();
-        }
-        return null;
+    private String callAsCoroutine(ExecutionContext context, Object[] args) {
+        return KotlinReflectiveRegistrationKt.callAsCoroutine(this, (ICommandReceiver.Factory) instance, context, args);
     }
 
 }

@@ -197,10 +197,20 @@ public class ReflectiveRegistration {
 
     static int parseCommandAttributes(IParameterTypeSelector selector, Method method, ReflectiveCommand command, java.lang.reflect.Parameter[] parameters) throws CommandParseException {
         ParameterList list = command.getParameterList();
+        boolean hasReceiverParameter = false;
         boolean hasSenderParameter = false;
         int start = 0;
         Class<?> firstParameterType = null;
-        if (parameters.length > start && CommandSender.class.isAssignableFrom(firstParameterType = parameters[0].getType())) {
+        Class<?> senderParameterType = null;
+
+        if (parameters.length > start
+            && command.getInstance() instanceof ICommandReceiver.Factory
+            && ICommandReceiver.class.isAssignableFrom(firstParameterType = parameters[start].getType())) {
+            hasReceiverParameter = true;
+            start++;
+        }
+
+        if (parameters.length > start && CommandSender.class.isAssignableFrom(senderParameterType = parameters[start].getType())) {
             hasSenderParameter = true;
             start++;
         }
@@ -212,12 +222,17 @@ public class ReflectiveRegistration {
         }
 
         String[] parameterNames = lookupParameterNames(method, parameters, start);
-        command.setParameterOrder(parameterNames);
-
         for (int i = start, n = parameters.length; i < n; i++) {
+            if (parameters[i].getType().getName().equals("kotlin.coroutines.experimental.Continuation")) {
+                List<String> temp = new ArrayList<>(Arrays.asList(parameterNames));
+                temp.remove(i - start);
+                parameterNames = temp.toArray(new String[0]);
+                continue;
+            }
             Parameter<?, ?> parameter = parseParameter(selector, method, parameters[i], parameterNames[i - start]);
             list.addParameter(parameter);
         }
+        command.setParameterOrder(parameterNames);
 
         RequirePermissions cmdPermissions = method.getAnnotation(RequirePermissions.class);
         if (cmdPermissions != null) {
@@ -257,9 +272,9 @@ public class ReflectiveRegistration {
             command.setDescription();
         }
 
-        if (hasSenderParameter && Player.class.isAssignableFrom(firstParameterType)) {
+        if (hasSenderParameter && Player.class.isAssignableFrom(senderParameterType)) {
             command.addContextFilter(IContextFilter.PLAYER_ONLY);
-        } else if (hasSenderParameter && ConsoleCommandSender.class.isAssignableFrom(firstParameterType)) {
+        } else if (hasSenderParameter && ConsoleCommandSender.class.isAssignableFrom(senderParameterType)) {
             command.addContextFilter(IContextFilter.CONSOLE_ONLY);
         } else if (method.isAnnotationPresent(RequirePlayer.class)) {
             command.addContextFilter(IContextFilter.PLAYER_ONLY);
@@ -269,7 +284,7 @@ public class ReflectiveRegistration {
 
         list.setRepeatFinalParameter(parameters.length > start && parameters[parameters.length - 1].isVarArgs());
         list.setFinalParameterMayBeFlag(true);
-        return (hasSenderParameter ? 1 : 0) | (hasContextParameter ? 2 : 0);
+        return (hasSenderParameter ? 2 : 0) | (hasContextParameter ? 4 : 0) | (hasReceiverParameter ? 1 : 0);
     }
 
     public static int parseCommandAttributes(IParameterTypeSelector selector, Method method, ReflectiveCommand command) throws CommandParseException {
