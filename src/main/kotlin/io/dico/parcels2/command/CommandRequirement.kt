@@ -19,44 +19,28 @@ import kotlin.reflect.jvm.kotlinFunction
 @Retention(AnnotationRetention.RUNTIME)
 annotation class ParcelRequire(val admin: Boolean = false, val owner: Boolean = false)
 
-sealed class BaseScope(private var _timeout: Int = 0) : ICommandSuspendReceiver {
-    override fun getTimeout() = _timeout
-    fun setTimeout(timeout: Int) {
-        _timeout = timeout
-    }
-}
+@Target(AnnotationTarget.FUNCTION)
+@Retention(AnnotationRetention.RUNTIME)
+annotation class SuspensionTimeout(val millis: Int)
 
-class SuspendOnlyScope : BaseScope()
-class ParcelScope(val world: ParcelWorld, val parcel: Parcel) : BaseScope()
-class WorldOnlyScope(val world: ParcelWorld) : BaseScope()
+open class WorldScope(val world: ParcelWorld) : ICommandReceiver
+open class ParcelScope(val parcel: Parcel) : WorldScope(parcel.world)
 
 fun getParcelCommandReceiver(worlds: Worlds, context: ExecutionContext, method: Method, cmdName: String): ICommandReceiver {
+    val player = context.sender as Player
     val function = method.kotlinFunction!!
     val receiverType = function.extensionReceiverParameter!!.type
-    logger.info("Receiver type: ${receiverType.javaType.typeName}")
-
     val require = function.findAnnotation<ParcelRequire>()
     val admin = require?.admin == true
     val owner = require?.owner == true
 
-    val player = context.sender as Player
-
     return when (receiverType.jvmErasure) {
-        ParcelScope::class -> worlds.getParcelRequired(player, admin = admin, own = owner).let {
-            ParcelScope(it.world, it)
-        }
-        WorldOnlyScope::class -> worlds.getWorldRequired(player, admin = admin).let {
-            WorldOnlyScope(it)
-        }
-        SuspendOnlyScope::class -> SuspendOnlyScope()
+        ParcelScope::class -> ParcelScope(worlds.getParcelRequired(player, admin, owner))
+        WorldScope::class -> WorldScope(worlds.getWorldRequired(player, admin))
         else -> throw InternalError("Invalid command receiver type")
-
     }
 }
 
-/*
- * Functions for checking
- */
 fun Worlds.getWorldRequired(player: Player, admin: Boolean = false): ParcelWorld {
     if (admin) Validate.isTrue(player.hasAdminManage, "You must have admin rights to use that command")
     return getWorld(player.world)

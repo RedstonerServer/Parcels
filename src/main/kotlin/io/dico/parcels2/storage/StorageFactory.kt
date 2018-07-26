@@ -1,5 +1,6 @@
 package io.dico.parcels2.storage
 
+import com.zaxxer.hikari.HikariDataSource
 import io.dico.parcels2.DataConnectionOptions
 import kotlin.reflect.KClass
 
@@ -26,21 +27,16 @@ interface StorageFactory {
 
 class ConnectionStorageFactory : StorageFactory {
     override val optionsClass = DataConnectionOptions::class
-
-    private val types: Map<String, String> = mutableMapOf(
-        "mysql" to "com.mysql.jdbc.jdbc2.optional.MysqlDataSource",
-        "h2" to "org.h2.jdbcx.JdbcDataSource"
-    )
+    private val types: List<String> = listOf("postgresql")
 
     fun register(companion: StorageFactory.StorageFactories) {
-        types.keys.forEach {
-            companion.registerFactory(it, this)
-        }
+        types.forEach { companion.registerFactory(it, this) }
     }
 
     override fun newStorageInstance(dialect: String, options: Any): Storage {
-        val driverClass = types[dialect.toLowerCase()] ?: throw IllegalArgumentException("Storage dialect $dialect is not supported")
-        return StorageWithCoroutineBacking(ExposedBacking(getHikariDataSource(dialect, driverClass, options as DataConnectionOptions)))
+        val hikariConfig = getHikariConfig(dialect, options as DataConnectionOptions)
+        val dataSourceFactory = { HikariDataSource(hikariConfig) }
+        return StorageWithCoroutineBacking(ExposedBacking(dataSourceFactory))
     }
 
 }

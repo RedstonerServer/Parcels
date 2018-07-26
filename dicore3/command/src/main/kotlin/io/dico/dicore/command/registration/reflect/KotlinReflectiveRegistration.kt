@@ -26,7 +26,9 @@ fun callAsCoroutine(command: ReflectiveCommand,
                     args: Array<Any?>): String? {
     val dispatcher = Executor { task -> factory.plugin.server.scheduler.runTask(factory.plugin, task) }.asCoroutineDispatcher()
 
-    // UNDISPATCHED causes the handler to run until the first suspension point on the current thread
+    // UNDISPATCHED causes the handler to run until the first suspension point on the current thread,
+    // meaning command handlers that don't have suspension points will run completely synchronously.
+    // Tasks that take time to compute should suspend the coroutine and resume on another thread.
     val job = async(context = dispatcher, start = UNDISPATCHED) { command.method.invokeSuspend(command.instance, args) }
 
     if (job.isCompleted) {
@@ -48,11 +50,6 @@ fun callAsCoroutine(command: ReflectiveCommand,
 
 private suspend fun Method.invokeSuspend(instance: Any?, args: Array<Any?>): Any? {
     return suspendCoroutineOrReturn { cont ->
-        println()
-        println("Calling command method suspendedly")
-        println(toGenericString())
-        println(Arrays.toString(arrayOf(instance, *args, cont)))
-        println()
         invoke(instance, *args, cont)
     }
 }

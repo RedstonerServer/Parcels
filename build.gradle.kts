@@ -6,6 +6,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformJvmPlugin
 import java.io.PrintWriter
 
+val firstImport = false
 val stdout = PrintWriter(File("$rootDir/gradle-output.txt"))
 
 buildscript {
@@ -30,8 +31,8 @@ allprojects {
     }
     dependencies {
         val spigotVersion = "1.13-R0.1-SNAPSHOT"
-        compile("org.bukkit:bukkit:$spigotVersion")
-        compile("org.spigotmc:spigot-api:$spigotVersion")
+        compile("org.bukkit:bukkit:$spigotVersion") { isTransitive = false }
+        compile("org.spigotmc:spigot-api:$spigotVersion") { isTransitive = false }
 
         compile("net.sf.trove4j:trove4j:3.0.3")
         testCompile("junit:junit:4.12")
@@ -80,73 +81,23 @@ dependencies {
     compile("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
     compile("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
     compile("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jacksonVersion")
+    //compile("org.yaml:snakeyaml:1.19")
 
     compile("org.slf4j:slf4j-api:1.7.25")
     compile("ch.qos.logback:logback-classic:1.2.3")
 }
 
 tasks {
-    val compileKotlin by getting(KotlinCompile::class) {
-        //this.setupPlugins()
-
-        //serializedCompilerArguments.add("-java-parameters")
-    }
-
-    fun Jar.packageDependencies(vararg names: String) {
-        //afterEvaluate {
-            from(*project.configurations.compile.resolvedConfiguration.firstLevelModuleDependencies
-                .filter { it.moduleName in names }
-                .flatMap { it.allModuleArtifacts }
-                .map { it.file }
-                .map(::zipTree)
-                .toTypedArray()
-            )
-        //}
-    }
-
-    fun Jar.packageDependency(name: String, configure: ModuleDependency.() -> Unit) {
-        val configuration = project.configurations.compile.copyRecursive()
-
-        configuration.dependencies.removeIf {
-            if (it is ModuleDependency && it.name == name) {
-                it.configure()
-                false
-            } else true
-        }
-
-        from(*configuration.resolvedConfiguration.resolvedArtifacts
-            .map { it.file }
-            .map(::zipTree)
-            .toTypedArray())
-    }
-
-    fun Jar.packageArtifacts(vararg names: String) {
-        //afterEvaluate {
-            from(*project.configurations.compile.resolvedConfiguration.resolvedArtifacts
-                .filter {
-                    val id = it.moduleVersion.id
-                    (id.name in names).also {
-                        if (!it) stdout.println("Not including artifact: ${id.group}:${id.name}")
-                    }
-                }
-                .map { it.file }
-                .map(::zipTree)
-                .toTypedArray())
-        //}
-    }
-
     val serverDir = "$rootDir/debug"
-
     val jar by getting(Jar::class)
-
     val kotlinStdlibJar by creating(Jar::class) {
         destinationDir = file("$serverDir/lib")
         archiveName = "kotlin-stdlib.jar"
         packageDependencies("kotlin-stdlib-jdk8")
     }
 
-    val shadowJar by getting(ShadowJar::class) {
-        relocate("", "")
+    val debugEnvironment by creating(Exec::class) {
+
     }
 
     val releaseJar by creating(ShadowJar::class) {
@@ -202,3 +153,55 @@ allprojects {
 }
 
 stdout.flush()
+stdout.close()
+
+fun Jar.packageDependencies(vararg names: String) {
+    if (!firstImport) {
+        from(*project.configurations.compile.resolvedConfiguration.firstLevelModuleDependencies
+            .filter { it.moduleName in names }
+            .flatMap { it.allModuleArtifacts }
+            .map { it.file }
+            .map(::zipTree)
+            .toTypedArray()
+        )
+    }
+}
+
+fun Jar.packageDependency(name: String, configure: ModuleDependency.() -> Unit) {
+    if (!firstImport) {
+        val configuration = project.configurations.compile.copyRecursive()
+
+        configuration.dependencies.removeIf {
+            if (it is ModuleDependency && it.name == name) {
+                it.configure()
+                false
+            } else true
+        }
+
+        from(*configuration.resolvedConfiguration.resolvedArtifacts
+            .map { it.file }
+            .map(::zipTree)
+            .toTypedArray())
+    }
+}
+
+@Suppress("IMPLICIT_CAST_TO_ANY")
+fun Jar.packageArtifacts(vararg names: String) {
+    if (!firstImport) {
+        from(*project.configurations.compile.resolvedConfiguration.firstLevelModuleDependencies
+            .flatMap { dep -> dep.allModuleArtifacts.map { dep to it } }
+            .filter { pair ->
+                val (dep, art) = pair
+                val id = art.moduleVersion.id
+                (id.name in names).also {
+                    val artName = art.moduleVersion.id.let {"${it.group}:${it.name}:${it.version}"}
+                    val depName = dep.let { "${it.moduleGroup}:${it.moduleName}:${it.moduleVersion}" }
+                    val name = "$artName \n    from $depName"
+                    stdout.println("${if (it) "Including" else "Not including"} artifact $name")
+                }
+            }
+            .map { pair -> pair.second.file }
+            .map { if (it.isDirectory()) it else zipTree(it) }
+            .toTypedArray())
+    }
+}

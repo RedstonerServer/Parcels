@@ -66,7 +66,12 @@ class ParcelsPlugin : JavaPlugin() {
             yamlObjectMapper.readerForUpdating(options).readValue<Options>(optionsFile)
         } else if (optionsFile.tryCreate()) {
             options.addWorld("plotworld", WorldOptions())
-            yamlObjectMapper.writeValue(optionsFile, options)
+            try {
+                yamlObjectMapper.writeValue(optionsFile, options)
+            } catch (ex: Throwable) {
+                optionsFile.delete()
+                throw ex
+            }
         } else {
             plogger.error("Failed to save options file ${optionsFile.canonicalPath}")
             return false

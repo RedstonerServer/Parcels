@@ -57,32 +57,30 @@ object ParcelOptionsT : Table("parcel_options") {
 private class ExposedDatabaseException(message: String? = null) : Exception(message)
 
 @Suppress("NOTHING_TO_INLINE")
-class ExposedBacking(val dataSource: DataSource) : Backing {
+class ExposedBacking(private val dataSourceFactory: () -> DataSource) : Backing {
     override val name get() = "Exposed"
+    private var dataSource: DataSource? = null
     private var database: Database? = null
     private var isShutdown: Boolean = false
 
     override val isConnected get() = database != null
 
     override suspend fun init() {
-        synchronized {
-            if (isShutdown) throw IllegalStateException()
-            database = Database.connect(dataSource)
-            transaction(database) {
-                create(WorldsT, ParcelsT, AddedLocalT, ParcelOptionsT)
-            }
+        if (isShutdown) throw IllegalStateException()
+        dataSource = dataSourceFactory()
+        database = Database.connect(dataSource!!)
+        transaction(database) {
+            create(WorldsT, ParcelsT, AddedLocalT, ParcelOptionsT)
         }
     }
 
     override suspend fun shutdown() {
-        synchronized {
-            if (isShutdown) throw IllegalStateException()
-            if (dataSource is HikariDataSource) {
-                dataSource.close()
-            }
-            database = null
-            isShutdown = true
+        if (isShutdown) throw IllegalStateException()
+        dataSource?.let {
+            if (it is HikariDataSource) it.close()
         }
+        database = null
+        isShutdown = true
     }
 
     private fun <T> transaction(statement: Transaction.() -> T) = transaction(database, statement)
@@ -206,7 +204,7 @@ class ExposedBacking(val dataSource: DataSource) : Backing {
         if (data == null) {
             transaction {
                 getParcelId(parcelFor)?.let { id ->
-                    ParcelsT.deleteIgnoreWhere(limit = 1) { ParcelsT.id eq id }
+                    ParcelsT.deleteIgnoreWhere() { ParcelsT.id eq id }
 
                     // Below should cascade automatically
                     /*
@@ -245,7 +243,7 @@ class ExposedBacking(val dataSource: DataSource) : Backing {
         else
             getOrInitParcelId(parcelFor)
 
-        ParcelsT.update({ ParcelsT.id eq id }, limit = 1) {
+        ParcelsT.update({ ParcelsT.id eq id }) {
             it[ParcelsT.owner_uuid] = binaryUuid
             it[ParcelsT.owner_name] = name
         }

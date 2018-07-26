@@ -1,24 +1,33 @@
 package io.dico.parcels2.storage
 
 import com.zaxxer.hikari.HikariConfig
-import com.zaxxer.hikari.HikariDataSource
 import io.dico.parcels2.DataConnectionOptions
-import javax.sql.DataSource
 
-fun getHikariDataSource(dialectName: String,
-                        driver: String,
-                        dco: DataConnectionOptions): DataSource = with(HikariConfig()) {
+fun getHikariConfig(dialectName: String,
+                    dco: DataConnectionOptions): HikariConfig = HikariConfig().apply {
 
     val (address, port) = dco.splitAddressAndPort() ?: throw IllegalArgumentException("Invalid address: ${dco.address}")
 
-    poolName = "redstonerplots"
+    when (dialectName) {
+        "postgresql" -> run {
+            dataSourceClassName = "org.postgresql.ds.PGSimpleDataSource"
+            dataSourceProperties["serverName"] = address
+            dataSourceProperties["portNumber"] = port.toString()
+            dataSourceProperties["databaseName"] = dco.database
+        }
+        else -> throw IllegalArgumentException("Unsupported dialect: $dialectName")
+    }
+
+    poolName = "parcels"
     maximumPoolSize = dco.poolSize
-    dataSourceClassName = driver
     username = dco.username
     password = dco.password
     connectionTimeout = 15000
     leakDetectionThreshold = 10000
     connectionTestQuery = "SELECT 1"
+
+
+    /*
 
     addDataSourceProperty("serverName", address)
     addDataSourceProperty("port", port.toString())
@@ -32,7 +41,7 @@ fun getHikariDataSource(dialectName: String,
         dataSourceProperties.remove("port")
         dataSourceProperties.remove("databaseName")
         addDataSourceProperty("url", "jdbc:h2:${if (address.isBlank()) "" else "tcp://$address/"}~/${dco.database}")
-    } else {
+    } else if (dialectName.toLowerCase() == "mysql") {
         // doesn't exist on the MariaDB driver
         addDataSourceProperty("cachePrepStmts", "true")
         addDataSourceProperty("alwaysSendSetIsolation", "false")
@@ -49,8 +58,7 @@ fun getHikariDataSource(dialectName: String,
         // make sure unicode characters can be used.
         addDataSourceProperty("characterEncoding", "utf8")
         addDataSourceProperty("useUnicode", "true")
-    }
+    } else {
 
-    HikariDataSource(this)
-
+    }*/
 }

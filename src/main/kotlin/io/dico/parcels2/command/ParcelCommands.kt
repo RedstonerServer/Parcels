@@ -8,6 +8,7 @@ import io.dico.dicore.command.annotation.Desc
 import io.dico.dicore.command.annotation.RequireParameters
 import io.dico.parcels2.ParcelOwner
 import io.dico.parcels2.ParcelsPlugin
+import io.dico.parcels2.command.NamedParcelDefaultValue.FIRST_OWNED
 import io.dico.parcels2.logger
 import io.dico.parcels2.storage.getParcelBySerializedValue
 import io.dico.parcels2.util.hasParcelHomeOthers
@@ -34,7 +35,7 @@ class ParcelCommands(val plugin: ParcelsPlugin) : ICommandReceiver.Factory {
     @Desc("Finds the unclaimed parcel nearest to origin,",
         "and gives it to you",
         shortVersion = "sets you up with a fresh, unclaimed parcel")
-    suspend fun WorldOnlyScope.cmdAuto(player: Player): Any? {
+    suspend fun WorldScope.cmdAuto(player: Player): Any? {
         logger.info("cmdAuto thread before await: ${Thread.currentThread().name}")
         val numOwnedParcels = plugin.storage.getNumParcels(ParcelOwner(uuid = player.uuid)).await()
         logger.info("cmdAuto thread before await: ${Thread.currentThread().name}")
@@ -65,8 +66,9 @@ class ParcelCommands(val plugin: ParcelsPlugin) : ICommandReceiver.Factory {
         "more than one parcel",
         shortVersion = "teleports you to parcels")
     @RequireParameters(0)
-    suspend fun SuspendOnlyScope.cmdHome(player: Player, context: ExecutionContext,
-                                         @NamedParcelDefault(NamedParcelDefaultValue.FIRST_OWNED) target: NamedParcelTarget): Any? {
+    suspend fun cmdHome(player: Player,
+                        @NamedParcelDefault(FIRST_OWNED) target: NamedParcelTarget): Any?
+    {
         if (player !== target.player && !player.hasParcelHomeOthers) {
             error("You do not have permission to teleport to other people's parcels")
         }

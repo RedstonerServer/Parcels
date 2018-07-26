@@ -17,7 +17,7 @@ import java.util.*
 class Options {
     var worlds: Map<String, WorldOptions> = HashMap()
         private set
-    var storage: StorageOptions = StorageOptions("mysql", DataConnectionOptions())
+    var storage: StorageOptions = StorageOptions("postgresql", DataConnectionOptions())
 
     fun addWorld(name: String, options: WorldOptions) = (worlds as MutableMap).put(name, options)
 
@@ -90,7 +90,7 @@ data class DataConnectionOptions(val address: String = "localhost",
             logger.error("(Invalidly) blank address in data storage options")
         }
 
-        val port = address.substring(idx).toIntOrNull() ?: return null.also {
+        val port = address.substring(idx + 1).toIntOrNull() ?: return null.also {
             logger.error("Invalid port number in data storage options: $it, using $defaultPort as default")
         }
 
