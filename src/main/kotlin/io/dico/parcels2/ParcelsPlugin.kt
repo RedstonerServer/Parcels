@@ -1,8 +1,10 @@
 package io.dico.parcels2
 
+import io.dico.dicore.Registrator
 import io.dico.dicore.command.EOverridePolicy
 import io.dico.dicore.command.ICommandDispatcher
 import io.dico.parcels2.command.getParcelCommands
+import io.dico.parcels2.listener.ParcelEditListener
 import io.dico.parcels2.storage.Storage
 import io.dico.parcels2.storage.yamlObjectMapper
 import io.dico.parcels2.util.tryCreate
@@ -30,6 +32,7 @@ class ParcelsPlugin : JavaPlugin() {
         }
 
         registerCommands()
+        registerListeners()
     }
 
     override fun onDisable() {
@@ -83,6 +86,10 @@ class ParcelsPlugin : JavaPlugin() {
         cmdDispatcher = getParcelCommands(this).apply {
             registerToCommandMap("parcels:", EOverridePolicy.FALLBACK_ONLY)
         }
+    }
+
+    private fun registerListeners() {
+        Registrator(this).registerListeners(ParcelEditListener(worlds))
     }
 
 }
