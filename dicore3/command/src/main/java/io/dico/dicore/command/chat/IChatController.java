@@ -25,4 +25,6 @@ public interface IChatController {
 
     String getMessagePrefixForType(EMessageType type);
 
+    String filterMessage(String message);
+
 }

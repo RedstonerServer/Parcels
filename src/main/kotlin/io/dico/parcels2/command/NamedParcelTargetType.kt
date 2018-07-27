@@ -6,6 +6,7 @@ import io.dico.dicore.command.parameter.type.ParameterConfig
 import io.dico.dicore.command.parameter.type.ParameterType
 import io.dico.parcels2.ParcelWorld
 import io.dico.parcels2.Worlds
+import io.dico.parcels2.util.isValid
 import org.bukkit.Bukkit
 import org.bukkit.OfflinePlayer
 import org.bukkit.command.CommandSender
@@ -42,7 +43,7 @@ class ParcelHomeParameterType(val worlds: Worlds) : ParameterType<NamedParcelTar
 
     @Suppress("UsePropertyAccessSyntax")
     private fun getOfflinePlayer(input: String, parameter: Parameter<*, *>) = Bukkit.getOfflinePlayer(input)
-        ?.takeIf { it.isOnline() || it.hasPlayedBefore() }
+        ?.takeIf { it.isValid }
         ?: invalidInput(parameter, "do not know who $input is")
 
     override fun parse(parameter: Parameter<NamedParcelTarget, NamedParcelDefaultValue>,

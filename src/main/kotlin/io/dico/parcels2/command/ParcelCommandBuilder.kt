@@ -9,6 +9,7 @@ import io.dico.parcels2.logger
 fun getParcelCommands(plugin: ParcelsPlugin): ICommandDispatcher {
     //@formatter:off
     return CommandBuilder()
+        .setChatController(ParcelsChatController())
         .addParameterType(false, ParcelParameterType(plugin.worlds))
         .addParameterType(true, ParcelHomeParameterType(plugin.worlds))
 
@@ -19,6 +20,10 @@ fun getParcelCommands(plugin: ParcelsPlugin): ICommandDispatcher {
             .group("option")
                 .apply { ParcelOptionCommands.setGroupDescription(this) }
                 .registerCommands(ParcelOptionCommands(plugin))
+                .parent()
+
+            .group("admin", "a")
+                .registerCommands(ParcelAdminCommands(plugin))
                 .parent()
 
             .putDebugCommands(plugin)

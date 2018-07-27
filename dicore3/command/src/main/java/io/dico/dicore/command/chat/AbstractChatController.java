@@ -4,9 +4,29 @@ import io.dico.dicore.command.CommandException;
 import io.dico.dicore.command.EMessageType;
 import io.dico.dicore.command.ExecutionContext;
 import io.dico.dicore.command.ICommandAddress;
+import io.dico.dicore.command.chat.help.HelpPages;
 import org.bukkit.command.CommandSender;
+import org.jetbrains.annotations.NotNull;
 
 public class AbstractChatController implements IChatController {
+    private @NotNull HelpPages helpPages;
+
+    public AbstractChatController(@NotNull HelpPages helpPages) {
+        this.helpPages = helpPages;
+    }
+
+    public AbstractChatController() {
+        this(HelpPages.newDefaultHelpPages());
+    }
+
+    @NotNull
+    public HelpPages getHelpPages() {
+        return helpPages;
+    }
+
+    public void setHelpPages(@NotNull HelpPages helpPages) {
+        this.helpPages = helpPages;
+    }
 
     @Override
     public void sendMessage(ExecutionContext context, EMessageType type, String message) {
@@ -37,12 +57,12 @@ public class AbstractChatController implements IChatController {
 
     @Override
     public void sendHelpMessage(CommandSender sender, ExecutionContext context, ICommandAddress address, int page) {
-        sendMessage(sender, EMessageType.INSTRUCTION, HelpCache.getHelpCache(address).getHelpPage(page));
+        sender.sendMessage(helpPages.getHelpPage(sender, context, address, page));
     }
 
     @Override
     public void sendSyntaxMessage(CommandSender sender, ExecutionContext context, ICommandAddress address) {
-        sendMessage(sender, EMessageType.INSTRUCTION, HelpCache.getHelpCache(address).getSyntax());
+        sender.sendMessage(helpPages.getSyntax(sender, context, address));
     }
 
     @Override
@@ -81,6 +101,11 @@ public class AbstractChatController implements IChatController {
     @Override
     public String getMessagePrefixForType(EMessageType type) {
         return "";
+    }
+
+    @Override
+    public String filterMessage(String message) {
+        return message;
     }
 
 }
