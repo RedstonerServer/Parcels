@@ -9,8 +9,8 @@ import org.bukkit.plugin.java.JavaPlugin
 
 inline val OfflinePlayer.uuid get() = uniqueId
 inline val Player.hasBanBypass get() = hasPermission("parcels.admin.bypass.ban")
-inline val Player.hasBuildAnywhere get() = hasPermission("parcels.admin.bypass.build")
 inline val Player.hasGamemodeBypass get() = hasPermission("parcels.admin.bypass.gamemode")
+inline val Player.hasBuildAnywhere get() = hasPermission("parcels.admin.bypass.build")
 inline val Player.hasAdminManage get() = hasPermission("parcels.admin.manage")
 inline val Player.hasParcelHomeOthers get() = hasPermission("parcels.command.home.others")
 inline val Player.hasRandomSpecific get() = hasPermission("parcels.command.random.specific")

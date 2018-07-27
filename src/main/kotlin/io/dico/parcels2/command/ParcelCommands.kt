@@ -36,12 +36,9 @@ class ParcelCommands(val plugin: ParcelsPlugin) : ICommandReceiver.Factory {
         "and gives it to you",
         shortVersion = "sets you up with a fresh, unclaimed parcel")
     suspend fun WorldScope.cmdAuto(player: Player): Any? {
-        logger.info("cmdAuto thread before await: ${Thread.currentThread().name}")
         val numOwnedParcels = plugin.storage.getNumParcels(ParcelOwner(uuid = player.uuid)).await()
-        logger.info("cmdAuto thread before await: ${Thread.currentThread().name}")
 
         val limit = player.parcelLimit
-
         if (numOwnedParcels >= limit) {
             error("You have enough plots for now")
         }
@@ -67,15 +64,12 @@ class ParcelCommands(val plugin: ParcelsPlugin) : ICommandReceiver.Factory {
         shortVersion = "teleports you to parcels")
     @RequireParameters(0)
     suspend fun cmdHome(player: Player,
-                        @NamedParcelDefault(FIRST_OWNED) target: NamedParcelTarget): Any?
-    {
+                        @NamedParcelDefault(FIRST_OWNED) target: NamedParcelTarget): Any? {
         if (player !== target.player && !player.hasParcelHomeOthers) {
             error("You do not have permission to teleport to other people's parcels")
         }
 
-        logger.info("cmdHome thread before await: ${Thread.currentThread().name}")
         val ownedParcelsResult = plugin.storage.getOwnedParcels(ParcelOwner(uuid = target.player.uuid)).await()
-        logger.info("cmdHome thread after await: ${Thread.currentThread().name}")
 
         val uuid = target.player.uuid
         val ownedParcels = ownedParcelsResult

@@ -11,10 +11,6 @@ import org.bukkit.plugin.EventExecutor;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredListener;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
 import java.lang.reflect.*;
 import java.util.*;
 import java.util.function.Consumer;
@@ -434,22 +430,6 @@ public final class Registrator {
     // # Public types
     // ############################################
 
-    public interface IEventListener<T extends Event> extends Consumer<T> {
-        @Override
-        void accept(T event);
-    }
-
-    @Retention(RetentionPolicy.RUNTIME)
-    @Target(ElementType.FIELD)
-    public @interface ListenerInfo {
-
-        String[] events() default {};
-
-        EventPriority priority() default EventPriority.HIGHEST;
-
-        boolean ignoreCancelled() default true;
-    }
-
     public static class Registration extends RegisteredListener {
 
         private final EventExecutor executor;
@@ -658,17 +638,17 @@ public final class Registrator {
         fieldLoop:
         for (Field f : fields) {
             if (isStatic != Modifier.isStatic(f.getModifiers())
-                    || !f.isAnnotationPresent(ListenerInfo.class)) {
+                    || !f.isAnnotationPresent(ListenerMarker.class)) {
                 continue;
             }
 
-            if (!IEventListener.class.isAssignableFrom(f.getType())) {
-                handleListenerFieldError(new ListenerFieldError(f, "Field type cannot be assigned to IEventListener: " + f.getGenericType().getTypeName()));
+            if (!RegistratorListener.class.isAssignableFrom(f.getType())) {
+                handleListenerFieldError(new ListenerFieldError(f, "Field type cannot be assigned to RegistratorListener: " + f.getGenericType().getTypeName()));
                 continue;
             }
 
             Type eventType = null;
-            if (f.getType() == IEventListener.class) {
+            if (f.getType() == RegistratorListener.class) {
 
                 Type[] typeArgs;
                 if (!(f.getGenericType() instanceof ParameterizedType)
@@ -681,7 +661,7 @@ public final class Registrator {
                 eventType = typeArgs[0];
 
             } else {
-                // field type is subtype of IEventListener.
+                // field type is subtype of RegistratorListener.
                 // TODO: link type arguments from field declaration (f.getGenericType()) to matching TypeVariables
                 Type[] interfaces = f.getType().getGenericInterfaces();
                 for (Type itf : interfaces) {
@@ -702,7 +682,7 @@ public final class Registrator {
                         continue;
                     }
 
-                    if (itfClass == IEventListener.class) {
+                    if (itfClass == RegistratorListener.class) {
                         if (arguments == null || arguments.length != 1) {
                             // Log a warning or throw an exception
                             handleListenerFieldError(new ListenerFieldError(f, ""));
@@ -749,7 +729,7 @@ public final class Registrator {
 
             Class<? extends Event> baseEventClass = (Class<? extends Event>) eventType;
 
-            ListenerInfo anno = f.getAnnotation(ListenerInfo.class);
+            ListenerMarker anno = f.getAnnotation(ListenerMarker.class);
             String[] eventClassNames = anno.events();
             if (eventClassNames.length > 0) {
 
@@ -844,9 +824,9 @@ public final class Registrator {
     private static final class ListenerFieldInfo {
         final Class<? extends Event> eventClass;
         final Consumer<? super Event> lambda;
-        final ListenerInfo anno;
+        final ListenerMarker anno;
 
-        ListenerFieldInfo(Class<? extends Event> eventClass, Consumer<? super Event> lambda, ListenerInfo anno) {
+        ListenerFieldInfo(Class<? extends Event> eventClass, Consumer<? super Event> lambda, ListenerMarker anno) {
             this.eventClass = eventClass;
             this.lambda = lambda;
             this.anno = anno;

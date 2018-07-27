@@ -90,6 +90,8 @@ class Parcel(val world: ParcelWorld, val pos: Vec2i) : ParcelData {
             world.storage.setParcelAllowsInteractInventory(this, value)
             data.allowInteractInventory = value
         }
+
+    var hasBlockVisitors: Boolean = false; private set
 }
 
 class ParcelDataHolder : ParcelData {
