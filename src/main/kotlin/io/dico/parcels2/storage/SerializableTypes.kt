@@ -3,7 +3,7 @@ package io.dico.parcels2.storage
 import io.dico.parcels2.Parcel
 import io.dico.parcels2.ParcelWorld
 import io.dico.parcels2.Worlds
-import io.dico.parcels2.math.Vec2i
+import io.dico.parcels2.util.Vec2i
 import org.bukkit.Bukkit
 import org.bukkit.World
 import java.util.*

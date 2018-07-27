@@ -2,14 +2,14 @@ package io.dico.parcels2.storage
 
 import com.zaxxer.hikari.HikariDataSource
 import io.dico.parcels2.*
-import io.dico.parcels2.math.Vec2i
-import io.dico.parcels2.util.synchronized
+import io.dico.parcels2.util.Vec2i
 import io.dico.parcels2.util.toByteArray
 import io.dico.parcels2.util.toUUID
 import kotlinx.coroutines.experimental.channels.ProducerScope
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SchemaUtils.create
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.joda.time.DateTime
 import java.util.*
 import javax.sql.DataSource
 
@@ -29,6 +29,7 @@ object ParcelsT : Table("parcels") {
         .references(WorldsT.id)
     val owner_uuid = binary("owner_uuid", 16).nullable()
     val owner_name = varchar("owner_name", 16).nullable()
+    val claim_time = datetime("claim_time").nullable()
 }
 
 object AddedLocalT : Table("parcels_added_local") {
@@ -148,30 +149,18 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource) : Backing 
         channel.close()
     }
 
+    override suspend fun ProducerScope<Pair<SerializableParcel, ParcelData?>>.produceAllParcelData() {
+        ParcelsT.selectAll().forEach { row ->
+            val parcel = rowToSerializableParcel(row) ?: return@forEach
+            val data = rowToParcelData(row)
+            channel.send(parcel to data)
+        }
+        channel.close()
+    }
+
     override suspend fun readParcelData(parcelFor: Parcel): ParcelData? = transaction {
         val row = getParcelRow(parcelFor) ?: return@transaction null
-
-        ParcelDataHolder().apply {
-
-            owner = ParcelOwner.create(
-                uuid = row[ParcelsT.owner_uuid]?.toUUID(),
-                name = row[ParcelsT.owner_name]
-            )
-
-            val parcelId = row[ParcelsT.id]
-            AddedLocalT.select { AddedLocalT.parcel_id eq parcelId }.forEach {
-                val uuid = it[AddedLocalT.player_uuid].toUUID()!!
-                val status = if (it[AddedLocalT.allowed_flag]) AddedStatus.ALLOWED else AddedStatus.BANNED
-                setAddedStatus(uuid, status)
-            }
-
-            ParcelOptionsT.select { ParcelOptionsT.parcel_id eq parcelId }.firstOrNull()?.let {
-                allowInteractInputs = it[ParcelOptionsT.interact_inputs]
-                allowInteractInventory = it[ParcelOptionsT.interact_inventory]
-            }
-
-        }
-
+        rowToParcelData(row)
     }
 
     // TODO order by some new column
@@ -186,16 +175,8 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource) : Backing 
             where = { ParcelsT.owner_name eq name }
         }
 
-        ParcelsT.select(where)
-            .map { parcelRow ->
-                val worldId = parcelRow[ParcelsT.world_id]
-                val worldRow = WorldsT.select({ WorldsT.id eq worldId }).firstOrNull()
-                    ?: return@map null
-
-                val world = SerializableWorld(worldRow[WorldsT.name], worldRow[WorldsT.uid].toUUID())
-                SerializableParcel(world, Vec2i(parcelRow[ParcelsT.px], parcelRow[ParcelsT.pz]))
-            }
-            .filterNotNull()
+        ParcelsT.select(where).orderBy(ParcelsT.claim_time, isAsc = true)
+            .mapNotNull(::rowToSerializableParcel)
             .toList()
     }
 
@@ -237,6 +218,7 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource) : Backing 
     override suspend fun setParcelOwner(parcelFor: Parcel, owner: ParcelOwner?) = transaction {
         val binaryUuid = owner?.uuid?.toByteArray()
         val name = owner?.name
+        val time = owner?.let { DateTime.now() }
 
         val id = if (owner == null)
             getParcelId(parcelFor) ?: return@transaction
@@ -246,6 +228,7 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource) : Backing 
         ParcelsT.update({ ParcelsT.id eq id }) {
             it[ParcelsT.owner_uuid] = binaryUuid
             it[ParcelsT.owner_name] = name
+            it[ParcelsT.claim_time] = time
         }
     }
 
@@ -279,6 +262,43 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource) : Backing 
         ParcelOptionsT.insertOrUpdate(ParcelOptionsT.interact_inputs) {
             it[ParcelOptionsT.parcel_id] = id
             it[ParcelOptionsT.interact_inputs] = value
+        }
+    }
+
+    override suspend fun readGlobalPlayerStateData(owner: ParcelOwner): AddedData? {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    override suspend fun setGlobalPlayerState(owner: ParcelOwner, player: UUID, state: Boolean?) {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    private fun rowToSerializableParcel(row: ResultRow): SerializableParcel? {
+        val worldId = row[ParcelsT.world_id]
+        val worldRow = WorldsT.select { WorldsT.id eq worldId }.firstOrNull()
+            ?: return null
+
+        val world = SerializableWorld(worldRow[WorldsT.name], worldRow[WorldsT.uid].toUUID())
+        return SerializableParcel(world, Vec2i(row[ParcelsT.px], row[ParcelsT.pz]))
+    }
+
+    private fun rowToParcelData(row: ResultRow) = ParcelDataHolder().apply {
+        owner = ParcelOwner.create(
+            uuid = row[ParcelsT.owner_uuid]?.toUUID(),
+            name = row[ParcelsT.owner_name],
+            time = row[ParcelsT.claim_time]
+        )
+
+        val parcelId = row[ParcelsT.id]
+        AddedLocalT.select { AddedLocalT.parcel_id eq parcelId }.forEach {
+            val uuid = it[AddedLocalT.player_uuid].toUUID()!!
+            val status = if (it[AddedLocalT.allowed_flag]) AddedStatus.ALLOWED else AddedStatus.BANNED
+            setAddedStatus(uuid, status)
+        }
+
+        ParcelOptionsT.select { ParcelOptionsT.parcel_id eq parcelId }.firstOrNull()?.let {
+            allowInteractInputs = it[ParcelOptionsT.interact_inputs]
+            allowInteractInventory = it[ParcelOptionsT.interact_inventory]
         }
     }
 

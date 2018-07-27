@@ -1,5 +1,6 @@
 package io.dico.parcels2.storage
 
+import io.dico.parcels2.AddedData
 import io.dico.parcels2.Parcel
 import io.dico.parcels2.ParcelData
 import io.dico.parcels2.ParcelOwner
@@ -25,6 +26,8 @@ interface Storage {
 
     fun readParcelData(parcelsFor: Sequence<Parcel>, channelCapacity: Int): ReceiveChannel<Pair<Parcel, ParcelData?>>
 
+    fun readAllParcelData(channelCapacity: Int): ReceiveChannel<Pair<SerializableParcel, ParcelData?>>
+
     fun getOwnedParcels(user: ParcelOwner): Deferred<List<SerializableParcel>>
 
     fun getNumParcels(user: ParcelOwner): Deferred<Int>
@@ -40,6 +43,10 @@ interface Storage {
 
     fun setParcelAllowsInteractInputs(parcel: Parcel, value: Boolean): Job
 
+
+    fun readGlobalPlayerStateData(owner: ParcelOwner): Deferred<AddedData?>
+
+    fun setGlobalPlayerState(owner: ParcelOwner, player: UUID, state: Boolean?): Job
 }
 
 class StorageWithCoroutineBacking internal constructor(val backing: Backing) : Storage {
@@ -66,9 +73,11 @@ class StorageWithCoroutineBacking internal constructor(val backing: Backing) : S
 
     override fun readParcelData(parcelFor: Parcel) = defer { backing.readParcelData(parcelFor) }
 
-    override fun readParcelData(parcelsFor: Sequence<Parcel>, channelCapacity: Int) = produce(asyncDispatcher, capacity = channelCapacity) {
-        with(backing) { produceParcelData(parcelsFor) }
-    }
+    override fun readParcelData(parcelsFor: Sequence<Parcel>, channelCapacity: Int) =
+        produce(asyncDispatcher, capacity = channelCapacity) { with(backing) { produceParcelData(parcelsFor) } }
+
+    override fun readAllParcelData(channelCapacity: Int): ReceiveChannel<Pair<SerializableParcel, ParcelData?>> =
+        produce(asyncDispatcher, capacity = channelCapacity) { with(backing) { produceAllParcelData() } }
 
     override fun getOwnedParcels(user: ParcelOwner) = defer { backing.getOwnedParcels(user) }
 
@@ -83,4 +92,9 @@ class StorageWithCoroutineBacking internal constructor(val backing: Backing) : S
     override fun setParcelAllowsInteractInventory(parcel: Parcel, value: Boolean) = job { backing.setParcelAllowsInteractInventory(parcel, value) }
 
     override fun setParcelAllowsInteractInputs(parcel: Parcel, value: Boolean) = job { backing.setParcelAllowsInteractInputs(parcel, value) }
+
+
+    override fun readGlobalPlayerStateData(owner: ParcelOwner): Deferred<AddedData?> = defer { backing.readGlobalPlayerStateData(owner) }
+
+    override fun setGlobalPlayerState(owner: ParcelOwner, player: UUID, state: Boolean?) = job { backing.setGlobalPlayerState(owner, player, state) }
 }

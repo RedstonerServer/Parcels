@@ -1,4 +1,4 @@
-package io.dico.parcels2.math
+package io.dico.parcels2.util
 
 fun Double.floor(): Int {
     val down = toInt()

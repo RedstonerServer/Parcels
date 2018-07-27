@@ -1,11 +1,11 @@
 package io.dico.parcels2
 
-import io.dico.parcels2.math.Vec2i
-import io.dico.parcels2.math.floor
 import io.dico.parcels2.storage.SerializableParcel
 import io.dico.parcels2.storage.SerializableWorld
 import io.dico.parcels2.storage.Storage
+import io.dico.parcels2.util.Vec2i
 import io.dico.parcels2.util.doAwait
+import io.dico.parcels2.util.floor
 import kotlinx.coroutines.experimental.launch
 import org.bukkit.Bukkit
 import org.bukkit.Location

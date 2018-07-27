@@ -1,4 +1,4 @@
-package io.dico.parcels2.math
+package io.dico.parcels2.util
 
 data class Vec2i(
     val x: Int,

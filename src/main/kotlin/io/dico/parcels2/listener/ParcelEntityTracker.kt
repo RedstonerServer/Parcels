@@ -40,8 +40,9 @@ class ParcelEntityTracker(val worlds: Worlds) {
         }
     }
 
+    @Suppress("RedundantLambdaArrow")
     fun swapParcels(parcel1: Parcel, parcel2: Parcel) {
-        map.editLoop {
+        map.editLoop { ->
             if (value === parcel1) {
                 value = parcel2
             } else if (value === parcel2) {

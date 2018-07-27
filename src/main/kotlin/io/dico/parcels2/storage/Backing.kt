@@ -1,5 +1,6 @@
 package io.dico.parcels2.storage
 
+import io.dico.parcels2.AddedData
 import io.dico.parcels2.Parcel
 import io.dico.parcels2.ParcelData
 import io.dico.parcels2.ParcelOwner
@@ -23,6 +24,8 @@ interface Backing {
      */
     suspend fun ProducerScope<Pair<Parcel, ParcelData?>>.produceParcelData(parcels: Sequence<Parcel>)
 
+    suspend fun ProducerScope<Pair<SerializableParcel, ParcelData?>>.produceAllParcelData()
+
     suspend fun readParcelData(parcelFor: Parcel): ParcelData?
 
     suspend fun getOwnedParcels(user: ParcelOwner): List<SerializableParcel>
@@ -39,5 +42,10 @@ interface Backing {
     suspend fun setParcelAllowsInteractInventory(parcel: Parcel, value: Boolean)
 
     suspend fun setParcelAllowsInteractInputs(parcel: Parcel, value: Boolean)
+
+
+    suspend fun readGlobalPlayerStateData(owner: ParcelOwner): AddedData?
+
+    suspend fun setGlobalPlayerState(owner: ParcelOwner, player: UUID, state: Boolean?)
 
 }

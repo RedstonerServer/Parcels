@@ -110,7 +110,7 @@ class ParcelListeners(val worlds: Worlds, val entityTracker: ParcelEntityTracker
 
     private inline val Long.columnX get() = and(0xFFFF_FFFFL).toInt()
     private inline val Long.columnZ get() = ushr(32).and(0xFFFF_FFFFL).toInt()
-    private inline fun TLongCollection.forEachInline(block: (Long) -> Unit) = iterator().let { while (it.hasNext()) block(it.next()) }
+    private inline fun TLongCollection.troveForEach(block: (Long) -> Unit) = iterator().let { while (it.hasNext()) block(it.next()) }
     //@formatter:on
     private fun checkPistonMovement(event: BlockPistonEvent, blocks: List<Block>) {
         val world = worlds.getWorld(event.block.world) ?: return
@@ -122,7 +122,7 @@ class ParcelListeners(val worlds: Worlds, val entityTracker: ParcelEntityTracker
             it.getRelative(direction).let { columns.add(Column(it.x, it.z)) }
         }
 
-        columns.forEachInline {
+        columns.troveForEach {
             val ppa = world.parcelAt(it.columnX, it.columnZ)
             if (ppa.isNullOr { hasBlockVisitors }) {
                 event.isCancelled = true

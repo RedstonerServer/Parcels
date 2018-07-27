@@ -1,9 +1,9 @@
 package io.dico.parcels2
 
-import io.dico.parcels2.math.Vec2i
-import io.dico.parcels2.math.clamp
-import io.dico.parcels2.math.even
-import io.dico.parcels2.math.umod
+import io.dico.parcels2.util.Vec2i
+import io.dico.parcels2.util.clamp
+import io.dico.parcels2.util.even
+import io.dico.parcels2.util.umod
 import org.bukkit.*
 import org.bukkit.Bukkit.createBlockData
 import org.bukkit.block.Biome

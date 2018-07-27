@@ -1,6 +1,6 @@
 package io.dico.parcels2
 
-import io.dico.parcels2.math.Vec2i
+import io.dico.parcels2.util.Vec2i
 import io.dico.parcels2.util.getPlayerName
 import io.dico.parcels2.util.hasBuildAnywhere
 import io.dico.parcels2.util.isValid
@@ -8,6 +8,7 @@ import io.dico.parcels2.util.uuid
 import org.bukkit.Bukkit
 import org.bukkit.OfflinePlayer
 import org.bukkit.entity.Player
+import org.joda.time.DateTime
 import java.util.*
 
 interface AddedData {
@@ -148,12 +149,13 @@ enum class AddedStatus {
 
 @Suppress("UsePropertyAccessSyntax")
 class ParcelOwner(val uuid: UUID? = null,
-                  name: String? = null) {
+                  name: String? = null,
+                  val since: DateTime? = null) {
 
     companion object {
-        fun create(uuid: UUID?, name: String?): ParcelOwner? {
-            return uuid?.let { ParcelOwner(uuid, name) }
-                ?: name?.let { ParcelOwner(uuid, name) }
+        fun create(uuid: UUID?, name: String?, time: DateTime? = null): ParcelOwner? {
+            return uuid?.let { ParcelOwner(uuid, name, time) }
+                ?: name?.let { ParcelOwner(uuid, name, time) }
         }
     }
 
