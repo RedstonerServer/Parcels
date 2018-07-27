@@ -1,17 +1,18 @@
 package io.dico.parcels2.command
 
-import io.dico.dicore.command.*
+import io.dico.dicore.command.CommandException
+import io.dico.dicore.command.ExecutionContext
+import io.dico.dicore.command.ICommandReceiver
+import io.dico.dicore.command.Validate
 import io.dico.parcels2.Parcel
 import io.dico.parcels2.ParcelWorld
 import io.dico.parcels2.Worlds
-import io.dico.parcels2.logger
 import io.dico.parcels2.util.hasAdminManage
 import io.dico.parcels2.util.uuid
 import org.bukkit.entity.Player
 import java.lang.reflect.Method
 import kotlin.reflect.full.extensionReceiverParameter
 import kotlin.reflect.full.findAnnotation
-import kotlin.reflect.jvm.javaType
 import kotlin.reflect.jvm.jvmErasure
 import kotlin.reflect.jvm.kotlinFunction
 
@@ -24,7 +25,10 @@ annotation class ParcelRequire(val admin: Boolean = false, val owner: Boolean = 
 annotation class SuspensionTimeout(val millis: Int)
 
 open class WorldScope(val world: ParcelWorld) : ICommandReceiver
-open class ParcelScope(val parcel: Parcel) : WorldScope(parcel.world)
+open class ParcelScope(val parcel: Parcel) : WorldScope(parcel.world) {
+    fun checkCanManage(player: Player, action: String) = Validate.isTrue(player.hasAdminManage || parcel.isOwner(player.uuid),
+        "You must own this parcel to $action")
+}
 
 fun getParcelCommandReceiver(worlds: Worlds, context: ExecutionContext, method: Method, cmdName: String): ICommandReceiver {
     val player = context.sender as Player

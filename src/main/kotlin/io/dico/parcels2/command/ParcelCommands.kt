@@ -1,47 +1,27 @@
 package io.dico.parcels2.command
 
-import io.dico.dicore.command.CommandException
-import io.dico.dicore.command.ExecutionContext
-import io.dico.dicore.command.ICommandReceiver
 import io.dico.dicore.command.annotation.Cmd
 import io.dico.dicore.command.annotation.Desc
 import io.dico.dicore.command.annotation.RequireParameters
 import io.dico.parcels2.ParcelOwner
 import io.dico.parcels2.ParcelsPlugin
 import io.dico.parcels2.command.NamedParcelDefaultValue.FIRST_OWNED
-import io.dico.parcels2.logger
 import io.dico.parcels2.storage.getParcelBySerializedValue
+import io.dico.parcels2.util.hasAdminManage
 import io.dico.parcels2.util.hasParcelHomeOthers
-import io.dico.parcels2.util.parcelLimit
 import io.dico.parcels2.util.uuid
 import org.bukkit.entity.Player
-import org.bukkit.plugin.Plugin
-import java.lang.reflect.Method
 
 //@Suppress("unused")
-class ParcelCommands(val plugin: ParcelsPlugin) : ICommandReceiver.Factory {
-    private inline val worlds get() = plugin.worlds
-
-    override fun getPlugin(): Plugin = plugin
-    override fun getReceiver(context: ExecutionContext, target: Method, cmdName: String): ICommandReceiver {
-        return getParcelCommandReceiver(plugin.worlds, context, target, cmdName)
-    }
-
-    private fun error(message: String): Nothing {
-        throw CommandException(message)
-    }
+class ParcelCommands(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
 
     @Cmd("auto")
     @Desc("Finds the unclaimed parcel nearest to origin,",
         "and gives it to you",
         shortVersion = "sets you up with a fresh, unclaimed parcel")
     suspend fun WorldScope.cmdAuto(player: Player): Any? {
-        val numOwnedParcels = plugin.storage.getNumParcels(ParcelOwner(uuid = player.uuid)).await()
-
-        val limit = player.parcelLimit
-        if (numOwnedParcels >= limit) {
-            error("You have enough plots for now")
-        }
+        checkConnected("be claimed")
+        checkParcelLimit(player)
 
         val parcel = world.nextEmptyParcel()
             ?: error("This world is full, please ask an admin to upsize it")
@@ -86,8 +66,16 @@ class ParcelCommands(val plugin: ParcelsPlugin) : ICommandReceiver.Factory {
     @Cmd("claim")
     @Desc("If this parcel is unowned, makes you the owner",
         shortVersion = "claims this parcel")
-    fun ParcelScope.cmdClaim(player: Player) {
+    suspend fun ParcelScope.cmdClaim(player: Player): Any? {
+        checkConnected("be claimed")
+        parcel.owner.takeIf { !player.hasAdminManage }?.let {
+            error(if (it.matches(player)) "You already own this parcel" else "This parcel is not available")
+        }
 
+        checkParcelLimit(player)
+        parcel.owner = ParcelOwner(uuid = player.uuid, name = player.name)
+        return "Enjoy your new parcel!"
     }
+
 
 }

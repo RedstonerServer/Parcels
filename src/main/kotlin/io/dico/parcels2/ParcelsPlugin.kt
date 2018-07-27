@@ -15,9 +15,7 @@ import org.slf4j.LoggerFactory
 import java.io.File
 
 val logger = LoggerFactory.getLogger("ParcelsPlugin")
-
 private inline val plogger get() = logger
-const val debugging = true
 
 class ParcelsPlugin : JavaPlugin() {
     lateinit var optionsFile: File; private set
@@ -31,6 +29,7 @@ class ParcelsPlugin : JavaPlugin() {
     private var cmdDispatcher: ICommandDispatcher? = null
 
     override fun onEnable() {
+        plogger.info("Debug enabled: ${plogger.isDebugEnabled}")
         if (!init()) {
             Bukkit.getPluginManager().disablePlugin(this)
         }
