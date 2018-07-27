@@ -29,8 +29,7 @@ class ParcelEditListener(val worlds: Worlds) {
 
     private inline fun <T> T?.isNullOr(condition: T.() -> Boolean): Boolean = this == null || condition()
     private inline fun <T> T?.isPresentAnd(condition: T.() -> Boolean): Boolean = this != null && condition()
-    private inline fun
-    fun Parcel?.canBuildN(user: Player) = isPresentAnd { canBuild(user) } || user.hasBuildAnywhere
+    private inline fun Parcel?.canBuildN(user: Player) = isPresentAnd { canBuild(user) } || user.hasBuildAnywhere
 
     /**
      * Get the world and parcel that the block resides in
