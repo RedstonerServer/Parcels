@@ -118,7 +118,7 @@ tasks {
             "logback-core",
             "logback-classic",
 
-            "h2",
+            //"h2",
             "HikariCP",
             "kotlinx-coroutines-core",
             "kotlinx-coroutines-core-common",

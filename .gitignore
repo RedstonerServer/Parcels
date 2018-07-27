@@ -6,3 +6,4 @@ build/
 /debug/
 target/
 /gradle-output.txt
+/*.java

@@ -4,7 +4,8 @@ import io.dico.dicore.Registrator
 import io.dico.dicore.command.EOverridePolicy
 import io.dico.dicore.command.ICommandDispatcher
 import io.dico.parcels2.command.getParcelCommands
-import io.dico.parcels2.listener.ParcelEditListener
+import io.dico.parcels2.listener.ParcelEntityTracker
+import io.dico.parcels2.listener.ParcelListeners
 import io.dico.parcels2.storage.Storage
 import io.dico.parcels2.storage.yamlObjectMapper
 import io.dico.parcels2.util.tryCreate
@@ -19,20 +20,20 @@ private inline val plogger get() = logger
 const val debugging = true
 
 class ParcelsPlugin : JavaPlugin() {
-    lateinit var optionsFile: File
-    lateinit var options: Options
-    lateinit var worlds: Worlds
-    lateinit var storage: Storage
+    lateinit var optionsFile: File; private set
+    lateinit var options: Options; private set
+    lateinit var worlds: Worlds; private set
+    lateinit var storage: Storage; private set
+
+    val registrator = Registrator(this)
+    lateinit var entityTracker: ParcelEntityTracker; private set
+    private var listeners: ParcelListeners? = null
     private var cmdDispatcher: ICommandDispatcher? = null
 
     override fun onEnable() {
         if (!init()) {
             Bukkit.getPluginManager().disablePlugin(this)
-            return
         }
-
-        registerCommands()
-        registerListeners()
     }
 
     override fun onDisable() {
@@ -60,6 +61,10 @@ class ParcelsPlugin : JavaPlugin() {
             plogger.error("Error loading options", ex)
             return false
         }
+
+        entityTracker = ParcelEntityTracker(worlds)
+        registerListeners()
+        registerCommands()
 
         return true
     }
@@ -89,7 +94,10 @@ class ParcelsPlugin : JavaPlugin() {
     }
 
     private fun registerListeners() {
-        Registrator(this).registerListeners(ParcelEditListener(worlds))
+        if (listeners != null) {
+            listeners = ParcelListeners(worlds, entityTracker)
+            registrator.registerListeners(listeners!!)
+        }
     }
 
 }
