@@ -5,5 +5,4 @@ import io.dico.dicore.command.chat.AbstractChatController
 class ParcelsChatController : AbstractChatController() {
 
 
-
 }

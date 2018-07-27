@@ -12,7 +12,7 @@ import org.bukkit.entity.Player
 import org.bukkit.plugin.Plugin
 import java.lang.reflect.Method
 
-abstract class AbstractParcelCommands(val plugin: ParcelsPlugin): ICommandReceiver.Factory {
+abstract class AbstractParcelCommands(val plugin: ParcelsPlugin) : ICommandReceiver.Factory {
 
     override fun getPlugin(): Plugin = plugin
     override fun getReceiver(context: ExecutionContext, target: Method, cmdName: String): ICommandReceiver {

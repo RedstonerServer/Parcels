@@ -10,7 +10,7 @@ import io.dico.parcels2.ParcelsPlugin
 import org.bukkit.entity.Player
 import kotlin.reflect.KMutableProperty
 
-class ParcelOptionCommands(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
+class CommandsParcelOptions(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
     @Cmd("inputs")
     @Desc("Sets whether players who are not allowed to",
         "build here can use levers, buttons,",

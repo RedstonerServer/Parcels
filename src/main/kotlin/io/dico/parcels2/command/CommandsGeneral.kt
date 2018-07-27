@@ -13,7 +13,7 @@ import io.dico.parcels2.util.uuid
 import org.bukkit.entity.Player
 
 //@Suppress("unused")
-class ParcelCommands(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
+class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
 
     @Cmd("auto")
     @Desc("Finds the unclaimed parcel nearest to origin,",

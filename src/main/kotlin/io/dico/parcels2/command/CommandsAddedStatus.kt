@@ -8,7 +8,7 @@ import io.dico.parcels2.util.hasAdminManage
 import org.bukkit.OfflinePlayer
 import org.bukkit.entity.Player
 
-class ParcelAddCommands(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
+class CommandsAddedStatus(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
 
     @Cmd("allow", aliases = ["add", "permit"])
     @Desc("Allows a player to build on this parcel",

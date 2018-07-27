@@ -6,7 +6,7 @@ import io.dico.parcels2.ParcelsPlugin
 import org.bukkit.Bukkit
 import org.bukkit.entity.Player
 
-class DebugCommands(val plugin: ParcelsPlugin) {
+class CommandsDebug(val plugin: ParcelsPlugin) {
 
     @Cmd("reloadoptions")
     fun reloadOptions() {

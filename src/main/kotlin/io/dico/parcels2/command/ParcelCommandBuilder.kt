@@ -14,16 +14,16 @@ fun getParcelCommands(plugin: ParcelsPlugin): ICommandDispatcher {
         .addParameterType(true, ParcelHomeParameterType(plugin.worlds))
 
         .group("parcel", "plot", "plots", "p")
-            .registerCommands(ParcelCommands(plugin))
-            .registerCommands(ParcelAddCommands(plugin))
+            .registerCommands(CommandsGeneral(plugin))
+            .registerCommands(CommandsAddedStatus(plugin))
 
             .group("option")
-                .apply { ParcelOptionCommands.setGroupDescription(this) }
-                .registerCommands(ParcelOptionCommands(plugin))
+                .apply { CommandsParcelOptions.setGroupDescription(this) }
+                .registerCommands(CommandsParcelOptions(plugin))
                 .parent()
 
             .group("admin", "a")
-                .registerCommands(ParcelAdminCommands(plugin))
+                .registerCommands(CommandsAdmin(plugin))
                 .parent()
 
             .putDebugCommands(plugin)
@@ -37,7 +37,7 @@ private fun CommandBuilder.putDebugCommands(plugin: ParcelsPlugin): CommandBuild
     if (!logger.isDebugEnabled) return this
     //@formatter:off
     return group("debug", "d")
-        .registerCommands(DebugCommands(plugin))
+        .registerCommands(CommandsDebug(plugin))
         .parent()
     //@formatter:on
 }
