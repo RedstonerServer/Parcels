@@ -33,40 +33,43 @@ class UpsertStatement<Key : Any>(table: Table, conflictColumn: Column<*>? = null
     val indexName: String
     val indexColumns: List<Column<*>>
 
+    private fun getUpdateStatement(): UpdateStatement {
+        val map: Map<Column<Any?>, Any?> = values.castUnchecked()
+        val statement = updateBody(table, UpdateStatement(table, null, combineAsConjunctions(indexColumns.castUnchecked(), map))) {
+            map.forEach { col, value -> if (col !in indexColumns)
+                it[col] = value
+            }
+        }
+        return statement
+    }
+
     init {
-        if (conflictIndex != null) {
-            indexName = conflictIndex.indexName
-            indexColumns = conflictIndex.columns
-        } else if (conflictColumn != null) {
-            indexName = conflictColumn.name
-            indexColumns = listOf(conflictColumn)
-        } else {
-            throw IllegalArgumentException()
+        when {
+            conflictIndex != null -> {
+                indexName = conflictIndex.indexName
+                indexColumns = conflictIndex.columns
+            }
+            conflictColumn != null -> {
+                indexName = conflictColumn.name
+                indexColumns = listOf(conflictColumn)
+            }
+            else -> throw IllegalArgumentException()
         }
     }
 
     override fun prepareSQL(transaction: Transaction): String {
         val insertSQL = super.prepareSQL(transaction)
-        val args = arguments!!.first()
-        val map = mutableMapOf<Column<Any?>, Any?>().apply { args.forEach { put(it.first.castUnchecked(), it.second) } }
+        val updateStatement = getUpdateStatement()
+        val updateSQL = updateStatement.prepareSQL(transaction)
+        super.arguments = listOf(super.arguments!!.first(), updateStatement.firstDataSet)
 
-        val updateSQL = updateBody(table, UpdateStatement(table, null, combineAsConjunctions(indexColumns.castUnchecked(), map))) {
-            map.forEach { col, value ->
-                if (col !in columns) {
-                    it[col] = value
-                }
-            }
-        }.prepareSQL(transaction)
-
-        val builder = StringBuilder().apply {
+        return buildString {
             append(insertSQL)
             append(" ON CONFLICT(")
             append(indexName)
             append(") DO UPDATE ")
             append(updateSQL)
-        }
-
-        return builder.toString().also { println(it) }
+        }.also { println(it) }
     }
 
     private companion object {
@@ -100,10 +103,10 @@ inline fun <T : Table> T.upsert(conflictColumn: Column<*>? = null, conflictIndex
         execute(TransactionManager.current())
     }
 
-fun Table.indexR(customIndexName:String? = null, isUnique: Boolean = false, vararg columns: Column<*>): Index {
+fun Table.indexR(customIndexName: String? = null, isUnique: Boolean = false, vararg columns: Column<*>): Index {
     val index = Index(columns.toList(), isUnique, customIndexName)
     indices.add(index)
     return index
 }
 
-fun Table.uniqueIndexR(customIndexName:String? = null, vararg columns: Column<*>): Index = indexR(customIndexName, true, *columns)
+fun Table.uniqueIndexR(customIndexName: String? = null, vararg columns: Column<*>): Index = indexR(customIndexName, true, *columns)

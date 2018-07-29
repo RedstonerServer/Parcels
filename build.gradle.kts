@@ -64,9 +64,11 @@ dependencies {
     compile(project(":dicore3:dicore3-command"))
 
     c.kotlinStd(kotlin("stdlib-jdk8"))
+    c.kotlinStd(kotlin("reflect"))
     c.kotlinStd(kotlinx("coroutines-core:0.23.4"))
-    c.kotlinStd("org.jetbrains.exposed:exposed:0.10.3")
 
+    compile("org.jetbrains.exposed:exposed:0.10.3") { isTransitive = false }
+    compile("joda-time:joda-time:2.10")
     compile("com.zaxxer:HikariCP:3.2.0")
 
     val jacksonVersion = "2.9.6"

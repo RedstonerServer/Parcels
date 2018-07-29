@@ -46,10 +46,9 @@ object AddedGlobalT : Table("parcels_added_global") {
 }
 
 object ParcelOptionsT : Table("parcel_options") {
-    val parcel_id = integer("parcel_id").references(ParcelsT.id, ReferenceOption.CASCADE)
+    val parcel_id = integer("parcel_id").primaryKey().references(ParcelsT.id, ReferenceOption.CASCADE)
     val interact_inventory = bool("interact_inventory").default(false)
     val interact_inputs = bool("interact_inputs").default(false)
-    val index_parcel_id = uniqueIndexR("index_parcel_id", parcel_id)
 }
 
 private class ExposedDatabaseException(message: String? = null) : Exception(message)
@@ -248,7 +247,12 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource) : Backing 
 
     override suspend fun setParcelAllowsInteractInventory(parcel: Parcel, value: Boolean): Unit = transaction {
         val id = getOrInitParcelId(parcel)
-        ParcelOptionsT.upsert(ParcelOptionsT.parcel_id) {
+        /*ParcelOptionsT.upsert(ParcelOptionsT.parcel_id) {
+            it[ParcelOptionsT.parcel_id] = id
+            it[ParcelOptionsT.interact_inventory] = value
+        }*/
+
+        ParcelOptionsT.replace {
             it[ParcelOptionsT.parcel_id] = id
             it[ParcelOptionsT.interact_inventory] = value
         }
@@ -256,7 +260,7 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource) : Backing 
 
     override suspend fun setParcelAllowsInteractInputs(parcel: Parcel, value: Boolean): Unit = transaction {
         val id = getOrInitParcelId(parcel)
-        ParcelOptionsT.upsert(ParcelOptionsT.parcel_id) {
+        ParcelOptionsT.replace {
             it[ParcelOptionsT.parcel_id] = id
             it[ParcelOptionsT.interact_inputs] = value
         }
