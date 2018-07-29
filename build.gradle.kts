@@ -1,25 +1,23 @@
-@file:Suppress("UNUSED_VARIABLE")
+@file:Suppress("RemoveRedundantBackticks", "IMPLICIT_CAST_TO_ANY", "UNUSED_VARIABLE")
 
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import org.jetbrains.kotlin.gradle.dsl.Coroutines.ENABLE
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformJvmPlugin
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.io.PrintWriter
 
-val firstImport = false
-val stdout = PrintWriter(File("$rootDir/gradle-output.txt"))
-
-buildscript {
-    dependencies {
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.2.51")
-    }
-}
+val stdout = PrintWriter("gradle-output.txt")
 
 group = "io.dico"
 version = "0.1"
 
-inline fun <reified T : Plugin<out Project>> Project.apply() =
-    (this as PluginAware).apply<T>()
+plugins {
+    java
+    kotlin("jvm") version "1.2.51"
+    id("com.github.johnrengelman.plugin-shadow") version "2.0.3"
+}
+
+kotlin.experimental.coroutines = ENABLE
 
 allprojects {
     apply<JavaPlugin>()
@@ -28,76 +26,72 @@ allprojects {
         mavenCentral()
         maven("https://hub.spigotmc.org/nexus/content/repositories/snapshots")
         maven("https://hub.spigotmc.org/nexus/content/repositories/sonatype-nexus-snapshots")
+        maven("https://dl.bintray.com/kotlin/exposed")
     }
+
     dependencies {
         val spigotVersion = "1.13-R0.1-SNAPSHOT"
-        compile("org.bukkit:bukkit:$spigotVersion") { isTransitive = false }
-        compile("org.spigotmc:spigot-api:$spigotVersion") { isTransitive = false }
+        c.provided("org.bukkit:bukkit:$spigotVersion") { isTransitive = false }
+        c.provided("org.spigotmc:spigot-api:$spigotVersion") { isTransitive = false }
 
-        compile("net.sf.trove4j:trove4j:3.0.3")
+        c.provided("net.sf.trove4j:trove4j:3.0.3")
         testCompile("junit:junit:4.12")
+    }
+
+    afterEvaluate {
+        tasks.filter { it is Jar }.forEach { it.group = "artifacts" }
     }
 }
 
 project(":dicore3:dicore3-command") {
     apply<KotlinPlatformJvmPlugin>()
-
     kotlin.experimental.coroutines = ENABLE
 
     dependencies {
-        // why the fuck does it need reflect explicitly?
-        compile("org.jetbrains.kotlinx:kotlinx-coroutines-core:0.23.4")
-        compile(kotlin("reflect", version = "1.2.50"))
-        compile(kotlin("stdlib-jdk8", version = "1.2.51"))
+        c.kotlinStd(kotlin("stdlib-jdk8"))
+        c.kotlinStd(kotlin("reflect"))
+        c.kotlinStd(kotlinx("coroutines-core:0.23.4"))
+
         compile(project(":dicore3:dicore3-core"))
         compile("com.thoughtworks.paranamer:paranamer:2.8")
+        c.provided("com.google.guava:guava:25.1-jre")
     }
 }
 
-
-plugins {
-    kotlin("jvm") version "1.2.51"
-    id("com.github.johnrengelman.plugin-shadow") version "2.0.3"
-}
-
-kotlin.experimental.coroutines = ENABLE
-
-repositories {
-    maven("https://dl.bintray.com/kotlin/exposed")
-}
 
 dependencies {
     compile(project(":dicore3:dicore3-core"))
     compile(project(":dicore3:dicore3-command"))
-    compile(kotlin("stdlib-jdk8"))
 
-    compile("org.jetbrains.exposed:exposed:0.10.3")
-    compile("org.jetbrains.kotlinx:kotlinx-coroutines-core:0.23.4")
+    c.kotlinStd(kotlin("stdlib-jdk8"))
+    c.kotlinStd(kotlinx("coroutines-core:0.23.4"))
+    c.kotlinStd("org.jetbrains.exposed:exposed:0.10.3")
+
     compile("com.zaxxer:HikariCP:3.2.0")
-    compile("com.h2database:h2:1.4.197")
 
     val jacksonVersion = "2.9.6"
     compile("com.fasterxml.jackson.core:jackson-core:$jacksonVersion")
     compile("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
-    compile("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
     compile("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:$jacksonVersion")
-    //compile("org.yaml:snakeyaml:1.19")
-
-    compile("org.slf4j:slf4j-api:1.7.25")
-    compile("ch.qos.logback:logback-classic:1.2.3")
+    compile("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion") { isTransitive = false }
 }
 
 tasks {
+    removeIf { it is ShadowJar }
+
+    val compileKotlin by getting(KotlinCompile::class) {
+        kotlinOptions {
+            javaParameters = true
+        }
+    }
+
     val serverDir = "$rootDir/debug"
     val jar by getting(Jar::class)
+
     val kotlinStdlibJar by creating(Jar::class) {
         destinationDir = file("$serverDir/lib")
         archiveName = "kotlin-stdlib.jar"
-        packageDependencies("kotlin-stdlib-jdk8")
-    }
-
-    val debugEnvironment by creating(Exec::class) {
-
+        fromFiles(c.kotlinStd)
     }
 
     val releaseJar by creating(ShadowJar::class) {
@@ -105,103 +99,46 @@ tasks {
         baseName = "parcels2-release"
 
         with(jar)
+        fromFiles(c.compile)
 
-        packageArtifacts(
-            "jackson-core",
-            "jackson-databind",
-            "jackson-module-kotlin",
-            "jackson-annotations",
-            "jackson-dataformat-yaml",
-            "snakeyaml",
+        /*
+        Shadow Jar is retarded so it also relocates packages not included in the releaseJar (such as the bukkit api)
 
-            "slf4j-api",
-            "logback-core",
-            "logback-classic",
+        relocate("", "io.dico.parcels2.lib.") {
+            exclude("*yml")
+            exclude("*xml")
+            exclude("META-INF/*")
+            exclude("io/dico/*")
+        }
+        */*/*/
 
-            //"h2",
-            "HikariCP",
-            "kotlinx-coroutines-core",
-            "kotlinx-coroutines-core-common",
-            "atomicfu-common",
-            "exposed",
+        // jackson-dataformat-yaml requires an older version of snakeyaml (1.19 or earlier)
+        // snakeyaml made a breaking change in 1.20 and didn't really warn anyone afaik
+        // it was like me changing the command library because I know I'm the only one using it
+        // spigot ships a later version in the root, so we must relocate ours
+        relocate("org.yaml.snakeyaml.", "io.dico.parcels2.lib.org.yaml.snakeyaml.")
 
-            "dicore3-core",
-            "dicore3-command",
-            "paranamer",
-
-            "trove4j",
-            "joda-time",
-
-            "annotations",
-            "kotlin-stdlib-common",
-            "kotlin-stdlib",
-            "kotlin-stdlib-jdk7",
-            "kotlin-stdlib-jdk8",
-            "kotlin-reflect"
-        )
-
-        relocate("org.yaml.snakeyaml", "io.dico.parcels2.util.snakeyaml")
-
-        manifest.attributes["Class-Path"] = "lib/kotlin-stdlib.jar"
+        manifest.attributes["Class-Path"] = "../lib/kotlin-stdlib.jar"
         dependsOn(kotlinStdlibJar)
     }
-
-}
-
-allprojects {
-    tasks.filter { it is Jar }.forEach { it.group = "artifacts" }
 }
 
 stdout.flush()
 stdout.close()
 
-fun Jar.packageDependencies(vararg names: String) {
-    if (!firstImport) {
-        from(*project.configurations.compile.resolvedConfiguration.firstLevelModuleDependencies
-            .filter { it.moduleName in names }
-            .flatMap { it.allModuleArtifacts }
-            .map { it.file }
-            .map(::zipTree)
-            .toTypedArray()
-        )
-    }
-}
+inline fun <reified T : Plugin<out Project>> Project.apply() =
+    (this as PluginAware).apply<T>()
 
-fun Jar.packageDependency(name: String, configure: ModuleDependency.() -> Unit) {
-    if (!firstImport) {
-        val configuration = project.configurations.compile.copyRecursive()
+fun kotlinx(module: String, version: String? = null): Any =
+    "org.jetbrains.kotlinx:kotlinx-$module${version?.let { ":$version" } ?: ""}"
 
-        configuration.dependencies.removeIf {
-            if (it is ModuleDependency && it.name == name) {
-                it.configure()
-                false
-            } else true
-        }
+val Project.c get() = configurations
 
-        from(*configuration.resolvedConfiguration.resolvedArtifacts
-            .map { it.file }
-            .map(::zipTree)
-            .toTypedArray())
-    }
-}
+val ConfigurationContainer.`provided`: Configuration
+    get() = findByName("provided") ?: create("provided").let { compileClasspath.extendsFrom(it) }
 
-@Suppress("IMPLICIT_CAST_TO_ANY")
-fun Jar.packageArtifacts(vararg names: String) {
-    if (!firstImport) {
-        from(*project.configurations.compile.resolvedConfiguration.firstLevelModuleDependencies
-            .flatMap { dep -> dep.allModuleArtifacts.map { dep to it } }
-            .filter { pair ->
-                val (dep, art) = pair
-                val id = art.moduleVersion.id
-                (id.name in names).also {
-                    val artName = art.moduleVersion.id.let {"${it.group}:${it.name}:${it.version}"}
-                    val depName = dep.let { "${it.moduleGroup}:${it.moduleName}:${it.moduleVersion}" }
-                    val name = "$artName \n    from $depName"
-                    stdout.println("${if (it) "Including" else "Not including"} artifact $name")
-                }
-            }
-            .map { pair -> pair.second.file }
-            .map { if (it.isDirectory()) it else zipTree(it) }
-            .toTypedArray())
-    }
-}
+val ConfigurationContainer.`kotlinStd`: Configuration
+    get() = findByName("kotlinStd") ?: create("kotlinStd").let { compileClasspath.extendsFrom(it) }
+
+fun Jar.fromFiles(files: Iterable<File>) =
+    afterEvaluate { from(*files.map { if (it.isDirectory) it else zipTree(it) }.toTypedArray()) }

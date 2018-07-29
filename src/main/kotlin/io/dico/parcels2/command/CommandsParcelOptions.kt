@@ -25,6 +25,7 @@ class CommandsParcelOptions(plugin: ParcelsPlugin) : AbstractParcelCommands(plug
     @Desc("Sets whether players who are not allowed to",
         "build here can interact with inventories",
         shortVersion = "allows editing inventories")
+    @RequireParameters(0)
     fun ParcelScope.cmdInventory(player: Player, enabled: Boolean?): Any? {
         return runOptionCommand(player, Parcel::allowInteractInventory, enabled, "interaction with inventories")
     }

@@ -21,6 +21,8 @@ public class Parameter<TResult, TParamInfo> {
     private final String description;
     private final ParameterType<TResult, TParamInfo> parameterType;
     private final TParamInfo paramInfo;
+    private final boolean isPrimitive;
+
     private final boolean flag;
     private final String flagPermission;
 
@@ -29,6 +31,10 @@ public class Parameter<TResult, TParamInfo> {
     }
 
     public Parameter(String name, String description, ParameterType<TResult, TParamInfo> parameterType, TParamInfo paramInfo, boolean flag, String flagPermission) {
+        this(name, description, parameterType, paramInfo, false, flag, flagPermission);
+    }
+
+    public Parameter(String name, String description, ParameterType<TResult, TParamInfo> parameterType, TParamInfo paramInfo, boolean isPrimitive, boolean flag, String flagPermission) {
         this.name = Objects.requireNonNull(name);
         this.description = description == null ? "" : description;
         this.parameterType = flag ? parameterType.asFlagParameter() : parameterType;
@@ -38,6 +44,7 @@ public class Parameter<TResult, TParamInfo> {
         }
         */
         this.paramInfo = paramInfo;
+        this.isPrimitive = isPrimitive;
 
         this.flag = flag;
         this.flagPermission = flagPermission;
@@ -49,17 +56,7 @@ public class Parameter<TResult, TParamInfo> {
         }
     }
 
-    public static <TResult> Parameter<TResult, ?> newParameter(String name, String description, ParameterType<TResult, ?> type) {
-        return new Parameter<>(name, description, type, null);
-    }
 
-    public static <TResult, TParamInfo> Parameter<TResult, TParamInfo> newParameter(String name, String description, ParameterType<TResult, TParamInfo> type, TParamInfo info) {
-        return new Parameter<>(name, description, type, info);
-    }
-
-    public static <TResult, TParamInfo> Parameter<TResult, TParamInfo> newParameter(String name, String description, ParameterType<TResult, TParamInfo> parameterType, TParamInfo paramInfo, boolean flag, String flagPermission) {
-        return new Parameter<>(name, description, parameterType, paramInfo, flag, flagPermission);
-    }
 
     public TResult parse(ExecutionContext context, ArgumentBuffer buffer) throws CommandException {
         if (getFlagPermission() != null) {
@@ -94,6 +91,10 @@ public class Parameter<TResult, TParamInfo> {
 
     public TParamInfo getParamInfo() {
         return paramInfo;
+    }
+
+    public boolean isPrimitive() {
+        return isPrimitive;
     }
 
     public boolean isFlag() {

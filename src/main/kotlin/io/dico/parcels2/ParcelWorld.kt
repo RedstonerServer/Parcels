@@ -15,6 +15,7 @@ import org.bukkit.block.Block
 import org.bukkit.entity.Entity
 import org.bukkit.entity.Player
 import java.util.*
+import kotlin.coroutines.experimental.buildIterator
 import kotlin.coroutines.experimental.buildSequence
 import kotlin.reflect.jvm.javaMethod
 import kotlin.reflect.jvm.kotlinFunction
@@ -117,7 +118,9 @@ class ParcelWorld constructor(val name: String,
                               val options: WorldOptions,
                               val generator: ParcelGenerator,
                               val storage: Storage) : ParcelProvider by generator, ParcelContainer {
-    val world: World by lazy { Bukkit.getWorld(name) ?: throw NullPointerException("World $name does not appear to be loaded") }
+    val world: World by lazy {
+        Bukkit.getWorld(name) ?: throw NullPointerException("World $name does not appear to be loaded")
+    }
     val container: ParcelContainer = DefaultParcelContainer(this, storage)
 
     override fun parcelByID(x: Int, z: Int): Parcel? {
@@ -189,12 +192,24 @@ class DefaultParcelContainer(private val world: ParcelWorld,
     }
 
     override fun parcelByID(x: Int, z: Int): Parcel? {
-        return parcels.getOrNull(x)?.getOrNull(z)
+        return parcels.getOrNull(x + world.options.axisLimit)?.getOrNull(z + world.options.axisLimit)
     }
 
     override fun nextEmptyParcel(): Parcel? {
-        return parcels[0][0]
-        TODO()
+        return walkInCircle().find { it.owner == null }
+    }
+
+    private fun walkInCircle(): Iterable<Parcel> = Iterable {
+        buildIterator {
+            val center = world.options.axisLimit
+            for (radius in 0..center) {
+                var x = center - radius; var z = center - radius
+                repeat(radius * 2) { yield(parcels[x++][z]) }
+                repeat(radius * 2) { yield(parcels[x][z++]) }
+                repeat(radius * 2) { yield(parcels[x--][z]) }
+                repeat(radius * 2) { yield(parcels[x][z--]) }
+            }
+        }
     }
 
     fun allParcels(): Sequence<Parcel> = buildSequence {

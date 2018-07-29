@@ -1,9 +1,8 @@
 package io.dico.parcels2.storage
 
-import org.jetbrains.exposed.sql.Column
-import org.jetbrains.exposed.sql.Table
-import org.jetbrains.exposed.sql.Transaction
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.statements.InsertStatement
+import org.jetbrains.exposed.sql.statements.UpdateStatement
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 
 /*
@@ -29,8 +28,82 @@ class InsertOrUpdate<Key : Any>(
 }
 
 
+class UpsertStatement<Key : Any>(table: Table, conflictColumn: Column<*>? = null, conflictIndex: Index? = null)
+    : InsertStatement<Key>(table, false) {
+    val indexName: String
+    val indexColumns: List<Column<*>>
 
+    init {
+        if (conflictIndex != null) {
+            indexName = conflictIndex.indexName
+            indexColumns = conflictIndex.columns
+        } else if (conflictColumn != null) {
+            indexName = conflictColumn.name
+            indexColumns = listOf(conflictColumn)
+        } else {
+            throw IllegalArgumentException()
+        }
+    }
 
+    override fun prepareSQL(transaction: Transaction): String {
+        val insertSQL = super.prepareSQL(transaction)
+        val args = arguments!!.first()
+        val map = mutableMapOf<Column<Any?>, Any?>().apply { args.forEach { put(it.first.castUnchecked(), it.second) } }
 
+        val updateSQL = updateBody(table, UpdateStatement(table, null, combineAsConjunctions(indexColumns.castUnchecked(), map))) {
+            map.forEach { col, value ->
+                if (col !in columns) {
+                    it[col] = value
+                }
+            }
+        }.prepareSQL(transaction)
 
+        val builder = StringBuilder().apply {
+            append(insertSQL)
+            append(" ON CONFLICT(")
+            append(indexName)
+            append(") DO UPDATE ")
+            append(updateSQL)
+        }
 
+        return builder.toString().also { println(it) }
+    }
+
+    private companion object {
+
+        inline fun <T : Table> updateBody(table: T, updateStatement: UpdateStatement,
+                                          body: T.(UpdateStatement) -> Unit): UpdateStatement {
+            table.body(updateStatement)
+            return updateStatement
+        }
+
+        @Suppress("UNCHECKED_CAST", "NOTHING_TO_INLINE")
+        inline fun <T> Any.castUnchecked() = this as T
+
+        private val absent = Any() // marker object
+        fun combineAsConjunctions(columns: Iterable<Column<Any?>>, map: Map<Column<Any?>, Any?>): Op<Boolean>? {
+            return with(SqlExpressionBuilder) {
+                columns.fold<Column<Any?>, Op<Boolean>?>(null) { op, col ->
+                    val arg = map.getOrDefault(col, absent)
+                    if (arg === absent) return@fold op
+                    op?.let { it and (col eq arg) } ?: col eq arg
+                }
+            }
+        }
+
+    }
+}
+
+inline fun <T : Table> T.upsert(conflictColumn: Column<*>? = null, conflictIndex: Index? = null, body: T.(UpsertStatement<Number>) -> Unit) =
+    UpsertStatement<Number>(this, conflictColumn, conflictIndex).apply {
+        body(this)
+        execute(TransactionManager.current())
+    }
+
+fun Table.indexR(customIndexName:String? = null, isUnique: Boolean = false, vararg columns: Column<*>): Index {
+    val index = Index(columns.toList(), isUnique, customIndexName)
+    indices.add(index)
+    return index
+}
+
+fun Table.uniqueIndexR(customIndexName:String? = null, vararg columns: Column<*>): Index = indexR(customIndexName, true, *columns)

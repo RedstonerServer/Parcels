@@ -27,27 +27,27 @@ public abstract class Command {
     }
 
     public <TType> Command addParameter(String name, String description, ParameterType<TType, Void> type) {
-        return addParameter(Parameter.newParameter(name, description, type, null, false, null));
+        return addParameter(new Parameter<>(name, description, type, null, false, null));
     }
 
     public <TType, TParamInfo> Command addParameter(String name, String description, ParameterType<TType, TParamInfo> type, TParamInfo paramInfo) {
-        return addParameter(Parameter.newParameter(name, description, type, paramInfo, false, null));
+        return addParameter(new Parameter<>(name, description, type, paramInfo, false, null));
     }
 
     public <TType> Command addFlag(String name, String description, ParameterType<TType, Void> type) {
-        return addParameter(Parameter.newParameter('-' + name, description, type, null, true, null));
+        return addParameter(new Parameter<>('-' + name, description, type, null, true, null));
     }
 
     public <TType, TParamInfo> Command addFlag(String name, String description, ParameterType<TType, TParamInfo> type, TParamInfo paramInfo) {
-        return addParameter(Parameter.newParameter('-' + name, description, type, paramInfo, true, null));
+        return addParameter(new Parameter<>('-' + name, description, type, paramInfo, true, null));
     }
 
     public <TType> Command addAuthorizedFlag(String name, String description, ParameterType<TType, Void> type, String permission) {
-        return addParameter(Parameter.newParameter('-' + name, description, type, null, true, permission));
+        return addParameter(new Parameter<>('-' + name, description, type, null, true, permission));
     }
 
     public <TType, TParamInfo> Command addAuthorizedFlag(String name, String description, ParameterType<TType, TParamInfo> type, TParamInfo paramInfo, String permission) {
-        return addParameter(Parameter.newParameter('-' + name, description, type, paramInfo, true, permission));
+        return addParameter(new Parameter<>('-' + name, description, type, paramInfo, true, permission));
     }
 
     public Command requiredParameters(int requiredParameters) {

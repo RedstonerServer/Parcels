@@ -332,7 +332,7 @@ public class ReflectiveRegistration {
 
         ParameterType<Object, Object> parameterType = selector.selectAny(type, typeAnnotation == null ? null : typeAnnotation.getClass());
         if (parameterType == null) {
-            throw new CommandParseException("IParameter type not found for parameter " + name + " in method " + method.toGenericString());
+            throw new CommandParseException("IParameter type not found for parameter " + name + " in method " + method.toString());
         }
 
         Object parameterInfo;
@@ -348,7 +348,8 @@ public class ReflectiveRegistration {
 
         try {
             //noinspection unchecked
-            return Parameter.newParameter(name, descString, parameterType, parameterInfo, name.startsWith("-"), flag == null ? null : flag.permission());
+            String flagPermission = flag == null ? null : flag.permission();
+            return new Parameter<>(name, descString, parameterType, parameterInfo, type.isPrimitive(), name.startsWith("-"), flagPermission);
         } catch (Exception ex) {
             throw new CommandParseException("Invalid parameter", ex);
         }

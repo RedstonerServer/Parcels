@@ -42,9 +42,6 @@ public class ParameterTypes {
     public static final NumberParameterType<Float> FLOAT;
     public static final ParameterType<Player, Void> PLAYER;
     public static final ParameterType<OfflinePlayer, Void> OFFLINE_PLAYER;
-    //public static final ParameterType<Boolean, Void> PRESENCE;
-    //public static final NumberParameterType<BigDecimal> BIG_DECIMAL;
-    //public static final NumberParameterType<BigInteger> BIG_INTEGER;
 
     private ParameterTypes() {
 
@@ -59,7 +56,7 @@ public class ParameterTypes {
 
             @Override
             public String getDefaultValue(Parameter<String, Void> parameter, CommandSender sender, ArgumentBuffer buffer) throws CommandException {
-                return "";
+                return null;
             }
         });
 
@@ -81,7 +78,7 @@ public class ParameterTypes {
 
             @Override
             public Boolean getDefaultValue(Parameter<Boolean, Void> parameter, CommandSender sender, ArgumentBuffer buffer) throws CommandException {
-                return false;
+                return !parameter.isPrimitive() ? null : false;
             }
 
             @Override

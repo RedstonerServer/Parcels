@@ -153,14 +153,7 @@ public final class CommandBuilder {
      * @return this
      */
     public CommandBuilder generatePredefinedCommands(String... commands) {
-        for (String value : commands) {
-            Consumer<ICommandAddress> subscriber = PredefinedCommand.getPredefinedCommandGenerator(value);
-            if (subscriber == null) {
-                System.out.println("[Command Warning] generated command '" + value + "' could not be found");
-            } else {
-                subscriber.accept(cur);
-            }
-        }
+        ReflectiveRegistration.generateCommands(cur, commands);
         return this;
     }
 

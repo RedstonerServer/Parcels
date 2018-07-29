@@ -17,42 +17,39 @@ object WorldsT : Table("worlds") {
     val id = integer("world_id").autoIncrement().primaryKey()
     val name = varchar("name", 50)
     val uid = binary("uid", 16)
-        .also { uniqueIndex("index_uid", it) }
+    val index_uid = uniqueIndexR("index_uid", uid)
 }
 
 object ParcelsT : Table("parcels") {
     val id = integer("parcel_id").autoIncrement().primaryKey()
     val px = integer("px")
     val pz = integer("pz")
-    val world_id = integer("id")
-        .also { uniqueIndex("index_location", it, px, pz) }
-        .references(WorldsT.id)
+    val world_id = integer("world_id").references(WorldsT.id)
     val owner_uuid = binary("owner_uuid", 16).nullable()
     val owner_name = varchar("owner_name", 16).nullable()
     val claim_time = datetime("claim_time").nullable()
+    val index_location = uniqueIndexR("index_location", world_id, px, pz)
 }
 
 object AddedLocalT : Table("parcels_added_local") {
-    val parcel_id = integer("parcel_id")
-        .references(ParcelsT.id, ReferenceOption.CASCADE)
+    val parcel_id = integer("parcel_id").references(ParcelsT.id, ReferenceOption.CASCADE)
     val player_uuid = binary("player_uuid", 16)
-        .also { uniqueIndex("index_pair", parcel_id, it) }
     val allowed_flag = bool("allowed_flag")
+    val index_pair = uniqueIndexR("index_pair", parcel_id, player_uuid)
 }
 
 object AddedGlobalT : Table("parcels_added_global") {
     val owner_uuid = binary("owner_uuid", 16)
     val player_uuid = binary("player_uuid", 16)
-        .also { uniqueIndex("index_pair", owner_uuid, it) }
     val allowed_flag = bool("allowed_flag")
+    val index_pair = uniqueIndexR("index_pair", owner_uuid, player_uuid)
 }
 
 object ParcelOptionsT : Table("parcel_options") {
-    val parcel_id = integer("parcel_id")
-        .also { uniqueIndex("index_parcel_id", it) }
-        .references(ParcelsT.id, ReferenceOption.CASCADE)
+    val parcel_id = integer("parcel_id").references(ParcelsT.id, ReferenceOption.CASCADE)
     val interact_inventory = bool("interact_inventory").default(false)
     val interact_inputs = bool("interact_inputs").default(false)
+    val index_parcel_id = uniqueIndexR("index_parcel_id", parcel_id)
 }
 
 private class ExposedDatabaseException(message: String? = null) : Exception(message)
@@ -163,7 +160,6 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource) : Backing 
         rowToParcelData(row)
     }
 
-    // TODO order by some new column
     override suspend fun getOwnedParcels(user: ParcelOwner): List<SerializableParcel> = transaction {
         val where: SqlExpressionBuilder.() -> Op<Boolean>
 
@@ -175,7 +171,8 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource) : Backing 
             where = { ParcelsT.owner_name eq name }
         }
 
-        ParcelsT.select(where).orderBy(ParcelsT.claim_time, isAsc = true)
+        ParcelsT.select(where)
+            .orderBy(ParcelsT.claim_time, isAsc = true)
             .mapNotNull(::rowToSerializableParcel)
             .toList()
     }
@@ -243,7 +240,7 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource) : Backing 
         }
 
         val id = getOrInitParcelId(parcelFor)
-        AddedLocalT.insertOrUpdate(AddedLocalT.allowed_flag) {
+        AddedLocalT.upsert(AddedLocalT.parcel_id) {
             it[AddedLocalT.parcel_id] = id
             it[AddedLocalT.player_uuid] = binaryUuid
         }
@@ -251,7 +248,7 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource) : Backing 
 
     override suspend fun setParcelAllowsInteractInventory(parcel: Parcel, value: Boolean): Unit = transaction {
         val id = getOrInitParcelId(parcel)
-        ParcelOptionsT.insertOrUpdate(ParcelOptionsT.interact_inventory) {
+        ParcelOptionsT.upsert(ParcelOptionsT.parcel_id) {
             it[ParcelOptionsT.parcel_id] = id
             it[ParcelOptionsT.interact_inventory] = value
         }
@@ -259,7 +256,7 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource) : Backing 
 
     override suspend fun setParcelAllowsInteractInputs(parcel: Parcel, value: Boolean): Unit = transaction {
         val id = getOrInitParcelId(parcel)
-        ParcelOptionsT.insertOrUpdate(ParcelOptionsT.interact_inputs) {
+        ParcelOptionsT.upsert(ParcelOptionsT.parcel_id) {
             it[ParcelOptionsT.parcel_id] = id
             it[ParcelOptionsT.interact_inputs] = value
         }

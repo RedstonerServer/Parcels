@@ -67,3 +67,10 @@ private fun Deferred<Any?>.getResult(): String? {
     }
     return ReflectiveCommand.getResult(getCompleted(), null)
 }
+
+fun getNonPrimitiveClass(clazz: Class<*>): Class<*>? {
+    return if (clazz.isPrimitive)
+        clazz.kotlin.javaObjectType
+    else
+        null
+}

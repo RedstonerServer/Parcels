@@ -49,7 +49,8 @@ public abstract class NumberParameterType<T extends Number> extends ParameterTyp
     @Override
     public T getDefaultValue(Parameter<T, Range.Memory> parameter, CommandSender sender, ArgumentBuffer buffer) throws CommandException {
         Range.Memory memory = (Range.Memory) parameter.getParamInfo();
-        return select(memory != null ? memory.defaultValue() : 0);
+        if (memory != null) return select(memory.defaultValue());
+        return !parameter.isPrimitive() ? null : select(0);
     }
 
 }

@@ -194,7 +194,7 @@ class DefaultParcelGenerator(val worlds: Worlds, val name: String, private val o
         val signBlock = world.getBlockAt(b.x - 2, o.floorHeight + 1, b.z - 1)
         val skullBlock = world.getBlockAt(b.x - 1, o.floorHeight + 2, b.z - 1)
 
-        val owner = parcel.data?.owner
+        val owner = parcel.owner
         if (owner == null) {
             wallBlock.blockData = o.wallType
             signBlock.type = Material.AIR
