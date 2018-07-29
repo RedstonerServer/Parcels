@@ -252,7 +252,7 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource) : Backing 
             it[ParcelOptionsT.interact_inventory] = value
         }*/
 
-        ParcelOptionsT.replace {
+        ParcelOptionsT.upsert(ParcelOptionsT.parcel_id) {
             it[ParcelOptionsT.parcel_id] = id
             it[ParcelOptionsT.interact_inventory] = value
         }
@@ -260,7 +260,7 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource) : Backing 
 
     override suspend fun setParcelAllowsInteractInputs(parcel: Parcel, value: Boolean): Unit = transaction {
         val id = getOrInitParcelId(parcel)
-        ParcelOptionsT.replace {
+        ParcelOptionsT.upsert(ParcelOptionsT.parcel_id) {
             it[ParcelOptionsT.parcel_id] = id
             it[ParcelOptionsT.interact_inputs] = value
         }
