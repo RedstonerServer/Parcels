@@ -9,10 +9,12 @@ import io.dico.parcels2.listener.ParcelListeners
 import io.dico.parcels2.storage.Storage
 import io.dico.parcels2.storage.yamlObjectMapper
 import io.dico.parcels2.util.tryCreate
+import kotlinx.coroutines.experimental.asCoroutineDispatcher
 import org.bukkit.Bukkit
 import org.bukkit.plugin.java.JavaPlugin
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.util.concurrent.Executor
 
 val logger = LoggerFactory.getLogger("ParcelsPlugin")
 private inline val plogger get() = logger
@@ -27,6 +29,8 @@ class ParcelsPlugin : JavaPlugin() {
     lateinit var entityTracker: ParcelEntityTracker; private set
     private var listeners: ParcelListeners? = null
     private var cmdDispatcher: ICommandDispatcher? = null
+
+    val mainThreadDispatcher = Executor { server.scheduler.runTask(this, it) }.asCoroutineDispatcher()
 
     override fun onEnable() {
         plogger.info("Debug enabled: ${plogger.isDebugEnabled}")

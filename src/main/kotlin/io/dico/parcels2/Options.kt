@@ -2,6 +2,7 @@ package io.dico.parcels2
 
 
 import com.fasterxml.jackson.annotation.JsonIgnore
+import io.dico.parcels2.blockvisitor.BlockVisitorOptions
 import io.dico.parcels2.storage.Storage
 import io.dico.parcels2.storage.StorageFactory
 import io.dico.parcels2.storage.yamlObjectMapper
@@ -39,7 +40,8 @@ data class WorldOptions(var gameMode: GameMode? = GameMode.CREATIVE,
                         var blockMobSpawning: Boolean = true,
                         var blockedItems: Set<Material> = EnumSet.of(Material.FLINT_AND_STEEL, Material.SNOWBALL),
                         var axisLimit: Int = 10,
-                        var generator: GeneratorOptions = DefaultGeneratorOptions()) {
+                        var generator: GeneratorOptions = DefaultGeneratorOptions(),
+                        var blockVisitor: BlockVisitorOptions = BlockVisitorOptions()) {
 
 }
 

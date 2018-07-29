@@ -66,6 +66,7 @@ dependencies {
     c.kotlinStd(kotlin("stdlib-jdk8"))
     c.kotlinStd(kotlin("reflect"))
     c.kotlinStd(kotlinx("coroutines-core:0.23.4"))
+    c.kotlinStd("org.jetbrains.kotlinx:atomicfu-common:0.11.0")
 
     compile("org.jetbrains.exposed:exposed:0.10.3") { isTransitive = false }
     compile("joda-time:joda-time:2.10")
