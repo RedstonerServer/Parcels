@@ -1,5 +1,6 @@
 package io.dico.parcels2.command
 
+import io.dico.dicore.command.EMessageType
 import io.dico.dicore.command.ExecutionContext
 import io.dico.dicore.command.annotation.Cmd
 import io.dico.dicore.command.annotation.Desc
@@ -83,10 +84,14 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
     @Cmd("clear")
     @ParcelRequire(owner = true)
     fun ParcelScope.cmdClear(player: Player, context: ExecutionContext) {
-        val onProgressUpdate: JobUpdateListener = { progress -> context.sendMessage("[Clearing] Progress: %.06f%%".format(progress * 100)) }
+        val onProgressUpdate: JobUpdateListener = { progress, elapsedTime ->
+            context.sendMessage("[Clearing] Progress: %.06f%%".format(progress * 100))
+        }
         world.generator.clearParcel(parcel)
-            .onProgressUpdate(1000, 1500, onProgressUpdate)
-            .onCompleted(onProgressUpdate)
+            .onProgressUpdate(5, 5) { progress, elapsedTime ->
+                context.sendMessage(EMessageType.INFORMATIVE, "Clear progress: %.06f%%, %.2fs elapsed"
+                    .format(progress * 100, elapsedTime / 1000.0))
+            }
     }
 
 }

@@ -35,35 +35,62 @@ interface WorktimeLimiter {
 typealias TimeLimitedTask = suspend WorktimeLimiter.() -> Unit
 
 interface JobData {
+    /**
+     * The coroutine associated with this task, if any
+     */
     val job: Job?
+
+    /**
+     * The time that elapsed since this task was dispatched, in milliseconds
+     */
+    val elapsedTime: Long
+
+    /**
+     * true if this task has completed
+     */
     val isComplete: Boolean
+
+    /**
+     * A value indicating the progress of this task, in the range 0.0 <= progress <= 1.0
+     * with no guarantees to its accuracy. May be null.
+     */
     val progress: Double?
 
     /**
      * Calls the given [block] whenever the progress is updated,
      * if [minInterval] milliseconds expired since the last call.
-     *
      * The first call occurs after at least [minDelay] milliseconds in a likewise manner.
      * Repeated invocations of this method result in an [IllegalStateException]
+     *
+     * if [asCompletionListener] is true, [onCompleted] is called with the same [block]
      */
-    fun onProgressUpdate(minDelay: Int, minInterval: Int, block: JobUpdateListener): JobData
-    val isUpdateBlockPresent: Boolean
+    fun onProgressUpdate(minDelay: Int, minInterval: Int, asCompletionListener: Boolean = true, block: JobUpdateListener): JobData
 
     /**
-     * Calls the given [block] when this job completes.
+     * Calls the given [block] when this job completes, with the progress value 1.0.
+     * Repeated invocations of this method result in an [IllegalStateException]
      */
     fun onCompleted(block: JobUpdateListener): JobData
 }
 
-typealias JobUpdateListener = JobData.(Double) -> Unit
+typealias JobUpdateListener = JobData.(Double, Long) -> Unit
 
 class JobDataImpl(val task: TimeLimitedTask) : JobData {
+
     override var job: Job? = null
         set(value) {
             field?.let { throw IllegalStateException() }
             field = value!!
-            value.invokeOnCompletion { onCompletedBlock?.invoke(this, 1.0) }
+            startTimeOrElapsedTime = System.currentTimeMillis()
+            value.invokeOnCompletion {
+                startTimeOrElapsedTime = System.currentTimeMillis() - startTimeOrElapsedTime
+                onCompletedBlock?.invoke(this, 1.0, elapsedTime)
+            }
         }
+
+    // when running: startTime, else: total elapsed time
+    private var startTimeOrElapsedTime: Long = 0L
+    override val elapsedTime get() = job?.let { if (it.isCompleted) startTimeOrElapsedTime else System.currentTimeMillis() - startTimeOrElapsedTime } ?: 0L
 
     var next: Continuation<Unit>? = null
 
@@ -77,20 +104,20 @@ class JobDataImpl(val task: TimeLimitedTask) : JobData {
         val progressUpdate = progressUpdateBlock ?: return
         val time = System.currentTimeMillis()
         if (time > lastUpdateTime + progressUpdateInterval) {
-            progressUpdate(progress!!)
+            progressUpdate(progress!!, elapsedTime)
             lastUpdateTime = time
         }
     }
 
-    override val isUpdateBlockPresent get() = progressUpdateBlock != null
     private var progressUpdateBlock: JobUpdateListener? = null
     private var progressUpdateInterval: Int = 0
     private var lastUpdateTime: Long = 0L
-    override fun onProgressUpdate(minDelay: Int, minInterval: Int, block: JobUpdateListener): JobDataImpl {
+    override fun onProgressUpdate(minDelay: Int, minInterval: Int, asCompletionListener: Boolean, block: JobUpdateListener): JobDataImpl {
         progressUpdateBlock?.let { throw IllegalStateException() }
         progressUpdateBlock = block
         progressUpdateInterval = minInterval
         lastUpdateTime = System.currentTimeMillis() + minDelay - minInterval
+        if (asCompletionListener) onCompleted(block)
         return this
     }
 
