@@ -1,6 +1,6 @@
 package io.dico.parcels2
 
-import io.dico.parcels2.blockvisitor.JobData
+import io.dico.parcels2.blockvisitor.Worker
 import io.dico.parcels2.blockvisitor.RegionTraversal
 import io.dico.parcels2.util.*
 import org.bukkit.*
@@ -50,7 +50,7 @@ abstract class ParcelGenerator : ChunkGenerator(), ParcelProvider {
 
     abstract fun getBlocks(parcel: Parcel, yRange: IntRange = 0..255): Iterator<Block>
 
-    abstract fun clearParcel(parcel: Parcel): JobData
+    abstract fun clearParcel(parcel: Parcel): Worker
 
 }
 

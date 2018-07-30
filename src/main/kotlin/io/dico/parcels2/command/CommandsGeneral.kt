@@ -7,13 +7,11 @@ import io.dico.dicore.command.annotation.Desc
 import io.dico.dicore.command.annotation.RequireParameters
 import io.dico.parcels2.ParcelOwner
 import io.dico.parcels2.ParcelsPlugin
-import io.dico.parcels2.blockvisitor.JobUpdateListener
 import io.dico.parcels2.command.NamedParcelDefaultValue.FIRST_OWNED
 import io.dico.parcels2.storage.getParcelBySerializedValue
 import io.dico.parcels2.util.hasAdminManage
 import io.dico.parcels2.util.hasParcelHomeOthers
 import io.dico.parcels2.util.uuid
-import kotlinx.coroutines.experimental.Job
 import org.bukkit.entity.Player
 
 //@Suppress("unused")
@@ -84,11 +82,8 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
     @Cmd("clear")
     @ParcelRequire(owner = true)
     fun ParcelScope.cmdClear(player: Player, context: ExecutionContext) {
-        val onProgressUpdate: JobUpdateListener = { progress, elapsedTime ->
-            context.sendMessage("[Clearing] Progress: %.06f%%".format(progress * 100))
-        }
         world.generator.clearParcel(parcel)
-            .onProgressUpdate(5, 5) { progress, elapsedTime ->
+            .onProgressUpdate(1000, 1000) { progress, elapsedTime ->
                 context.sendMessage(EMessageType.INFORMATIVE, "Clear progress: %.06f%%, %.2fs elapsed"
                     .format(progress * 100, elapsedTime / 1000.0))
             }
