@@ -1,8 +1,10 @@
 package io.dico.parcels2.storage
 
-import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.Column
+import org.jetbrains.exposed.sql.Index
+import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.sql.Transaction
 import org.jetbrains.exposed.sql.statements.InsertStatement
-import org.jetbrains.exposed.sql.statements.UpdateStatement
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 
 class UpsertStatement<Key : Any>(table: Table, conflictColumn: Column<*>? = null, conflictIndex: Index? = null)
@@ -26,12 +28,23 @@ class UpsertStatement<Key : Any>(table: Table, conflictColumn: Column<*>? = null
 
     override fun prepareSQL(transaction: Transaction) = buildString {
         append(super.prepareSQL(transaction))
-        append(" ON CONFLICT(")
-        append(indexName)
-        append(") DO UPDATE SET ")
 
-        values.keys.filter { it !in indexColumns}.joinTo(this) { "${transaction.identity(it)}=EXCLUDED.${transaction.identity(it)}" }
-    }.also { println(it) }
+        val dialect = transaction.db.vendor
+        if (dialect == "postgresql") {
+
+            append(" ON CONFLICT(")
+            append(indexName)
+            append(") DO UPDATE SET ")
+
+            values.keys.filter { it !in indexColumns }.joinTo(this) { "${transaction.identity(it)}=EXCLUDED.${transaction.identity(it)}" }
+
+        } else {
+
+            append (" ON DUPLICATE KEY UPDATE ")
+            values.keys.filter { it !in indexColumns }.joinTo(this) { "${transaction.identity(it)}=VALUES(${transaction.identity(it)})" }
+
+        }
+    }
 
 }
 

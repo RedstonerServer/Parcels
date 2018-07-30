@@ -27,7 +27,7 @@ interface StorageFactory {
 
 class ConnectionStorageFactory : StorageFactory {
     override val optionsClass = DataConnectionOptions::class
-    private val types: List<String> = listOf("postgresql")
+    private val types: List<String> = listOf("postgresql", "mariadb")
 
     fun register(companion: StorageFactory.StorageFactories) {
         types.forEach { companion.registerFactory(it, this) }

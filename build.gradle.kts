@@ -5,6 +5,7 @@ import org.jetbrains.kotlin.gradle.dsl.Coroutines.ENABLE
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformJvmPlugin
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.io.PrintWriter
+import java.net.URL
 
 val stdout = PrintWriter("gradle-output.txt")
 
@@ -123,6 +124,17 @@ tasks {
 
         manifest.attributes["Class-Path"] = "../lib/kotlin-stdlib.jar"
         dependsOn(kotlinStdlibJar)
+    }
+
+    val createDebugServer by creating {
+
+        val jarUrl = URL("https://yivesmirror.com/files/spigot/spigot-latest.jar")
+        val serverJarFile = file("$serverDir/lib/spigot.jar")
+
+
+        doFirst {
+
+        }
     }
 }
 
