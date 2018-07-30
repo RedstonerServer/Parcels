@@ -22,7 +22,7 @@ class Schematic {
         val size = region.size.also { _size = it }
         val data = arrayOfNulls<BlockData>(region.blockCount).also { _data = it }
         //val extra = mutableMapOf<Vec3i, (Block) -> Unit>().also { extra = it }
-        val blocks = RegionTraversal.XZY.regionTraverser(region)
+        val blocks = RegionTraversal.DOWNWARD.regionTraverser(region)
 
         for ((index, vec) in blocks.withIndex()) {
             markSuspensionPoint()
@@ -38,7 +38,7 @@ class Schematic {
     fun getPasteTask(world: World, position: Vec3i): TimeLimitedTask = {
         if (!isLoaded) throw IllegalStateException()
         val region = Region(position, _size!!)
-        val blocks = RegionTraversal.XZY.regionTraverser(region)
+        val blocks = RegionTraversal.DOWNWARD.regionTraverser(region)
         val data = _data!!
 
         for ((index, vec) in blocks.withIndex()) {

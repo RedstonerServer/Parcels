@@ -52,6 +52,8 @@ abstract class ParcelGenerator : ChunkGenerator(), ParcelProvider {
 
     abstract fun clearParcel(parcel: Parcel): Worker
 
+    abstract fun doBlockOperation(parcel: Parcel, direction: RegionTraversal = RegionTraversal.DOWNWARD, operation: (Block) -> Unit): Worker
+
 }
 
 interface GeneratorFactory {
@@ -267,7 +269,7 @@ class DefaultParcelGenerator(val worlds: Worlds, val name: String, private val o
     override fun clearParcel(parcel: Parcel) = worktimeLimiter.submit {
         val bottom = getBottomCoord(parcel)
         val region = Region(Vec3i(bottom.x, 0, bottom.z), Vec3i(o.parcelSize, maxHeight + 1, o.parcelSize))
-        val blocks = RegionTraversal.XZY.regionTraverser(region)
+        val blocks = RegionTraversal.DOWNWARD.regionTraverser(region)
         val blockCount = region.blockCount.toDouble()
 
         val world = world.world
@@ -286,6 +288,20 @@ class DefaultParcelGenerator(val worlds: Worlds, val name: String, private val o
             setProgress((index + 1) / blockCount)
         }
 
+    }
+
+    override fun doBlockOperation(parcel: Parcel, direction: RegionTraversal, operation: (Block) -> Unit) = worktimeLimiter.submit {
+        val bottom = getBottomCoord(parcel)
+        val region = Region(Vec3i(bottom.x, 0, bottom.z), Vec3i(o.parcelSize, maxHeight + 1, o.parcelSize))
+        val blocks = direction.regionTraverser(region)
+        val blockCount = region.blockCount.toDouble()
+        val world = world.world
+
+        for ((index, vec) in blocks.withIndex()) {
+            markSuspensionPoint()
+            operation(world[vec])
+            setProgress((index + 1) / blockCount)
+        }
     }
 
 }

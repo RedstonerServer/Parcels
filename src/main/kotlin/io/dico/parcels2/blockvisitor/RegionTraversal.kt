@@ -6,7 +6,21 @@ import kotlin.coroutines.experimental.SequenceBuilder
 import kotlin.coroutines.experimental.buildIterator
 
 enum class RegionTraversal(private val builder: suspend SequenceBuilder<Vec3i>.(Region) -> Unit) {
-    XZY({ region ->
+    DOWNWARD({ region ->
+        val origin = region.origin
+        val size = region.size
+
+        repeat(size.y) { y ->
+            repeat(size.z) { z ->
+                repeat(size.x) { x ->
+                    yield(origin.add(x, size.y - y - 1, z))
+                }
+            }
+        }
+
+    }),
+
+    UPDARD({ region ->
         val origin = region.origin
         val size = region.size
 
@@ -17,7 +31,6 @@ enum class RegionTraversal(private val builder: suspend SequenceBuilder<Vec3i>.(
                 }
             }
         }
-
     }),
 
     ;

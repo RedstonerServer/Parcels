@@ -19,7 +19,7 @@ class Options {
     var worlds: Map<String, WorldOptions> = HashMap()
         private set
     var storage: StorageOptions = StorageOptions("postgresql", DataConnectionOptions())
-    var tickWorktime: TickWorktimeOptions = TickWorktimeOptions(30, 1)
+    var tickWorktime: TickWorktimeOptions = TickWorktimeOptions(20, 1)
 
     fun addWorld(name: String, options: WorldOptions) = (worlds as MutableMap).put(name, options)
 
