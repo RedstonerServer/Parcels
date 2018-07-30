@@ -6,6 +6,7 @@ import org.bukkit.scheduler.BukkitTask
 import java.lang.System.currentTimeMillis
 import java.util.*
 import java.util.concurrent.Executor
+import java.util.logging.Level
 import kotlin.coroutines.experimental.Continuation
 import kotlin.coroutines.experimental.intrinsics.COROUTINE_SUSPENDED
 import kotlin.coroutines.experimental.intrinsics.suspendCoroutineUninterceptedOrReturn
@@ -45,6 +46,12 @@ interface Worker : Timed {
      * true if this worker has completed
      */
     val isComplete: Boolean
+
+    /**
+     * If an exception was thrown during the execution of this task,
+     * returns that exception. Returns null otherwise.
+     */
+    val completionException: Throwable?
 
     /**
      * A value indicating the progress of this worker, in the range 0.0 <= progress <= 1.0
@@ -104,7 +111,7 @@ class TickWorktimeLimiter(private val plugin: Plugin, var options: TickWorktimeO
     override val workers: List<Worker> = _workers
 
     override fun submit(task: TimeLimitedTask): Worker {
-        val worker: WorkerContinuation = WorkerImpl(dispatcher, task)
+        val worker: WorkerContinuation = WorkerImpl(plugin, dispatcher, task)
         _workers.addFirst(worker)
         if (bukkitTask == null) bukkitTask = plugin.server.scheduler.runTaskTimer(plugin, ::tickJobs, 0, options.tickInterval.toLong())
         return worker
@@ -122,7 +129,7 @@ class TickWorktimeLimiter(private val plugin: Plugin, var options: TickWorktimeO
             val timeLeft = options.workTime - timeElapsed
             if (timeLeft <= 0) return
 
-            val count = iterator.nextIndex()
+            val count = workers.size - iterator.nextIndex()
             val timePerJob = (timeLeft + count - 1) / count
             val worker = iterator.next()
             val completed = worker.resume(timePerJob)
@@ -139,7 +146,8 @@ class TickWorktimeLimiter(private val plugin: Plugin, var options: TickWorktimeO
 
 }
 
-private class WorkerImpl(val dispatcher: CoroutineDispatcher,
+private class WorkerImpl(val plugin: Plugin,
+                         val dispatcher: CoroutineDispatcher,
                          val task: TimeLimitedTask) : WorkerContinuation {
     override var job: Job? = null; private set
 
@@ -150,6 +158,8 @@ private class WorkerImpl(val dispatcher: CoroutineDispatcher,
         } ?: 0L
 
     override val isComplete get() = job?.isCompleted == true
+
+    override var completionException: Throwable? = null; private set
 
     override var progress: Double? = null; private set
 
@@ -165,7 +175,13 @@ private class WorkerImpl(val dispatcher: CoroutineDispatcher,
         this.job?.let { throw IllegalStateException() }
         this.job = job
         startTimeOrElapsedTime = System.currentTimeMillis()
-        job.invokeOnCompletion {
+        job.invokeOnCompletion { exception ->
+            // report any error that occurred
+            completionException = exception?.also {
+                if (it !is CancellationException)
+                    plugin.logger.log(Level.SEVERE, "TimeLimitedTask for plugin ${plugin.name} generated an exception", it)
+            }
+
             // convert to elapsed time here
             startTimeOrElapsedTime = System.currentTimeMillis() - startTimeOrElapsedTime
             onCompleted?.let { it(1.0, elapsedTime) }
@@ -219,9 +235,13 @@ private class WorkerImpl(val dispatcher: CoroutineDispatcher,
             throw IllegalStateException()
         }
 
-        launch(context = dispatcher, start = CoroutineStart.UNDISPATCHED) {
-            initJob(job = kotlin.coroutines.experimental.coroutineContext[Job]!!)
-            task()
+        try {
+            launch(context = dispatcher, start = CoroutineStart.UNDISPATCHED) {
+                initJob(job = kotlin.coroutines.experimental.coroutineContext[Job]!!)
+                task()
+            }
+        } catch (t: Throwable) {
+            // do nothing: handled by job.invokeOnCompletion()
         }
 
         return continuation == null

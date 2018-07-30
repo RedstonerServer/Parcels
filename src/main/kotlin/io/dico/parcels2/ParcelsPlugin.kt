@@ -31,7 +31,7 @@ class ParcelsPlugin : JavaPlugin() {
     lateinit var entityTracker: ParcelEntityTracker; private set
     private var listeners: ParcelListeners? = null
     private var cmdDispatcher: ICommandDispatcher? = null
-    val worktimeLimiter: WorktimeLimiter by lazy { TickWorktimeLimiter(this, options) }
+    val worktimeLimiter: WorktimeLimiter by lazy { TickWorktimeLimiter(this, options.tickWorktime) }
 
     override fun onEnable() {
         plogger.info("Debug enabled: ${plogger.isDebugEnabled}")
