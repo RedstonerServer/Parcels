@@ -5,30 +5,9 @@ import org.bukkit.Material.*
 
 /* 
 colors:
-WHITE_$,
-ORANGE_$,
-MAGENTA_$,
-LIGHT_BLUE_$,
-YELLOW_$,
-LIME_$,
-PINK_$,
-GRAY_$,
-LIGHT_GRAY_$,
-CYAN_$,
-PURPLE_$,
-BLUE_$,
-BROWN_$,
-GREEN_$,
-RED_$,
-BLACK_$,
-
+WHITE_$, ORANGE_$, MAGENTA_$, LIGHT_BLUE_$, YELLOW_$, LIME_$, PINK_$, GRAY_$, LIGHT_GRAY_$, CYAN_$, PURPLE_$, BLUE_$, BROWN_$, GREEN_$, RED_$, BLACK_$, 
 wood:
-OAK_$,
-BIRCH_$,
-SPRUCE_$,
-JUNGLE_$,
-ACACIA_$,
-DARK_OAK_$,
+OAK_$, BIRCH_$, SPRUCE_$, JUNGLE_$, ACACIA_$, DARK_OAK_$,
  */
 
 val Material.isBed get() = when(this) {

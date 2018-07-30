@@ -3,6 +3,8 @@ package io.dico.parcels2
 import io.dico.dicore.Registrator
 import io.dico.dicore.command.EOverridePolicy
 import io.dico.dicore.command.ICommandDispatcher
+import io.dico.parcels2.blockvisitor.TickWorktimeLimiter
+import io.dico.parcels2.blockvisitor.WorktimeLimiter
 import io.dico.parcels2.command.getParcelCommands
 import io.dico.parcels2.listener.ParcelEntityTracker
 import io.dico.parcels2.listener.ParcelListeners
@@ -29,8 +31,7 @@ class ParcelsPlugin : JavaPlugin() {
     lateinit var entityTracker: ParcelEntityTracker; private set
     private var listeners: ParcelListeners? = null
     private var cmdDispatcher: ICommandDispatcher? = null
-
-    val mainThreadDispatcher = Executor { server.scheduler.runTask(this, it) }.asCoroutineDispatcher()
+    val worktimeLimiter: WorktimeLimiter by lazy { TickWorktimeLimiter(this, options) }
 
     override fun onEnable() {
         plogger.info("Debug enabled: ${plogger.isDebugEnabled}")

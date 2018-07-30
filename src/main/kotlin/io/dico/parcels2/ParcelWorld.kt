@@ -20,7 +20,7 @@ import kotlin.coroutines.experimental.buildSequence
 import kotlin.reflect.jvm.javaMethod
 import kotlin.reflect.jvm.kotlinFunction
 
-class Worlds(private val plugin: ParcelsPlugin) {
+class Worlds(val plugin: ParcelsPlugin) {
     val worlds: Map<String, ParcelWorld> get() = _worlds
     private val _worlds: MutableMap<String, ParcelWorld> = HashMap()
 

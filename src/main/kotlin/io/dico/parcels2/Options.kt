@@ -2,7 +2,7 @@ package io.dico.parcels2
 
 
 import com.fasterxml.jackson.annotation.JsonIgnore
-import io.dico.parcels2.blockvisitor.BlockVisitorOptions
+import io.dico.parcels2.blockvisitor.TickWorktimeOptions
 import io.dico.parcels2.storage.Storage
 import io.dico.parcels2.storage.StorageFactory
 import io.dico.parcels2.storage.yamlObjectMapper
@@ -19,6 +19,7 @@ class Options {
     var worlds: Map<String, WorldOptions> = HashMap()
         private set
     var storage: StorageOptions = StorageOptions("postgresql", DataConnectionOptions())
+    var tickWorktime: TickWorktimeOptions = TickWorktimeOptions(30, 1)
 
     fun addWorld(name: String, options: WorldOptions) = (worlds as MutableMap).put(name, options)
 
@@ -40,8 +41,7 @@ data class WorldOptions(var gameMode: GameMode? = GameMode.CREATIVE,
                         var blockMobSpawning: Boolean = true,
                         var blockedItems: Set<Material> = EnumSet.of(Material.FLINT_AND_STEEL, Material.SNOWBALL),
                         var axisLimit: Int = 10,
-                        var generator: GeneratorOptions = DefaultGeneratorOptions(),
-                        var blockVisitor: BlockVisitorOptions = BlockVisitorOptions()) {
+                        var generator: GeneratorOptions = DefaultGeneratorOptions()) {
 
 }
 
@@ -73,7 +73,8 @@ class StorageOptions(val dialect: String,
                      val options: Any) {
 
     @get:JsonIgnore
-    val factory = StorageFactory.getFactory(dialect) ?: throw IllegalArgumentException("Invalid storage dialect: $dialect")
+    val factory = StorageFactory.getFactory(dialect)
+        ?: throw IllegalArgumentException("Invalid storage dialect: $dialect")
 
     fun newStorageInstance(): Storage = factory.newStorageInstance(dialect, options)
 

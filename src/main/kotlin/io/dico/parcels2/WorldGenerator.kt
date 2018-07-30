@@ -1,9 +1,8 @@
 package io.dico.parcels2
 
-import io.dico.parcels2.util.Vec2i
-import io.dico.parcels2.util.clamp
-import io.dico.parcels2.util.even
-import io.dico.parcels2.util.umod
+import io.dico.parcels2.blockvisitor.JobData
+import io.dico.parcels2.blockvisitor.RegionTraversal
+import io.dico.parcels2.util.*
 import org.bukkit.*
 import org.bukkit.Bukkit.createBlockData
 import org.bukkit.block.Biome
@@ -51,6 +50,8 @@ abstract class ParcelGenerator : ChunkGenerator(), ParcelProvider {
 
     abstract fun getBlocks(parcel: Parcel, yRange: IntRange = 0..255): Iterator<Block>
 
+    abstract fun clearParcel(parcel: Parcel): JobData
+
 }
 
 interface GeneratorFactory {
@@ -78,6 +79,9 @@ interface GeneratorFactory {
 class DefaultParcelGenerator(val worlds: Worlds, val name: String, private val o: DefaultGeneratorOptions) : ParcelGenerator() {
     override val world: ParcelWorld by lazy { worlds.getWorld(name)!! }
     override val factory = Factory
+    val worktimeLimiter = worlds.plugin.worktimeLimiter
+    val maxHeight by lazy { world.world.maxHeight }
+    val airType = worlds.plugin.server.createBlockData(Material.AIR)
 
     companion object Factory : GeneratorFactory {
         override val name get() = "default"
@@ -258,6 +262,30 @@ class DefaultParcelGenerator(val worlds: Worlds, val name: String, private val o
                 }
             }
         }
+    }
+
+    override fun clearParcel(parcel: Parcel) = worktimeLimiter.submit {
+        val bottom = getBottomCoord(parcel)
+        val region = Region(Vec3i(bottom.x, 0, bottom.z), Vec3i(o.parcelSize, maxHeight + 1, o.parcelSize))
+        val blocks = RegionTraversal.XZY.regionTraverser(region)
+        val blockCount = region.blockCount.toDouble()
+
+        val world = world.world
+        val floorHeight = o.floorHeight
+        val airType = airType; val floorType = o.floorType; val fillType = o.fillType
+
+        for ((index, vec) in blocks.withIndex()) {
+            markSuspensionPoint()
+            val y = vec.y
+            val blockType = when {
+                y > floorHeight -> airType
+                y == floorHeight -> floorType
+                else -> fillType
+            }
+            world[vec].blockData = blockType
+            setProgress((index + 1) / blockCount)
+        }
+
     }
 
 }
