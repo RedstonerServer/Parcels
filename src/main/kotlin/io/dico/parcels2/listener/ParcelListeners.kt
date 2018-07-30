@@ -376,6 +376,40 @@ class ParcelListeners(val worlds: Worlds, val entityTracker: ParcelEntityTracker
         w.setGameRuleValue("doTileDrops", world.options.doTileDrops.toString())
     }
 
+    // TODO: BlockFormEvent, BlockSpreadEvent, BlockFadeEvent
+
+    /*
+     * Prevents natural blocks forming
+     */
+    @ListenerMarker(priority = NORMAL)
+    val onBlockFormEvent = RegistratorListener<BlockFormEvent> l@{ event ->
+        val block = event.block
+        val (wo, ppa) = getWoAndPPa(block) ?: return@l
+
+        // prevent any generation whatsoever on paths
+        if (ppa == null) {
+            event.isCancelled = true; return@l
+        }
+
+        val hasEntity = event is EntityBlockFormEvent
+        val player = (event as? EntityBlockFormEvent)?.entity as? Player
+
+        val cancel: Boolean = when (block.type) {
+
+            // prevent ice generation from Frost Walkers enchantment
+            ICE -> player != null && !ppa.canBuild(player)
+
+            // prevent snow generation from weather
+            SNOW -> !hasEntity && wo.options.preventWeatherBlockChanges
+
+            else -> false
+        }
+
+        if (cancel) {
+            event.isCancelled = true
+        }
+    }
+
     /*
      * Prevents mobs (living entities) from spawning if that is disabled for that world in the config.
      */

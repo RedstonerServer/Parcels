@@ -34,6 +34,8 @@ class Options {
 data class WorldOptions(var gameMode: GameMode? = GameMode.CREATIVE,
                         var dayTime: Boolean = true,
                         var noWeather: Boolean = true,
+                        var preventWeatherBlockChanges: Boolean = true,
+                        var preventBlockSpread: Boolean = true, // TODO
                         var dropEntityItems: Boolean = true,
                         var doTileDrops: Boolean = false,
                         var disableExplosions: Boolean = true,
