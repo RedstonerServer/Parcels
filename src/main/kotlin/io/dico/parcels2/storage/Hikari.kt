@@ -15,6 +15,15 @@ fun getHikariConfig(dialectName: String,
             dataSourceProperties["portNumber"] = port.toString()
             dataSourceProperties["databaseName"] = dco.database
         }
+
+        "mariadb" -> run {
+            dataSourceClassName = "org.mariadb.jdbc.MariaDbDataSource"
+            dataSourceProperties["serverName"] = address
+            dataSourceProperties["port"] = port.toString()
+            dataSourceProperties["databaseName"] = dco.database
+            dataSourceProperties["properties"] = "useUnicode=true;characterEncoding=utf8"
+        }
+
         else -> throw IllegalArgumentException("Unsupported dialect: $dialectName")
     }
 

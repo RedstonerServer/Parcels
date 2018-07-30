@@ -9,6 +9,7 @@ import kotlinx.coroutines.experimental.channels.ProducerScope
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SchemaUtils.create
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.jetbrains.exposed.sql.vendors.DatabaseDialect
 import org.joda.time.DateTime
 import java.util.*
 import javax.sql.DataSource
@@ -61,6 +62,14 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource) : Backing 
     private var isShutdown: Boolean = false
 
     override val isConnected get() = database != null
+
+    companion object {
+        init {
+            Database.registerDialect("mariadb") {
+                Class.forName("org.jetbrains.exposed.sql.vendors.MysqlDialect").newInstance() as DatabaseDialect
+            }
+        }
+    }
 
     override suspend fun init() {
         if (isShutdown) throw IllegalStateException()
