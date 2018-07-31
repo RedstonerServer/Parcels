@@ -11,7 +11,6 @@ import io.dico.parcels2.listener.ParcelListeners
 import io.dico.parcels2.storage.Storage
 import io.dico.parcels2.storage.yamlObjectMapper
 import io.dico.parcels2.util.tryCreate
-import kotlinx.coroutines.experimental.asCoroutineDispatcher
 import org.bukkit.Bukkit
 import org.bukkit.plugin.java.JavaPlugin
 import org.slf4j.LoggerFactory
@@ -32,6 +31,14 @@ class ParcelsPlugin : JavaPlugin() {
     private var listeners: ParcelListeners? = null
     private var cmdDispatcher: ICommandDispatcher? = null
     val worktimeLimiter: WorktimeLimiter by lazy { TickWorktimeLimiter(this, options.tickWorktime) }
+
+    val mainThreadDispatcher = object : Executor {
+        private val mainThread = Thread.currentThread()
+        override fun execute(command: Runnable) {
+            if (Thread.currentThread() === mainThread) command.run()
+            else server.scheduler.runTask(this@ParcelsPlugin, command)
+        }
+    }
 
     override fun onEnable() {
         plogger.info("Debug enabled: ${plogger.isDebugEnabled}")

@@ -1,6 +1,6 @@
 package io.dico.parcels2.storage
 
-import io.dico.parcels2.AddedData
+import io.dico.parcels2.AddedStatus
 import io.dico.parcels2.Parcel
 import io.dico.parcels2.ParcelData
 import io.dico.parcels2.ParcelOwner
@@ -44,8 +44,8 @@ interface Backing {
     suspend fun setParcelAllowsInteractInputs(parcel: Parcel, value: Boolean)
 
 
-    suspend fun readGlobalPlayerStateData(owner: ParcelOwner): AddedData?
+    suspend fun readGlobalAddedData(owner: ParcelOwner): MutableMap<UUID, AddedStatus>
 
-    suspend fun setGlobalPlayerState(owner: ParcelOwner, player: UUID, state: Boolean?)
+    suspend fun setGlobalAddedStatus(owner: ParcelOwner, player: UUID, status: AddedStatus)
 
 }

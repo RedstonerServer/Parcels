@@ -1,6 +1,6 @@
 package io.dico.parcels2.storage
 
-import io.dico.parcels2.AddedData
+import io.dico.parcels2.AddedStatus
 import io.dico.parcels2.Parcel
 import io.dico.parcels2.ParcelData
 import io.dico.parcels2.ParcelOwner
@@ -44,9 +44,9 @@ interface Storage {
     fun setParcelAllowsInteractInputs(parcel: Parcel, value: Boolean): Job
 
 
-    fun readGlobalPlayerStateData(owner: ParcelOwner): Deferred<AddedData?>
+    fun readGlobalAddedData(owner: ParcelOwner): Deferred<MutableMap<UUID, AddedStatus>?>
 
-    fun setGlobalPlayerState(owner: ParcelOwner, player: UUID, state: Boolean?): Job
+    fun setGlobalAddedStatus(owner: ParcelOwner, player: UUID, status: AddedStatus): Job
 }
 
 class StorageWithCoroutineBacking internal constructor(val backing: Backing) : Storage {
@@ -94,7 +94,7 @@ class StorageWithCoroutineBacking internal constructor(val backing: Backing) : S
     override fun setParcelAllowsInteractInputs(parcel: Parcel, value: Boolean) = job { backing.setParcelAllowsInteractInputs(parcel, value) }
 
 
-    override fun readGlobalPlayerStateData(owner: ParcelOwner): Deferred<AddedData?> = defer { backing.readGlobalPlayerStateData(owner) }
+    override fun readGlobalAddedData(owner: ParcelOwner): Deferred<MutableMap<UUID, AddedStatus>?> = defer { backing.readGlobalAddedData(owner) }
 
-    override fun setGlobalPlayerState(owner: ParcelOwner, player: UUID, state: Boolean?) = job { backing.setGlobalPlayerState(owner, player, state) }
+    override fun setGlobalAddedStatus(owner: ParcelOwner, player: UUID, status: AddedStatus) = job { backing.setGlobalAddedStatus(owner, player, status) }
 }

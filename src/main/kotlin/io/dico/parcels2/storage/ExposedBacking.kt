@@ -275,11 +275,11 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource) : Backing 
         }
     }
 
-    override suspend fun readGlobalPlayerStateData(owner: ParcelOwner): AddedData? {
+    override suspend fun readGlobalAddedData(owner: ParcelOwner): AddedData? {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
-    override suspend fun setGlobalPlayerState(owner: ParcelOwner, player: UUID, state: Boolean?) {
+    override suspend fun setGlobalAddedStatus(owner: ParcelOwner, player: UUID, status: Boolean?) {
         TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 

@@ -117,8 +117,8 @@ class Parcel(val world: ParcelWorld, val pos: Vec2i) : ParcelData {
     var hasBlockVisitors: Boolean = false; private set
 }
 
-open class AddedDataHolder : AddedData {
-    override var added = mutableMapOf<UUID, AddedStatus>()
+open class AddedDataHolder(override var added: MutableMap<UUID, AddedStatus>
+                           = mutableMapOf<UUID, AddedStatus>()) : AddedData {
     override fun getAddedStatus(uuid: UUID): AddedStatus = added.getOrDefault(uuid, AddedStatus.DEFAULT)
     override fun setAddedStatus(uuid: UUID, status: AddedStatus): Boolean = status.takeIf { it != AddedStatus.DEFAULT }
         ?.let { added.put(uuid, it) != it }
