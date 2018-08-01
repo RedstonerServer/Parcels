@@ -7,6 +7,7 @@ import io.dico.dicore.command.parameter.type.ParameterConfig
 import io.dico.dicore.command.parameter.type.ParameterType
 import io.dico.parcels2.Parcel
 import io.dico.parcels2.ParcelWorld
+import io.dico.parcels2.ParcelsPlugin
 import io.dico.parcels2.Worlds
 import io.dico.parcels2.util.isValid
 import org.bukkit.Bukkit

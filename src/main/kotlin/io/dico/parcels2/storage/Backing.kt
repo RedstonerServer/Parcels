@@ -37,15 +37,17 @@ interface Backing {
 
     suspend fun setParcelOwner(parcelFor: Parcel, owner: ParcelOwner?)
 
-    suspend fun setParcelPlayerState(parcelFor: Parcel, player: UUID, state: Boolean?)
+    suspend fun setLocalPlayerStatus(parcelFor: Parcel, player: UUID, status: AddedStatus)
 
     suspend fun setParcelAllowsInteractInventory(parcel: Parcel, value: Boolean)
 
     suspend fun setParcelAllowsInteractInputs(parcel: Parcel, value: Boolean)
 
 
+    suspend fun ProducerScope<Pair<ParcelOwner, MutableMap<UUID, AddedStatus>>>.produceAllGlobalAddedData()
+
     suspend fun readGlobalAddedData(owner: ParcelOwner): MutableMap<UUID, AddedStatus>
 
-    suspend fun setGlobalAddedStatus(owner: ParcelOwner, player: UUID, status: AddedStatus)
+    suspend fun setGlobalPlayerStatus(owner: ParcelOwner, player: UUID, status: AddedStatus)
 
 }

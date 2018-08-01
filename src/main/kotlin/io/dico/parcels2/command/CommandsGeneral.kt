@@ -4,6 +4,7 @@ import io.dico.dicore.command.EMessageType
 import io.dico.dicore.command.ExecutionContext
 import io.dico.dicore.command.annotation.Cmd
 import io.dico.dicore.command.annotation.Desc
+import io.dico.dicore.command.annotation.Flag
 import io.dico.dicore.command.annotation.RequireParameters
 import io.dico.parcels2.ParcelOwner
 import io.dico.parcels2.ParcelsPlugin
@@ -84,12 +85,22 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
 
     @Cmd("clear")
     @ParcelRequire(owner = true)
-    fun ParcelScope.cmdClear(context: ExecutionContext) {
+    fun ParcelScope.cmdClear(context: ExecutionContext, @Flag sure: Boolean): Any? {
+        if (!sure) return "Are you sure? You cannot undo this action!\n" +
+            "Type ${context.rawInput} -sure if you want to go through with this."
+
         world.generator.clearParcel(parcel)
             .onProgressUpdate(1000, 1000) { progress, elapsedTime ->
                 context.sendMessage(EMessageType.INFORMATIVE, "Clear progress: %.02f%%, %.2fs elapsed"
                     .format(progress * 100, elapsedTime / 1000.0))
             }
+
+        return null
+    }
+
+    @Cmd("swap")
+    fun ParcelScope.cmdSwap(context: ExecutionContext, @Flag sure: Boolean): Any? {
+
     }
 
     @Cmd("make_mess")

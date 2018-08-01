@@ -1,11 +1,12 @@
 package io.dico.parcels2.blockvisitor
 
-import kotlinx.coroutines.experimental.*
-import org.bukkit.plugin.Plugin
+import io.dico.parcels2.ParcelsPlugin
+import io.dico.parcels2.util.FunctionHelper
+import kotlinx.coroutines.experimental.CancellationException
+import kotlinx.coroutines.experimental.Job
 import org.bukkit.scheduler.BukkitTask
 import java.lang.System.currentTimeMillis
 import java.util.*
-import java.util.concurrent.Executor
 import java.util.logging.Level
 import kotlin.coroutines.experimental.Continuation
 import kotlin.coroutines.experimental.intrinsics.COROUTINE_SUSPENDED
@@ -101,9 +102,7 @@ private interface WorkerContinuation : Worker, WorkerScope {
  * There is a configurable maxiumum amount of milliseconds that can be allocated to all workers together in each server tick
  * This object attempts to split that maximum amount of milliseconds equally between all jobs
  */
-class TickWorktimeLimiter(private val plugin: Plugin, var options: TickWorktimeOptions) : WorktimeLimiter() {
-    // Coroutine dispatcher for jobs
-    private val dispatcher = Executor(Runnable::run).asCoroutineDispatcher()
+class TickWorktimeLimiter(private val plugin: ParcelsPlugin, var options: TickWorktimeOptions) : WorktimeLimiter() {
     // The currently registered bukkit scheduler task
     private var bukkitTask: BukkitTask? = null
     // The workers.
@@ -111,9 +110,9 @@ class TickWorktimeLimiter(private val plugin: Plugin, var options: TickWorktimeO
     override val workers: List<Worker> = _workers
 
     override fun submit(task: TimeLimitedTask): Worker {
-        val worker: WorkerContinuation = WorkerImpl(plugin, dispatcher, task)
+        val worker: WorkerContinuation = WorkerImpl(plugin.functionHelper, task)
         _workers.addFirst(worker)
-        if (bukkitTask == null) bukkitTask = plugin.server.scheduler.runTaskTimer(plugin, ::tickJobs, 0, options.tickInterval.toLong())
+        if (bukkitTask == null) bukkitTask = plugin.functionHelper.scheduleRepeating(0, options.tickInterval) { tickJobs() }
         return worker
     }
 
@@ -146,8 +145,7 @@ class TickWorktimeLimiter(private val plugin: Plugin, var options: TickWorktimeO
 
 }
 
-private class WorkerImpl(val plugin: Plugin,
-                         val dispatcher: CoroutineDispatcher,
+private class WorkerImpl(val functionHelper: FunctionHelper,
                          val task: TimeLimitedTask) : WorkerContinuation {
     override var job: Job? = null; private set
 
@@ -179,7 +177,7 @@ private class WorkerImpl(val plugin: Plugin,
             // report any error that occurred
             completionException = exception?.also {
                 if (it !is CancellationException)
-                    plugin.logger.log(Level.SEVERE, "TimeLimitedTask for plugin ${plugin.name} generated an exception", it)
+                    functionHelper.plugin.logger.log(Level.SEVERE, "TimeLimitedTask for plugin ${functionHelper.plugin.name} generated an exception", it)
             }
 
             // convert to elapsed time here
@@ -236,10 +234,9 @@ private class WorkerImpl(val plugin: Plugin,
         }
 
         try {
-            launch(context = dispatcher, start = CoroutineStart.UNDISPATCHED) {
-                initJob(job = kotlin.coroutines.experimental.coroutineContext[Job]!!)
-                task()
-            }
+            val job = functionHelper.launchLazilyOnMainThread { task() }
+            initJob(job = job)
+            job.start()
         } catch (t: Throwable) {
             // do nothing: handled by job.invokeOnCompletion()
         }

@@ -64,4 +64,4 @@ val attachables: Set<Material> = EnumSet.of(
     WALL_SIGN,
     LILY_PAD,
     DANDELION
-);
+)

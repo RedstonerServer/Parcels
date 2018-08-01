@@ -219,7 +219,7 @@ class DefaultParcelContainer(private val world: ParcelWorld,
     }
 
     fun loadAllData() {
-        val channel = storage.readParcelData(allParcels(), 100)
+        val channel = storage.readParcelData(allParcels())
         launch(storage.asyncDispatcher) {
             for ((parcel, data) in channel) {
                 data?.let { parcel.copyDataIgnoringDatabase(it) }

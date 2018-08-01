@@ -51,7 +51,7 @@ project(":dicore3:dicore3-command") {
     dependencies {
         c.kotlinStd(kotlin("stdlib-jdk8"))
         c.kotlinStd(kotlin("reflect"))
-        c.kotlinStd(kotlinx("coroutines-core:0.23.4"))
+        c.kotlinStd(kotlinx("coroutines-core:0.24.0"))
 
         compile(project(":dicore3:dicore3-core"))
         compile("com.thoughtworks.paranamer:paranamer:2.8")
@@ -86,6 +86,8 @@ tasks {
     val compileKotlin by getting(KotlinCompile::class) {
         kotlinOptions {
             javaParameters = true
+            suppressWarnings = true
+            //freeCompilerArgs = listOf("-XXLanguage:+InlineClasses", "-Xuse-experimental=kotlin.Experimental")
         }
     }
 

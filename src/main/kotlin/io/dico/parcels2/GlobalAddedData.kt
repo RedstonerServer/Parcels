@@ -1,38 +1,25 @@
+@file:Suppress("UNCHECKED_CAST")
+
 package io.dico.parcels2
 
-import io.dico.parcels2.util.uuid
-import kotlinx.coroutines.experimental.CompletableDeferred
-import kotlinx.coroutines.experimental.Deferred
-import org.bukkit.OfflinePlayer
 import java.util.*
 
 interface GlobalAddedData : AddedData {
-    val uuid: UUID
+    val owner: ParcelOwner
 }
 
-class GlobalAddedDataManager(val plugin: ParcelsPlugin) {
-    private val map = mutableMapOf<UUID, GlobalAddedData?>()
+interface GlobalAddedDataManager {
+    operator fun get(owner: ParcelOwner): GlobalAddedData
+}
 
-    operator fun get(player: OfflinePlayer) = get(player.uuid)
+class GlobalAddedDataManagerImpl(val plugin: ParcelsPlugin) : GlobalAddedDataManager {
+    private val map = mutableMapOf<ParcelOwner, GlobalAddedData>()
 
-    operator fun get(uuid: UUID): GlobalAddedData? {
-
+    override fun get(owner: ParcelOwner): GlobalAddedData {
+        return map[owner] ?: GlobalAddedDataImpl(owner).also { map[owner] = it }
     }
 
-    fun getDeferred(uuid: UUID): Deferred<AddedData> {
-        get(uuid)?.let { return CompletableDeferred(it) }
-
-    }
-
-    private suspend fun getAsync(uuid: UUID): GlobalAddedData {
-        val data = plugin.storage.readGlobalAddedData(ParcelOwner(uuid = uuid)).await()
-            ?: return GlobalAddedDataImpl(uuid)
-        val result = GlobalAddedDataImpl(uuid, data)
-        map[uuid] = result
-        return result
-    }
-
-    private inner class GlobalAddedDataImpl(override val uuid: UUID,
+    private inner class GlobalAddedDataImpl(override val owner: ParcelOwner,
                                             data: MutableMap<UUID, AddedStatus> = emptyData)
         : AddedDataHolder(data), GlobalAddedData {
 
@@ -45,7 +32,7 @@ class GlobalAddedDataManager(val plugin: ParcelsPlugin) {
                 data = mutableMapOf()
             }
             return super.setAddedStatus(uuid, status).also {
-                if (it) plugin.storage.setGlobalAddedStatus(ParcelOwner(uuid = this.uuid), uuid, status)
+                if (it) plugin.storage.setGlobalAddedStatus(owner, uuid, status)
             }
         }
 
@@ -56,8 +43,6 @@ class GlobalAddedDataManager(val plugin: ParcelsPlugin) {
     }
 
 }
-
-
 
 
 

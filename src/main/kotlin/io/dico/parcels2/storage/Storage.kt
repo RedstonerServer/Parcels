@@ -24,9 +24,9 @@ interface Storage {
 
     fun readParcelData(parcelFor: Parcel): Deferred<ParcelData?>
 
-    fun readParcelData(parcelsFor: Sequence<Parcel>, channelCapacity: Int): ReceiveChannel<Pair<Parcel, ParcelData?>>
+    fun readParcelData(parcelsFor: Sequence<Parcel>): ReceiveChannel<Pair<Parcel, ParcelData?>>
 
-    fun readAllParcelData(channelCapacity: Int): ReceiveChannel<Pair<SerializableParcel, ParcelData?>>
+    fun readAllParcelData(): ReceiveChannel<Pair<SerializableParcel, ParcelData?>>
 
     fun getOwnedParcels(user: ParcelOwner): Deferred<List<SerializableParcel>>
 
@@ -37,12 +37,14 @@ interface Storage {
 
     fun setParcelOwner(parcelFor: Parcel, owner: ParcelOwner?): Job
 
-    fun setParcelPlayerState(parcelFor: Parcel, player: UUID, state: Boolean?): Job
+    fun setParcelPlayerStatus(parcelFor: Parcel, player: UUID, status: AddedStatus): Job
 
     fun setParcelAllowsInteractInventory(parcel: Parcel, value: Boolean): Job
 
     fun setParcelAllowsInteractInputs(parcel: Parcel, value: Boolean): Job
 
+
+    fun readAllGlobalAddedData(): ReceiveChannel<Pair<ParcelOwner, MutableMap<UUID, AddedStatus>>>
 
     fun readGlobalAddedData(owner: ParcelOwner): Deferred<MutableMap<UUID, AddedStatus>?>
 
@@ -55,6 +57,7 @@ class StorageWithCoroutineBacking internal constructor(val backing: Backing) : S
     val poolSize: Int get() = 4
     override val asyncDispatcher = Executors.newFixedThreadPool(poolSize) { Thread(it, "Parcels2_StorageThread") }.asCoroutineDispatcher()
     override val isConnected get() = backing.isConnected
+    val channelCapacity = 16
 
     @Suppress("NOTHING_TO_INLINE")
     private inline fun <T> defer(noinline block: suspend CoroutineScope.() -> T): Deferred<T> {
@@ -73,10 +76,10 @@ class StorageWithCoroutineBacking internal constructor(val backing: Backing) : S
 
     override fun readParcelData(parcelFor: Parcel) = defer { backing.readParcelData(parcelFor) }
 
-    override fun readParcelData(parcelsFor: Sequence<Parcel>, channelCapacity: Int) =
+    override fun readParcelData(parcelsFor: Sequence<Parcel>) =
         produce(asyncDispatcher, capacity = channelCapacity) { with(backing) { produceParcelData(parcelsFor) } }
 
-    override fun readAllParcelData(channelCapacity: Int): ReceiveChannel<Pair<SerializableParcel, ParcelData?>> =
+    override fun readAllParcelData(): ReceiveChannel<Pair<SerializableParcel, ParcelData?>> =
         produce(asyncDispatcher, capacity = channelCapacity) { with(backing) { produceAllParcelData() } }
 
     override fun getOwnedParcels(user: ParcelOwner) = defer { backing.getOwnedParcels(user) }
@@ -87,14 +90,17 @@ class StorageWithCoroutineBacking internal constructor(val backing: Backing) : S
 
     override fun setParcelOwner(parcelFor: Parcel, owner: ParcelOwner?) = job { backing.setParcelOwner(parcelFor, owner) }
 
-    override fun setParcelPlayerState(parcelFor: Parcel, player: UUID, state: Boolean?) = job { backing.setParcelPlayerState(parcelFor, player, state) }
+    override fun setParcelPlayerStatus(parcelFor: Parcel, player: UUID, status: AddedStatus) = job { backing.setLocalPlayerStatus(parcelFor, player, status) }
 
     override fun setParcelAllowsInteractInventory(parcel: Parcel, value: Boolean) = job { backing.setParcelAllowsInteractInventory(parcel, value) }
 
     override fun setParcelAllowsInteractInputs(parcel: Parcel, value: Boolean) = job { backing.setParcelAllowsInteractInputs(parcel, value) }
 
 
+    override fun readAllGlobalAddedData(): ReceiveChannel<Pair<ParcelOwner, MutableMap<UUID, AddedStatus>>> =
+        produce(asyncDispatcher, capacity = channelCapacity) { with(backing) { produceAllGlobalAddedData() } }
+
     override fun readGlobalAddedData(owner: ParcelOwner): Deferred<MutableMap<UUID, AddedStatus>?> = defer { backing.readGlobalAddedData(owner) }
 
-    override fun setGlobalAddedStatus(owner: ParcelOwner, player: UUID, status: AddedStatus) = job { backing.setGlobalAddedStatus(owner, player, status) }
+    override fun setGlobalAddedStatus(owner: ParcelOwner, player: UUID, status: AddedStatus) = job { backing.setGlobalPlayerStatus(owner, player, status) }
 }

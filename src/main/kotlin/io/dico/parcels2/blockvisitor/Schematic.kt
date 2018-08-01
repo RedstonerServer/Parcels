@@ -6,6 +6,7 @@ import io.dico.parcels2.util.get
 import org.bukkit.World
 import org.bukkit.block.data.BlockData
 
+// TODO order paste such that attachables are placed after the block they depend on
 class Schematic {
     val size: Vec3i get() = _size!!
     private var _size: Vec3i? = null

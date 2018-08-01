@@ -49,8 +49,6 @@ class AwaitTask : Runnable {
             onSuccess!!.invoke()
         }
 
-        elapsedChecks++
-
         if (maxChecks in 1 until elapsedChecks) {
             cancel()
             onFailure?.invoke()

@@ -218,7 +218,7 @@ class DefaultParcelGenerator(val worlds: Worlds, val name: String, private val o
 
             val sign = signBlock.state as org.bukkit.block.Sign
             sign.setLine(0, parcel.id)
-            sign.setLine(2, owner.playerName)
+            sign.setLine(2, owner.name)
             sign.update()
 
             skullBlock.type = Material.PLAYER_HEAD
