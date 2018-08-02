@@ -10,7 +10,7 @@ import java.net.URL
 val stdout = PrintWriter("gradle-output.txt")
 
 group = "io.dico"
-version = "0.1"
+version = "0.2"
 
 plugins {
     java
