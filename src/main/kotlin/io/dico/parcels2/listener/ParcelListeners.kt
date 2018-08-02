@@ -4,8 +4,8 @@ import gnu.trove.TLongCollection
 import io.dico.dicore.ListenerMarker
 import io.dico.dicore.RegistratorListener
 import io.dico.parcels2.Parcel
+import io.dico.parcels2.ParcelProvider
 import io.dico.parcels2.ParcelWorld
-import io.dico.parcels2.Worlds
 import io.dico.parcels2.util.*
 import org.bukkit.Material.*
 import org.bukkit.World
@@ -26,11 +26,10 @@ import org.bukkit.event.player.*
 import org.bukkit.event.vehicle.VehicleMoveEvent
 import org.bukkit.event.weather.WeatherChangeEvent
 import org.bukkit.event.world.StructureGrowEvent
-import org.bukkit.event.world.WorldLoadEvent
 import org.bukkit.inventory.InventoryHolder
 
 @Suppress("NOTHING_TO_INLINE")
-class ParcelListeners(val worlds: Worlds, val entityTracker: ParcelEntityTracker) {
+class ParcelListeners(val parcelProvider: ParcelProvider, val entityTracker: ParcelEntityTracker) {
     private inline fun Parcel?.canBuildN(user: Player) = isPresentAnd { canBuild(user) } || user.hasBuildAnywhere
 
     /**
@@ -40,8 +39,8 @@ class ParcelListeners(val worlds: Worlds, val entityTracker: ParcelEntityTracker
      * returns null if not in a registered parcel world
      */
     private fun getWoAndPPa(block: Block): Pair<ParcelWorld, Parcel?>? {
-        val world = worlds.getWorld(block.world) ?: return null
-        return world to world.parcelAt(block)
+        val world = parcelProvider.getWorld(block.world) ?: return null
+        return world to world.getParcelAt(block)
     }
 
     /*
@@ -51,10 +50,10 @@ class ParcelListeners(val worlds: Worlds, val entityTracker: ParcelEntityTracker
     val onPlayerMoveEvent = RegistratorListener<PlayerMoveEvent> l@{ event ->
         val user = event.player
         if (user.hasBanBypass) return@l
-        val parcel = worlds.getParcelAt(event.to) ?: return@l
+        val parcel = parcelProvider.getParcelAt(event.to) ?: return@l
         if (parcel.isBanned(user.uuid)) {
-            worlds.getParcelAt(event.from)?.also {
-                user.teleport(it.homeLocation)
+            parcelProvider.getParcelAt(event.from)?.also {
+                user.teleport(it.world.getHomeLocation(it.id))
                 user.sendParcelMessage(nopermit = true, message = "You are banned from this parcel")
             } ?: run { event.to = event.from }
         }
@@ -113,7 +112,7 @@ class ParcelListeners(val worlds: Worlds, val entityTracker: ParcelEntityTracker
     private inline fun TLongCollection.troveForEach(block: (Long) -> Unit) = iterator().let { while (it.hasNext()) block(it.next()) }
     //@formatter:on
     private fun checkPistonMovement(event: BlockPistonEvent, blocks: List<Block>) {
-        val world = worlds.getWorld(event.block.world) ?: return
+        val world = parcelProvider.getWorld(event.block.world) ?: return
         val direction = event.direction
         val columns = gnu.trove.set.hash.TLongHashSet(blocks.size * 2)
 
@@ -123,7 +122,7 @@ class ParcelListeners(val worlds: Worlds, val entityTracker: ParcelEntityTracker
         }
 
         columns.troveForEach {
-            val ppa = world.parcelAt(it.columnX, it.columnZ)
+            val ppa = world.getParcelAt(it.columnX, it.columnZ)
             if (ppa.isNullOr { hasBlockVisitors }) {
                 event.isCancelled = true
                 return
@@ -150,8 +149,8 @@ class ParcelListeners(val worlds: Worlds, val entityTracker: ParcelEntityTracker
     @field:ListenerMarker(priority = NORMAL)
     val onEntityExplodeEvent = RegistratorListener<EntityExplodeEvent> l@{ event ->
         entityTracker.untrack(event.entity)
-        val world = worlds.getWorld(event.entity.world) ?: return@l
-        if (world.options.disableExplosions || world.parcelAt(event.entity).isPresentAnd { hasBlockVisitors }) {
+        val world = parcelProvider.getWorld(event.entity.world) ?: return@l
+        if (world.options.disableExplosions || world.getParcelAt(event.entity).isPresentAnd { hasBlockVisitors }) {
             event.isCancelled = true
         }
     }
@@ -175,9 +174,9 @@ class ParcelListeners(val worlds: Worlds, val entityTracker: ParcelEntityTracker
     @field:ListenerMarker(priority = NORMAL)
     val onPlayerInteractEvent = RegistratorListener<PlayerInteractEvent> l@{ event ->
         val user = event.player
-        val world = worlds.getWorld(user.world) ?: return@l
+        val world = parcelProvider.getWorld(user.world) ?: return@l
         val clickedBlock = event.clickedBlock
-        val parcel = clickedBlock?.let { world.parcelAt(it) }
+        val parcel = clickedBlock?.let { world.getParcelAt(it) }
 
         if (!user.hasBuildAnywhere && parcel.isPresentAnd { isBanned(user.uuid) }) {
             user.sendParcelMessage(nopermit = true, message = "You cannot interact with parcels you're banned from")
@@ -300,7 +299,7 @@ class ParcelListeners(val worlds: Worlds, val entityTracker: ParcelEntityTracker
      */
     @field:ListenerMarker(priority = NORMAL)
     val onEntityCreatePortalEvent = RegistratorListener<EntityCreatePortalEvent> l@{ event ->
-        val world = worlds.getWorld(event.entity.world) ?: return@l
+        val world = parcelProvider.getWorld(event.entity.world) ?: return@l
         if (world.options.blockPortalCreation) event.isCancelled = true
     }
 
@@ -341,7 +340,7 @@ class ParcelListeners(val worlds: Worlds, val entityTracker: ParcelEntityTracker
      */
     @field:ListenerMarker(priority = NORMAL)
     val onWeatherChangeEvent = RegistratorListener<WeatherChangeEvent> l@{ event ->
-        val world = worlds.getWorld(event.world) ?: return@l
+        val world = parcelProvider.getWorld(event.world) ?: return@l
         if (world.options.noWeather && event.toWeatherState()) {
             event.isCancelled = true
         }
@@ -351,29 +350,6 @@ class ParcelListeners(val worlds: Worlds, val entityTracker: ParcelEntityTracker
         world.setStorm(false)
         world.isThundering = false
         world.weatherDuration = Int.MAX_VALUE
-    }
-
-    /*
-     * Sets time to day and doDayLightCycle gamerule if requested by the config for that world
-     * Sets the weather to sunny if requested by the config for that world.
-     */
-    @field:ListenerMarker(priority = NORMAL)
-    val onWorldLoadEvent = RegistratorListener<WorldLoadEvent> l@{ event ->
-        enforceWorldSettingsIfApplicable(event.world)
-    }
-
-    fun enforceWorldSettingsIfApplicable(w: World) {
-        val world = worlds.getWorld(w) ?: return
-        if (world.options.dayTime) {
-            w.setGameRuleValue("doDaylightCycle", "false")
-            w.time = 6000
-        }
-
-        if (world.options.noWeather) {
-            resetWeather(w)
-        }
-
-        w.setGameRuleValue("doTileDrops", world.options.doTileDrops.toString())
     }
 
     // TODO: BlockFormEvent, BlockSpreadEvent, BlockFadeEvent
@@ -396,10 +372,10 @@ class ParcelListeners(val worlds: Worlds, val entityTracker: ParcelEntityTracker
 
         val cancel: Boolean = when (block.type) {
 
-            // prevent ice generation from Frost Walkers enchantment
+        // prevent ice generation from Frost Walkers enchantment
             ICE -> player != null && !ppa.canBuild(player)
 
-            // prevent snow generation from weather
+        // prevent snow generation from weather
             SNOW -> !hasEntity && wo.options.preventWeatherBlockChanges
 
             else -> false
@@ -415,10 +391,10 @@ class ParcelListeners(val worlds: Worlds, val entityTracker: ParcelEntityTracker
      */
     @field:ListenerMarker(priority = NORMAL)
     val onEntitySpawnEvent = RegistratorListener<EntitySpawnEvent> l@{ event ->
-        val world = worlds.getWorld(event.entity.world) ?: return@l
+        val world = parcelProvider.getWorld(event.entity.world) ?: return@l
         if (event.entity is Creature && world.options.blockMobSpawning) {
             event.isCancelled = true
-        } else if (world.parcelAt(event.entity).isPresentAnd { hasBlockVisitors }) {
+        } else if (world.getParcelAt(event.entity).isPresentAnd { hasBlockVisitors }) {
             event.isCancelled = true
         }
     }
@@ -448,7 +424,7 @@ class ParcelListeners(val worlds: Worlds, val entityTracker: ParcelEntityTracker
      */
     @field:ListenerMarker(priority = NORMAL)
     val onEntityDamageByEntityEvent = RegistratorListener<EntityDamageByEntityEvent> l@{ event ->
-        val world = worlds.getWorld(event.entity.world) ?: return@l
+        val world = parcelProvider.getWorld(event.entity.world) ?: return@l
         if (world.options.disableExplosions && event.damager is ExplosiveMinecart || event.damager is Creeper) {
             event.isCancelled = true; return@l
         }
@@ -457,19 +433,19 @@ class ParcelListeners(val worlds: Worlds, val entityTracker: ParcelEntityTracker
             ?: (event.damager as? Projectile)?.let { it.shooter as? Player }
             ?: return@l
 
-        if (!world.parcelAt(event.entity).canBuildN(user)) {
+        if (!world.getParcelAt(event.entity).canBuildN(user)) {
             event.isCancelled = true
         }
     }
 
     @field:ListenerMarker(priority = NORMAL)
     val onHangingBreakEvent = RegistratorListener<HangingBreakEvent> l@{ event ->
-        val world = worlds.getWorld(event.entity.world) ?: return@l
+        val world = parcelProvider.getWorld(event.entity.world) ?: return@l
         if (event.cause == HangingBreakEvent.RemoveCause.EXPLOSION && world.options.disableExplosions) {
             event.isCancelled = true; return@l
         }
 
-        if (world.parcelAt(event.entity).isPresentAnd { hasBlockVisitors }) {
+        if (world.getParcelAt(event.entity).isPresentAnd { hasBlockVisitors }) {
             event.isCancelled = true
         }
     }
@@ -480,9 +456,9 @@ class ParcelListeners(val worlds: Worlds, val entityTracker: ParcelEntityTracker
      */
     @field:ListenerMarker(priority = NORMAL)
     val onHangingBreakByEntityEvent = RegistratorListener<HangingBreakByEntityEvent> l@{ event ->
-        val world = worlds.getWorld(event.entity.world) ?: return@l
+        val world = parcelProvider.getWorld(event.entity.world) ?: return@l
         val user = event.remover as? Player ?: return@l
-        if (!world.parcelAt(event.entity).canBuildN(user)) {
+        if (!world.getParcelAt(event.entity).canBuildN(user)) {
             event.isCancelled = true
         }
     }
@@ -492,9 +468,9 @@ class ParcelListeners(val worlds: Worlds, val entityTracker: ParcelEntityTracker
      */
     @field:ListenerMarker(priority = NORMAL)
     val onHangingPlaceEvent = RegistratorListener<HangingPlaceEvent> l@{ event ->
-        val world = worlds.getWorld(event.entity.world) ?: return@l
+        val world = parcelProvider.getWorld(event.entity.world) ?: return@l
         val block = event.block.getRelative(event.blockFace)
-        if (!world.parcelAt(block).canBuildN(event.player)) {
+        if (!world.getParcelAt(block).canBuildN(event.player)) {
             event.isCancelled = true
         }
     }
@@ -513,7 +489,7 @@ class ParcelListeners(val worlds: Worlds, val entityTracker: ParcelEntityTracker
             event.isCancelled = true; return@l
         }
 
-        event.blocks.removeIf { wo.parcelAt(it.block) !== ppa }
+        event.blocks.removeIf { wo.getParcelAt(it.block) !== ppa }
     }
 
     /*
@@ -523,10 +499,10 @@ class ParcelListeners(val worlds: Worlds, val entityTracker: ParcelEntityTracker
     val onBlockDispenseEvent = RegistratorListener<BlockDispenseEvent> l@{ event ->
         val block = event.block
         if (!block.type.let { it == DISPENSER || it == DROPPER }) return@l
-        val world = worlds.getWorld(block.world) ?: return@l
+        val world = parcelProvider.getWorld(block.world) ?: return@l
         val data = block.blockData as Directional
         val targetBlock = block.getRelative(data.facing)
-        if (world.parcelAt(targetBlock) == null) {
+        if (world.getParcelAt(targetBlock) == null) {
             event.isCancelled = true
         }
     }
@@ -547,7 +523,7 @@ class ParcelListeners(val worlds: Worlds, val entityTracker: ParcelEntityTracker
     @field:ListenerMarker(priority = NORMAL)
     val onEntityTeleportEvent = RegistratorListener<EntityTeleportEvent> l@{ event ->
         val (wo, ppa) = getWoAndPPa(event.from.block) ?: return@l
-        if (ppa !== wo.parcelAt(event.to)) {
+        if (ppa !== wo.getParcelAt(event.to)) {
             event.isCancelled = true
         }
     }
@@ -572,7 +548,7 @@ class ParcelListeners(val worlds: Worlds, val entityTracker: ParcelEntityTracker
     @field:ListenerMarker(priority = NORMAL)
     val onEntityDeathEvent = RegistratorListener<EntityDeathEvent> l@{ event ->
         entityTracker.untrack(event.entity)
-        val world = worlds.getWorld(event.entity.world) ?: return@l
+        val world = parcelProvider.getWorld(event.entity.world) ?: return@l
         if (!world.options.dropEntityItems) {
             event.drops.clear()
             event.droppedExp = 0
@@ -584,7 +560,7 @@ class ParcelListeners(val worlds: Worlds, val entityTracker: ParcelEntityTracker
      */
     @field:ListenerMarker(priority = NORMAL)
     val onPlayerChangedWorldEvent = RegistratorListener<PlayerChangedWorldEvent> l@{ event ->
-        val world = worlds.getWorld(event.player.world) ?: return@l
+        val world = parcelProvider.getWorld(event.player.world) ?: return@l
         if (world.options.gameMode != null && !event.player.hasGamemodeBypass) {
             event.player.gameMode = world.options.gameMode
         }

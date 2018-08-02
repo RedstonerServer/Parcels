@@ -2,10 +2,13 @@ package io.dico.parcels2
 
 import io.dico.parcels2.util.uuid
 import org.bukkit.OfflinePlayer
-import java.util.*
+import java.util.UUID
+
+typealias MutableAddedDataMap = MutableMap<UUID, AddedStatus>
+typealias AddedDataMap = Map<UUID, AddedStatus>
 
 interface AddedData {
-    val addedMap: Map<UUID, AddedStatus>
+    val addedMap: AddedDataMap
 
     fun getAddedStatus(uuid: UUID): AddedStatus
     fun setAddedStatus(uuid: UUID, status: AddedStatus): Boolean
@@ -28,8 +31,7 @@ interface AddedData {
     fun unban(player: OfflinePlayer) = unban(player.uuid)
 }
 
-open class AddedDataHolder(override var addedMap: MutableMap<UUID, AddedStatus>
-                           = mutableMapOf<UUID, AddedStatus>()) : AddedData {
+open class AddedDataHolder(override var addedMap: MutableAddedDataMap = mutableMapOf()) : AddedData {
     override fun getAddedStatus(uuid: UUID): AddedStatus = addedMap.getOrDefault(uuid, AddedStatus.DEFAULT)
     override fun setAddedStatus(uuid: UUID, status: AddedStatus): Boolean = status.takeIf { it != AddedStatus.DEFAULT }
         ?.let { addedMap.put(uuid, it) != it }
@@ -44,4 +46,12 @@ enum class AddedStatus {
     val isDefault get() = this == DEFAULT
     val isAllowed get() = this == ALLOWED
     val isBanned get() = this == BANNED
+}
+
+interface GlobalAddedData : AddedData {
+    val owner: ParcelOwner
+}
+
+interface GlobalAddedDataManager {
+    operator fun get(owner: ParcelOwner): GlobalAddedData
 }

@@ -16,10 +16,10 @@ abstract class AbstractParcelCommands(val plugin: ParcelsPlugin) : ICommandRecei
 
     override fun getPlugin(): Plugin = plugin
     override fun getReceiver(context: ExecutionContext, target: Method, cmdName: String): ICommandReceiver {
-        return getParcelCommandReceiver(plugin.worlds, context, target, cmdName)
+        return getParcelCommandReceiver(plugin.parcelProvider, context, target, cmdName)
     }
 
-    protected inline val worlds get() = plugin.worlds
+    protected inline val worlds get() = plugin.parcelProvider
 
     protected fun error(message: String): Nothing {
         throw CommandException(message)
@@ -32,7 +32,7 @@ abstract class AbstractParcelCommands(val plugin: ParcelsPlugin) : ICommandRecei
     protected suspend fun checkParcelLimit(player: Player, world: ParcelWorld) {
         if (player.hasAdminManage) return
         val numOwnedParcels = plugin.storage.getOwnedParcels(ParcelOwner(player)).await()
-            .filter { it.world.world == world.world }.size
+            .filter { it.worldId.equals(world.id) }.size
 
         val limit = player.parcelLimit
         if (numOwnedParcels >= limit) {

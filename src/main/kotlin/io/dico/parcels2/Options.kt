@@ -1,27 +1,33 @@
 package io.dico.parcels2
 
-
 import com.fasterxml.jackson.annotation.JsonIgnore
 import io.dico.parcels2.blockvisitor.TickWorktimeOptions
+import io.dico.parcels2.defaultimpl.DefaultGeneratorOptions
 import io.dico.parcels2.storage.Storage
 import io.dico.parcels2.storage.StorageFactory
 import io.dico.parcels2.storage.yamlObjectMapper
-import org.bukkit.Bukkit.createBlockData
 import org.bukkit.GameMode
 import org.bukkit.Material
-import org.bukkit.block.Biome
-import org.bukkit.block.data.BlockData
 import java.io.Reader
 import java.io.Writer
-import java.util.*
+import java.util.EnumSet
 
 class Options {
-    var worlds: Map<String, WorldOptions> = HashMap()
+    var worlds: Map<String, WorldOptionsHolder> = hashMapOf()
         private set
     var storage: StorageOptions = StorageOptions("postgresql", DataConnectionOptions())
     var tickWorktime: TickWorktimeOptions = TickWorktimeOptions(20, 1)
 
-    fun addWorld(name: String, options: WorldOptions) = (worlds as MutableMap).put(name, options)
+    fun addWorld(name: String,
+                 generatorOptions: GeneratorOptions? = null,
+                 worldOptions: WorldOptions? = null) {
+        val optionsHolder = WorldOptionsHolder(
+            generatorOptions ?: DefaultGeneratorOptions(),
+            worldOptions ?: WorldOptions()
+        )
+
+        (worlds as MutableMap).put(name, optionsHolder)
+    }
 
     fun writeTo(writer: Writer) = yamlObjectMapper.writeValue(writer, this)
 
@@ -30,6 +36,9 @@ class Options {
     override fun toString(): String = yamlObjectMapper.writeValueAsString(this)
 
 }
+
+class WorldOptionsHolder(var generator: GeneratorOptions = DefaultGeneratorOptions(),
+                         var runtime: WorldOptions = WorldOptions())
 
 data class WorldOptions(var gameMode: GameMode? = GameMode.CREATIVE,
                         var dayTime: Boolean = true,
@@ -42,8 +51,7 @@ data class WorldOptions(var gameMode: GameMode? = GameMode.CREATIVE,
                         var blockPortalCreation: Boolean = true,
                         var blockMobSpawning: Boolean = true,
                         var blockedItems: Set<Material> = EnumSet.of(Material.FLINT_AND_STEEL, Material.SNOWBALL),
-                        var axisLimit: Int = 10,
-                        var generator: GeneratorOptions = DefaultGeneratorOptions()) {
+                        var axisLimit: Int = 10) {
 
 }
 
@@ -51,23 +59,7 @@ abstract class GeneratorOptions {
 
     abstract fun generatorFactory(): GeneratorFactory
 
-    fun getGenerator(worlds: Worlds, worldName: String) = generatorFactory().newParcelGenerator(worlds, worldName, this)
-
-}
-
-data class DefaultGeneratorOptions(var defaultBiome: Biome = Biome.JUNGLE,
-                                   var wallType: BlockData = createBlockData(Material.STONE_SLAB),
-                                   var floorType: BlockData = createBlockData(Material.QUARTZ_BLOCK),
-                                   var fillType: BlockData = createBlockData(Material.QUARTZ_BLOCK),
-                                   var pathMainType: BlockData = createBlockData(Material.SANDSTONE),
-                                   var pathAltType: BlockData = createBlockData(Material.REDSTONE_BLOCK),
-                                   var parcelSize: Int = 101,
-                                   var pathSize: Int = 9,
-                                   var floorHeight: Int = 64,
-                                   var offsetX: Int = 0,
-                                   var offsetZ: Int = 0) : GeneratorOptions() {
-
-    override fun generatorFactory(): GeneratorFactory = DefaultParcelGenerator.Factory
+    fun newGenerator(worldName: String) = generatorFactory().newParcelGenerator(worldName, this)
 
 }
 
@@ -105,3 +97,8 @@ data class DataConnectionOptions(val address: String = "localhost",
 }
 
 data class DataFileOptions(val location: String = "/flatfile-storage/")
+
+class MigrationOptions() {
+
+
+}

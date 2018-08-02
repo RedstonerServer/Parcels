@@ -1,12 +1,12 @@
 package io.dico.parcels2.listener
 
 import io.dico.parcels2.Parcel
-import io.dico.parcels2.Worlds
+import io.dico.parcels2.ParcelProvider
 import io.dico.parcels2.util.editLoop
 import io.dico.parcels2.util.isPresentAnd
 import org.bukkit.entity.Entity
 
-class ParcelEntityTracker(val worlds: Worlds) {
+class ParcelEntityTracker(val parcelProvider: ParcelProvider) {
     val map = mutableMapOf<Entity, Parcel?>()
 
     fun untrack(entity: Entity) {
@@ -32,7 +32,7 @@ class ParcelEntityTracker(val worlds: Worlds) {
             if (parcel.isPresentAnd { hasBlockVisitors }) {
                 remove()
             }
-            val newParcel = worlds.getParcelAt(entity.location)
+            val newParcel = parcelProvider.getParcelAt(entity.location)
             if (newParcel !== parcel && !newParcel.isPresentAnd { hasBlockVisitors }) {
                 remove()
                 entity.remove()

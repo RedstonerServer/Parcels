@@ -8,14 +8,7 @@ interface HasPlugin {
     val plugin: ParcelsPlugin
 }
 
-inline fun <reified T: Event> HasPlugin.listener(crossinline block: suspend (T) -> Unit) = RegistratorListener<T> { event ->
-
-
-
-
-
-
-
+inline fun <reified T : Event> HasPlugin.listener(crossinline block: suspend (T) -> Unit) = RegistratorListener<T> { event ->
 
 
 }

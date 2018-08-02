@@ -1,223 +1,86 @@
 package io.dico.parcels2
 
-import io.dico.parcels2.storage.SerializableParcel
-import io.dico.parcels2.storage.SerializableWorld
 import io.dico.parcels2.storage.Storage
-import io.dico.parcels2.storage.getParcelBySerializedValue
 import io.dico.parcels2.util.Vec2i
 import io.dico.parcels2.util.floor
-import kotlinx.coroutines.experimental.launch
-import org.bukkit.Bukkit
 import org.bukkit.Location
 import org.bukkit.World
-import org.bukkit.WorldCreator
 import org.bukkit.block.Block
 import org.bukkit.entity.Entity
-import org.bukkit.entity.Player
-import java.util.*
-import kotlin.coroutines.experimental.buildIterator
-import kotlin.coroutines.experimental.buildSequence
+import java.util.UUID
 
-class Worlds(val plugin: ParcelsPlugin) {
-    val worlds: Map<String, ParcelWorld> get() = _worlds
-    private val _worlds: MutableMap<String, ParcelWorld> = HashMap()
+interface ParcelProvider {
+    val worlds: Map<String, ParcelWorld>
 
-    fun getWorld(name: String): ParcelWorld? = _worlds[name]
+    fun getWorldById(id: ParcelWorldId): ParcelWorld?
+
+    fun getParcelById(id: ParcelId): Parcel?
+
+    fun getWorld(name: String): ParcelWorld?
 
     fun getWorld(world: World): ParcelWorld? = getWorld(world.name)
 
-    fun getParcelAt(block: Block): Parcel? = getParcelAt(block.world, block.x, block.z)
+    fun getWorld(block: Block): ParcelWorld? = getWorld(block.world)
 
-    fun getParcelAt(player: Player): Parcel? = getParcelAt(player.location)
+    fun getWorld(loc: Location): ParcelWorld? = getWorld(loc.world)
 
-    fun getParcelAt(location: Location): Parcel? = getParcelAt(location.world, location.x.floor(), location.z.floor())
+    fun getWorld(entity: Entity): ParcelWorld? = getWorld(entity.location)
+
+    fun getParcelAt(worldName: String, x: Int, z: Int): Parcel? = getWorld(worldName)?.locator?.getParcelAt(x, z)
 
     fun getParcelAt(world: World, x: Int, z: Int): Parcel? = getParcelAt(world.name, x, z)
 
-    fun getParcelAt(world: String, x: Int, z: Int): Parcel? {
-        with(getWorld(world) ?: return null) {
-            return generator.parcelAt(x, z)
-        }
-    }
+    fun getParcelAt(world: World, vec: Vec2i): Parcel? = getParcelAt(world, vec.x, vec.z)
 
-    operator fun SerializableParcel.invoke(): Parcel? {
-        return world()?.parcelByID(pos)
-    }
+    fun getParcelAt(loc: Location): Parcel? = getParcelAt(loc.world, loc.x.floor(), loc.z.floor())
 
-    operator fun SerializableWorld.invoke(): ParcelWorld? {
-        return world?.let { getWorld(it) }
-    }
+    fun getParcelAt(entity: Entity): Parcel? = getParcelAt(entity.location)
 
-    fun loadWorlds(options: Options) {
-        for ((worldName, worldOptions) in options.worlds.entries) {
-            val world: ParcelWorld
-            try {
+    fun getParcelAt(block: Block): Parcel? = getParcelAt(block.world, block.x, block.z)
 
-                world = ParcelWorld(
-                    worldName,
-                    worldOptions,
-                    worldOptions.generator.getGenerator(this, worldName),
-                    plugin.storage,
-                    plugin.globalAddedData)
+    fun getWorldGenerator(worldName: String): ParcelGenerator?
 
-            } catch (ex: Exception) {
-                ex.printStackTrace()
-                continue
-            }
-
-            _worlds[worldName] = world
-        }
-
-        plugin.functionHelper.schedule(10) {
-            println("Parcels generating worlds now")
-            for ((name, world) in _worlds) {
-                if (Bukkit.getWorld(name) == null) {
-                    val bworld = WorldCreator(name).generator(world.generator).createWorld()
-                    val spawn = world.generator.getFixedSpawnLocation(bworld, null)
-                    bworld.setSpawnLocation(spawn.x.floor(), spawn.y.floor(), spawn.z.floor())
-                }
-            }
-
-            val channel = plugin.storage.readAllParcelData()
-            val job = plugin.functionHelper.launchLazilyOnMainThread {
-                do {
-                    val pair = channel.receiveOrNull() ?: break
-                    val parcel = getParcelBySerializedValue(pair.first) ?: continue
-                    pair.second?.let { parcel.copyDataIgnoringDatabase(it) }
-                } while (true)
-            }
-            job.start()
-        }
-
-    }
+    fun loadWorlds()
 }
 
-interface ParcelProvider {
+interface ParcelLocator {
+    val world: World
 
-    fun parcelAt(x: Int, z: Int): Parcel?
+    fun getParcelIdAt(x: Int, z: Int): ParcelId?
 
-    fun parcelAt(vec: Vec2i): Parcel? = parcelAt(vec.x, vec.z)
+    fun getParcelAt(x: Int, z: Int): Parcel?
 
-    fun parcelAt(loc: Location): Parcel? = parcelAt(loc.x.floor(), loc.z.floor())
+    fun getParcelAt(vec: Vec2i): Parcel? = getParcelAt(vec.x, vec.z)
 
-    fun parcelAt(entity: Entity): Parcel? = parcelAt(entity.location)
+    fun getParcelAt(loc: Location): Parcel? = getParcelAt(loc.x.floor(), loc.z.floor()).takeIf { loc.world == world }
 
-    fun parcelAt(block: Block): Parcel? = parcelAt(block.x, block.z)
-}
+    fun getParcelAt(entity: Entity): Parcel? = getParcelAt(entity.location).takeIf { entity.world == world }
 
-class ParcelWorld constructor(val name: String,
-                              val options: WorldOptions,
-                              val generator: ParcelGenerator,
-                              val storage: Storage,
-                              val globalAddedData: GlobalAddedDataManager) : ParcelProvider by generator, ParcelContainer {
-    val world: World by lazy {
-        Bukkit.getWorld(name) ?: throw NullPointerException("World $name does not appear to be loaded")
-    }
-    val container: ParcelContainer = DefaultParcelContainer(this, storage)
-
-    override fun parcelByID(x: Int, z: Int): Parcel? {
-        return container.parcelByID(x, z)
-    }
-
-    override fun nextEmptyParcel(): Parcel? {
-        return container.nextEmptyParcel()
-    }
-
-    fun parcelByID(id: Vec2i): Parcel? = parcelByID(id.x, id.z)
-
-    fun enforceOptionsIfApplicable() {
-        val world = world
-        val options = options
-        if (options.dayTime) {
-            world.setGameRuleValue("doDaylightCycle", "false")
-            world.setTime(6000)
-        }
-
-        if (options.noWeather) {
-            world.setStorm(false)
-            world.setThundering(false)
-            world.weatherDuration = Integer.MAX_VALUE
-        }
-
-        world.setGameRuleValue("doTileDrops", "${options.doTileDrops}")
-    }
-
-}
-
-interface ParcelContainer {
-
-    fun parcelByID(x: Int, z: Int): Parcel?
-
-    fun nextEmptyParcel(): Parcel?
+    fun getParcelAt(block: Block): Parcel? = getParcelAt(block.x, block.z).takeIf { block.world == world }
 
 }
 
 typealias ParcelContainerFactory = (ParcelWorld) -> ParcelContainer
 
-class DefaultParcelContainer(private val world: ParcelWorld,
-                             private val storage: Storage) : ParcelContainer {
-    private var parcels: Array<Array<Parcel>>
+interface ParcelContainer {
 
-    init {
-        parcels = initArray(world.options.axisLimit, world)
-    }
+    fun getParcelById(x: Int, z: Int): Parcel?
 
-    fun resizeIfSizeChanged() {
-        if (parcels.size / 2 != world.options.axisLimit) {
-            resize(world.options.axisLimit)
-        }
-    }
+    fun getParcelById(id: Vec2i): Parcel? = getParcelById(id.x, id.z)
 
-    fun resize(axisLimit: Int) {
-        parcels = initArray(axisLimit, world, this)
-    }
+    fun nextEmptyParcel(): Parcel?
 
-    fun initArray(axisLimit: Int, world: ParcelWorld, cur: DefaultParcelContainer? = null): Array<Array<Parcel>> {
-        val arraySize = 2 * axisLimit + 1
-        return Array(arraySize) {
-            val x = it - axisLimit
-            Array(arraySize) {
-                val z = it - axisLimit
-                cur?.parcelByID(x, z) ?: Parcel(world, Vec2i(x, z))
-            }
-        }
-    }
+}
 
-    override fun parcelByID(x: Int, z: Int): Parcel? {
-        return parcels.getOrNull(x + world.options.axisLimit)?.getOrNull(z + world.options.axisLimit)
-    }
-
-    override fun nextEmptyParcel(): Parcel? {
-        return walkInCircle().find { it.owner == null }
-    }
-
-    private fun walkInCircle(): Iterable<Parcel> = Iterable {
-        buildIterator {
-            val center = world.options.axisLimit
-            for (radius in 0..center) {
-                var x = center - radius;
-                var z = center - radius
-                repeat(radius * 2) { yield(parcels[x++][z]) }
-                repeat(radius * 2) { yield(parcels[x][z++]) }
-                repeat(radius * 2) { yield(parcels[x--][z]) }
-                repeat(radius * 2) { yield(parcels[x][z--]) }
-            }
-        }
-    }
-
-    fun allParcels(): Sequence<Parcel> = buildSequence {
-        for (array in parcels) {
-            yieldAll(array.iterator())
-        }
-    }
-
-    fun loadAllData() {
-        val channel = storage.readParcelData(allParcels())
-        launch(storage.asyncDispatcher) {
-            for ((parcel, data) in channel) {
-                data?.let { parcel.copyDataIgnoringDatabase(it) }
-            }
-        }
-    }
-
+interface ParcelWorld : ParcelLocator, ParcelContainer, ParcelBlockManager {
+    val id: ParcelWorldId
+    val name: String
+    val uid: UUID?
+    val options: WorldOptions
+    val generator: ParcelGenerator
+    val storage: Storage
+    val container: ParcelContainer
+    val locator: ParcelLocator
+    val blockManager: ParcelBlockManager
+    val globalAddedData: GlobalAddedDataManager
 }

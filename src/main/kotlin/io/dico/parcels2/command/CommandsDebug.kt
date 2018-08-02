@@ -9,7 +9,7 @@ import io.dico.parcels2.blockvisitor.RegionTraversal
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.entity.Player
-import java.util.*
+import java.util.Random
 
 class CommandsDebug(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
 
@@ -39,7 +39,8 @@ class CommandsDebug(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
             server.createBlockData(Material.QUARTZ_BLOCK)
         )
         val random = Random()
-        world.generator.doBlockOperation(parcel, direction = RegionTraversal.UPWARD) { block ->
+
+        world.doBlockOperation(parcel.id, direction = RegionTraversal.UPWARD) { block ->
             block.blockData = blockDatas[random.nextInt(4)]
         }.onProgressUpdate(1000, 1000) { progress, elapsedTime ->
             context.sendMessage(EMessageType.INFORMATIVE, "Mess progress: %.02f%%, %.2fs elapsed"

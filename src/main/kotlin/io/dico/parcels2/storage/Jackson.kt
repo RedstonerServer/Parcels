@@ -8,7 +8,7 @@ import com.fasterxml.jackson.databind.ser.BeanSerializerModifier
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.KotlinModule
-import io.dico.parcels2.GeneratorFactory
+import io.dico.parcels2.GeneratorFactories
 import io.dico.parcels2.GeneratorOptions
 import io.dico.parcels2.StorageOptions
 import org.bukkit.Bukkit
@@ -100,7 +100,7 @@ class GeneratorOptionsDeserializer : JsonDeserializer<GeneratorOptions>() {
         val node = parser!!.readValueAsTree<JsonNode>()
         val name = node.get("name").asText()
         val optionsNode = node.get("options")
-        val factory = GeneratorFactory.getFactory(name) ?: throw IllegalStateException("Unknown generator: $name")
+        val factory = GeneratorFactories.getFactory(name) ?: throw IllegalStateException("Unknown generator: $name")
 
         return parser.codec.treeToValue(optionsNode, factory.optionsClass.java)
     }

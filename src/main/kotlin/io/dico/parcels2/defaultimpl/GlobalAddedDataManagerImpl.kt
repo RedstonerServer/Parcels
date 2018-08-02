@@ -1,16 +1,10 @@
 @file:Suppress("UNCHECKED_CAST")
 
-package io.dico.parcels2
+package io.dico.parcels2.defaultimpl
 
-import java.util.*
-
-interface GlobalAddedData : AddedData {
-    val owner: ParcelOwner
-}
-
-interface GlobalAddedDataManager {
-    operator fun get(owner: ParcelOwner): GlobalAddedData
-}
+import io.dico.parcels2.*
+import java.util.Collections
+import java.util.UUID
 
 class GlobalAddedDataManagerImpl(val plugin: ParcelsPlugin) : GlobalAddedDataManager {
     private val map = mutableMapOf<ParcelOwner, GlobalAddedData>()
@@ -20,7 +14,7 @@ class GlobalAddedDataManagerImpl(val plugin: ParcelsPlugin) : GlobalAddedDataMan
     }
 
     private inner class GlobalAddedDataImpl(override val owner: ParcelOwner,
-                                            data: MutableMap<UUID, AddedStatus> = emptyData)
+                                            data: MutableAddedDataMap = emptyData)
         : AddedDataHolder(data), GlobalAddedData {
 
         private inline var data get() = addedMap; set(value) = run { addedMap = value }
@@ -39,10 +33,7 @@ class GlobalAddedDataManagerImpl(val plugin: ParcelsPlugin) : GlobalAddedDataMan
     }
 
     private companion object {
-        val emptyData = Collections.emptyMap<UUID, AddedStatus>() as MutableMap<UUID, AddedStatus>
+        val emptyData = Collections.emptyMap<Any, Any>() as MutableAddedDataMap
     }
 
 }
-
-
-

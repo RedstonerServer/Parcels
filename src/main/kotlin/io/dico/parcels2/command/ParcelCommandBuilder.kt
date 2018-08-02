@@ -3,27 +3,30 @@ package io.dico.parcels2.command
 import io.dico.dicore.command.CommandBuilder
 import io.dico.dicore.command.ICommandAddress
 import io.dico.dicore.command.ICommandDispatcher
-import io.dico.dicore.command.predef.PredefinedCommand
 import io.dico.dicore.command.registration.reflect.ReflectiveRegistration
 import io.dico.parcels2.ParcelsPlugin
-import io.dico.parcels2.logger
-import java.util.*
+import java.util.LinkedList
+import java.util.Queue
 
 @Suppress("UsePropertyAccessSyntax")
 fun getParcelCommands(plugin: ParcelsPlugin): ICommandDispatcher {
     //@formatter:off
     return CommandBuilder()
         .setChatController(ParcelsChatController())
-        .addParameterType(false, ParcelParameterType(plugin.worlds))
-        .addParameterType(true, ParcelTarget.PType(plugin.worlds))
+        .addParameterType(false, ParcelParameterType(plugin.parcelProvider))
+        .addParameterType(true, ParcelTarget.PType(plugin.parcelProvider))
 
         .group("parcel", "plot", "plots", "p")
             .registerCommands(CommandsGeneral(plugin))
-            .registerCommands(CommandsAddedStatus(plugin))
+            .registerCommands(CommandsAddedStatusLocal(plugin))
 
-            .group("option")
+            .group("option", "opt", "o")
                 //.apply { CommandsParcelOptions.setGroupDescription(this) }
                 .registerCommands(CommandsParcelOptions(plugin))
+                .parent()
+
+            .group("global", "g")
+                .registerCommands(CommandsAddedStatusGlobal(plugin))
                 .parent()
 
             .group("admin", "a")

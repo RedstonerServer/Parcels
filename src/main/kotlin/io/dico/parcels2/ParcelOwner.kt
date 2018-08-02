@@ -1,4 +1,4 @@
-@file:Suppress("unused")
+@file:Suppress("unused", "UsePropertyAccessSyntax", "DEPRECATION")
 
 package io.dico.parcels2
 
@@ -8,11 +8,10 @@ import io.dico.parcels2.util.uuid
 import org.bukkit.Bukkit
 import org.bukkit.OfflinePlayer
 import org.bukkit.entity.Player
-import java.util.*
+import java.util.UUID
 
-@Suppress("UsePropertyAccessSyntax")
-class ParcelOwner private constructor(val uuid: UUID?,
-                                      val name: String?) {
+class ParcelOwner(val uuid: UUID?,
+                  val name: String?) {
     val notNullName: String by lazy { name ?: getPlayerNameOrDefault(uuid!!) }
 
     constructor(name: String) : this(null, name)
@@ -26,11 +25,11 @@ class ParcelOwner private constructor(val uuid: UUID?,
     inline val hasUUID: Boolean get() = uuid != null
 
     val onlinePlayer: Player? get() = uuid?.let { Bukkit.getPlayer(uuid) }
-    @Suppress("DEPRECATION")
+
     val onlinePlayerAllowingNameMatch: Player? get() = onlinePlayer ?: name?.let { Bukkit.getPlayerExact(name) }
     val offlinePlayer: OfflinePlayer? get() = uuid?.let { Bukkit.getOfflinePlayer(it).takeIf { it.isValid } }
-    @Suppress("DEPRECATION")
-    val offlinePlayerAllowingNameMatch: OfflinePlayer? get() = offlinePlayer ?: Bukkit.getOfflinePlayer(name).takeIf { it.isValid }
+    val offlinePlayerAllowingNameMatch: OfflinePlayer?
+        get() = offlinePlayer ?: Bukkit.getOfflinePlayer(name).takeIf { it.isValid }
 
     fun matches(player: OfflinePlayer, allowNameMatch: Boolean = false): Boolean {
         return uuid?.let { it == player.uniqueId } ?: false

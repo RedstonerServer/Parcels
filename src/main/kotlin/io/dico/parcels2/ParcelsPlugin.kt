@@ -6,6 +6,8 @@ import io.dico.dicore.command.ICommandDispatcher
 import io.dico.parcels2.blockvisitor.TickWorktimeLimiter
 import io.dico.parcels2.blockvisitor.WorktimeLimiter
 import io.dico.parcels2.command.getParcelCommands
+import io.dico.parcels2.defaultimpl.GlobalAddedDataManagerImpl
+import io.dico.parcels2.defaultimpl.ParcelProviderImpl
 import io.dico.parcels2.listener.ParcelEntityTracker
 import io.dico.parcels2.listener.ParcelListeners
 import io.dico.parcels2.storage.Storage
@@ -13,6 +15,7 @@ import io.dico.parcels2.storage.yamlObjectMapper
 import io.dico.parcels2.util.FunctionHelper
 import io.dico.parcels2.util.tryCreate
 import org.bukkit.Bukkit
+import org.bukkit.generator.ChunkGenerator
 import org.bukkit.plugin.java.JavaPlugin
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -24,7 +27,7 @@ private inline val plogger get() = logger
 class ParcelsPlugin : JavaPlugin() {
     lateinit var optionsFile: File; private set
     lateinit var options: Options; private set
-    lateinit var worlds: Worlds; private set
+    lateinit var parcelProvider: ParcelProvider; private set
     lateinit var storage: Storage; private set
     lateinit var globalAddedData: GlobalAddedDataManager; private set
 
@@ -50,7 +53,7 @@ class ParcelsPlugin : JavaPlugin() {
     private fun init(): Boolean {
         optionsFile = File(dataFolder, "options.yml")
         options = Options()
-        worlds = Worlds(this)
+        parcelProvider = ParcelProviderImpl(this)
 
         try {
             if (!loadOptions()) return false
@@ -64,8 +67,7 @@ class ParcelsPlugin : JavaPlugin() {
             }
 
             globalAddedData = GlobalAddedDataManagerImpl(this)
-            worlds.loadWorlds(options)
-            entityTracker = ParcelEntityTracker(worlds)
+            entityTracker = ParcelEntityTracker(parcelProvider)
         } catch (ex: Exception) {
             plogger.error("Error loading options", ex)
             return false
@@ -74,6 +76,7 @@ class ParcelsPlugin : JavaPlugin() {
         registerListeners()
         registerCommands()
 
+        parcelProvider.loadWorlds()
         return true
     }
 
@@ -81,7 +84,7 @@ class ParcelsPlugin : JavaPlugin() {
         when {
             optionsFile.exists() -> yamlObjectMapper.readerForUpdating(options).readValue<Options>(optionsFile)
             optionsFile.tryCreate() -> {
-                options.addWorld("parcels", WorldOptions())
+                options.addWorld("parcels")
                 try {
                     yamlObjectMapper.writeValue(optionsFile, options)
                 } catch (ex: Throwable) {
@@ -99,6 +102,10 @@ class ParcelsPlugin : JavaPlugin() {
         return true
     }
 
+    override fun getDefaultWorldGenerator(worldName: String, generatorId: String?): ChunkGenerator? {
+        return parcelProvider.getWorldGenerator(worldName)
+    }
+
     private fun registerCommands() {
         cmdDispatcher = getParcelCommands(this).apply {
             registerToCommandMap("parcels:", EOverridePolicy.FALLBACK_ONLY)
@@ -107,7 +114,7 @@ class ParcelsPlugin : JavaPlugin() {
 
     private fun registerListeners() {
         if (listeners == null) {
-            listeners = ParcelListeners(worlds, entityTracker)
+            listeners = ParcelListeners(parcelProvider, entityTracker)
             registrator.registerListeners(listeners!!)
         }
     }

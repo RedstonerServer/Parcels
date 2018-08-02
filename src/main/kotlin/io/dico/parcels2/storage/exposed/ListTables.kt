@@ -3,17 +3,16 @@
 package io.dico.parcels2.storage.exposed
 
 import io.dico.parcels2.AddedStatus
-import io.dico.parcels2.Parcel
+import io.dico.parcels2.ParcelId
 import io.dico.parcels2.ParcelOwner
-import io.dico.parcels2.storage.SerializableParcel
 import io.dico.parcels2.util.toByteArray
 import io.dico.parcels2.util.toUUID
 import kotlinx.coroutines.experimental.channels.SendChannel
 import org.jetbrains.exposed.sql.*
-import java.util.*
+import java.util.UUID
 
-object AddedLocalT : AddedTable<Parcel, SerializableParcel>("parcels_added_local", ParcelsT)
-object AddedGlobalT : AddedTable<ParcelOwner, ParcelOwner>("parcels_added_global", OwnersT)
+object AddedLocalT : AddedTable<ParcelId>("parcels_added_local", ParcelsT)
+object AddedGlobalT : AddedTable<ParcelOwner>("parcels_added_global", OwnersT)
 
 object ParcelOptionsT : Table("parcel_options") {
     val parcel_id = integer("parcel_id").primaryKey().references(ParcelsT.id, ReferenceOption.CASCADE)
@@ -23,7 +22,7 @@ object ParcelOptionsT : Table("parcel_options") {
 
 typealias AddedStatusSendChannel<AttachT> = SendChannel<Pair<AttachT, MutableMap<UUID, AddedStatus>>>
 
-sealed class AddedTable<AttachT, SerializableT>(name: String, val idTable: IdTransactionsTable<*, AttachT, SerializableT>) : Table(name) {
+sealed class AddedTable<AttachT>(name: String, val idTable: IdTransactionsTable<*, AttachT>) : Table(name) {
     val attach_id = integer("attach_id").references(idTable.id, ReferenceOption.CASCADE)
     val player_uuid = binary("player_uuid", 16)
     val allowed_flag = bool("allowed_flag")
@@ -52,7 +51,7 @@ sealed class AddedTable<AttachT, SerializableT>(name: String, val idTable: IdTra
             .associateByTo(hashMapOf(), { it[player_uuid].toUUID() }, { it[allowed_flag].asAddedStatus() })
     }
 
-    suspend fun sendAllAddedData(channel: AddedStatusSendChannel<SerializableT>) {
+    suspend fun sendAllAddedData(channel: AddedStatusSendChannel<AttachT>) {
         /*
         val iterator = selectAll().orderBy(attach_id).iterator()
 
@@ -63,7 +62,7 @@ sealed class AddedTable<AttachT, SerializableT>(name: String, val idTable: IdTra
             var map: MutableMap<UUID, AddedStatus>? = null
 
             fun initAttachAndMap() {
-                attach = idTable.getSerializable(id)
+                attach = idTable.getId(id)
                 map = attach?.let { mutableMapOf() }
             }
 

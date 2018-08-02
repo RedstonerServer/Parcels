@@ -40,7 +40,7 @@ class UpsertStatement<Key : Any>(table: Table, conflictColumn: Column<*>? = null
 
         } else {
 
-            append (" ON DUPLICATE KEY UPDATE ")
+            append(" ON DUPLICATE KEY UPDATE ")
             values.keys.filter { it !in indexColumns }.joinTo(this) { "${transaction.identity(it)}=VALUES(${transaction.identity(it)})" }
 
         }

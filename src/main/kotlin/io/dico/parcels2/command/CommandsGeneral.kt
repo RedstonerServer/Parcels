@@ -8,7 +8,6 @@ import io.dico.dicore.command.annotation.Flag
 import io.dico.dicore.command.annotation.RequireParameters
 import io.dico.parcels2.ParcelOwner
 import io.dico.parcels2.ParcelsPlugin
-import io.dico.parcels2.storage.getParcelBySerializedValue
 import io.dico.parcels2.util.hasAdminManage
 import io.dico.parcels2.util.hasParcelHomeOthers
 import io.dico.parcels2.util.uuid
@@ -27,7 +26,7 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
         val parcel = world.nextEmptyParcel()
             ?: error("This world is full, please ask an admin to upsize it")
         parcel.owner = ParcelOwner(uuid = player.uuid)
-        player.teleport(parcel.homeLocation)
+        player.teleport(parcel.world.getHomeLocation(parcel.id))
         return "Enjoy your new parcel!"
     }
 
@@ -53,13 +52,13 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
         val ownedParcelsResult = plugin.storage.getOwnedParcels(ownerTarget.owner).await()
 
         val ownedParcels = ownedParcelsResult
-            .map { worlds.getParcelBySerializedValue(it) }
+            .map { worlds.getParcelById(it) }
             .filter { it != null && ownerTarget.world == it.world }
 
         val targetMatch = ownedParcels.getOrNull(target.index)
             ?: error("The specified parcel could not be matched")
 
-        player.teleport(targetMatch.homeLocation)
+        player.teleport(targetMatch.world.getHomeLocation(targetMatch.id))
         return ""
     }
 
@@ -91,7 +90,7 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
         if (!sure) return "Are you sure? You cannot undo this action!\n" +
             "Type ${context.rawInput} -sure if you want to go through with this."
 
-        world.generator.clearParcel(parcel)
+        world.clearParcel(parcel.id)
             .onProgressUpdate(1000, 1000) { progress, elapsedTime ->
                 context.sendMessage(EMessageType.INFORMATIVE, "Clear progress: %.02f%%, %.2fs elapsed"
                     .format(progress * 100, elapsedTime / 1000.0))

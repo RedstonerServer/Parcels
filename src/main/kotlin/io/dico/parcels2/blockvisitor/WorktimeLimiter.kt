@@ -6,7 +6,7 @@ import kotlinx.coroutines.experimental.CancellationException
 import kotlinx.coroutines.experimental.Job
 import org.bukkit.scheduler.BukkitTask
 import java.lang.System.currentTimeMillis
-import java.util.*
+import java.util.LinkedList
 import java.util.logging.Level
 import kotlin.coroutines.experimental.Continuation
 import kotlin.coroutines.experimental.intrinsics.COROUTINE_SUSPENDED

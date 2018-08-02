@@ -5,18 +5,18 @@ package io.dico.parcels2.storage.exposed
 import com.zaxxer.hikari.HikariDataSource
 import io.dico.parcels2.*
 import io.dico.parcels2.storage.Backing
-import io.dico.parcels2.storage.SerializableParcel
+import io.dico.parcels2.storage.DataPair
 import io.dico.parcels2.util.toUUID
 import kotlinx.coroutines.experimental.CoroutineStart
 import kotlinx.coroutines.experimental.Unconfined
-import kotlinx.coroutines.experimental.channels.ProducerScope
+import kotlinx.coroutines.experimental.channels.SendChannel
 import kotlinx.coroutines.experimental.launch
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SchemaUtils.create
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.vendors.DatabaseDialect
 import org.joda.time.DateTime
-import java.util.*
+import java.util.UUID
 import javax.sql.DataSource
 
 class ExposedDatabaseException(message: String? = null) : Exception(message)
@@ -63,7 +63,7 @@ class ExposedBacking(private val dataSourceFactory: suspend () -> DataSource) : 
         isShutdown = true
     }
 
-    override suspend fun ProducerScope<Pair<Parcel, ParcelData?>>.produceParcelData(parcels: Sequence<Parcel>) {
+    override suspend fun produceParcelData(channel: SendChannel<DataPair>, parcels: Sequence<ParcelId>) {
         for (parcel in parcels) {
             val data = readParcelData(parcel)
             channel.send(parcel to data)
@@ -71,32 +71,32 @@ class ExposedBacking(private val dataSourceFactory: suspend () -> DataSource) : 
         channel.close()
     }
 
-    override suspend fun ProducerScope<Pair<SerializableParcel, ParcelData?>>.produceAllParcelData() = transactionLaunch {
+    override suspend fun produceAllParcelData(channel: SendChannel<Pair<ParcelId, ParcelData?>>) = transactionLaunch {
         ParcelsT.selectAll().forEach { row ->
-            val parcel = ParcelsT.getSerializable(row) ?: return@forEach
+            val parcel = ParcelsT.getId(row) ?: return@forEach
             val data = rowToParcelData(row)
             channel.send(parcel to data)
         }
         channel.close()
     }
 
-    override suspend fun readParcelData(parcelFor: Parcel): ParcelData? = transaction {
-        val row = ParcelsT.getRow(parcelFor) ?: return@transaction null
+    override suspend fun readParcelData(parcel: ParcelId): ParcelData? = transaction {
+        val row = ParcelsT.getRow(parcel) ?: return@transaction null
         rowToParcelData(row)
     }
 
-    override suspend fun getOwnedParcels(user: ParcelOwner): List<SerializableParcel> = transaction {
+    override suspend fun getOwnedParcels(user: ParcelOwner): List<ParcelId> = transaction {
         val user_id = OwnersT.getId(user) ?: return@transaction emptyList()
         ParcelsT.select { ParcelsT.owner_id eq user_id }
             .orderBy(ParcelsT.claim_time, isAsc = true)
-            .mapNotNull(ParcelsT::getSerializable)
+            .mapNotNull(ParcelsT::getId)
             .toList()
     }
 
-    override suspend fun setParcelData(parcelFor: Parcel, data: ParcelData?) {
+    override suspend fun setParcelData(parcel: ParcelId, data: ParcelData?) {
         if (data == null) {
             transaction {
-                ParcelsT.getId(parcelFor)?.let { id ->
+                ParcelsT.getId(parcel)?.let { id ->
                     ParcelsT.deleteIgnoreWhere { ParcelsT.id eq id }
 
                     // Below should cascade automatically
@@ -111,25 +111,25 @@ class ExposedBacking(private val dataSourceFactory: suspend () -> DataSource) : 
         }
 
         transaction {
-            val id = ParcelsT.getOrInitId(parcelFor)
+            val id = ParcelsT.getOrInitId(parcel)
             AddedLocalT.deleteIgnoreWhere { AddedLocalT.attach_id eq id }
         }
 
-        setParcelOwner(parcelFor, data.owner)
+        setParcelOwner(parcel, data.owner)
 
         for ((uuid, status) in data.addedMap) {
-            setLocalPlayerStatus(parcelFor, uuid, status)
+            setLocalPlayerStatus(parcel, uuid, status)
         }
 
-        setParcelAllowsInteractInputs(parcelFor, data.allowInteractInputs)
-        setParcelAllowsInteractInventory(parcelFor, data.allowInteractInventory)
+        setParcelAllowsInteractInputs(parcel, data.allowInteractInputs)
+        setParcelAllowsInteractInventory(parcel, data.allowInteractInventory)
     }
 
-    override suspend fun setParcelOwner(parcelFor: Parcel, owner: ParcelOwner?) = transaction {
+    override suspend fun setParcelOwner(parcel: ParcelId, owner: ParcelOwner?) = transaction {
         val id = if (owner == null)
-            ParcelsT.getId(parcelFor) ?: return@transaction
+            ParcelsT.getId(parcel) ?: return@transaction
         else
-            ParcelsT.getOrInitId(parcelFor)
+            ParcelsT.getOrInitId(parcel)
 
         val owner_id = owner?.let { OwnersT.getOrInitId(it) }
         val time = owner?.let { DateTime.now() }
@@ -140,11 +140,11 @@ class ExposedBacking(private val dataSourceFactory: suspend () -> DataSource) : 
         }
     }
 
-    override suspend fun setLocalPlayerStatus(parcelFor: Parcel, player: UUID, status: AddedStatus) = transaction {
-        AddedLocalT.setPlayerStatus(parcelFor, player, status)
+    override suspend fun setLocalPlayerStatus(parcel: ParcelId, player: UUID, status: AddedStatus) = transaction {
+        AddedLocalT.setPlayerStatus(parcel, player, status)
     }
 
-    override suspend fun setParcelAllowsInteractInventory(parcel: Parcel, value: Boolean): Unit = transaction {
+    override suspend fun setParcelAllowsInteractInventory(parcel: ParcelId, value: Boolean): Unit = transaction {
         val id = ParcelsT.getOrInitId(parcel)
         ParcelOptionsT.upsert(ParcelOptionsT.parcel_id) {
             it[ParcelOptionsT.parcel_id] = id
@@ -152,7 +152,7 @@ class ExposedBacking(private val dataSourceFactory: suspend () -> DataSource) : 
         }
     }
 
-    override suspend fun setParcelAllowsInteractInputs(parcel: Parcel, value: Boolean): Unit = transaction {
+    override suspend fun setParcelAllowsInteractInputs(parcel: ParcelId, value: Boolean): Unit = transaction {
         val id = ParcelsT.getOrInitId(parcel)
         ParcelOptionsT.upsert(ParcelOptionsT.parcel_id) {
             it[ParcelOptionsT.parcel_id] = id
@@ -160,7 +160,7 @@ class ExposedBacking(private val dataSourceFactory: suspend () -> DataSource) : 
         }
     }
 
-    override suspend fun ProducerScope<Pair<ParcelOwner, MutableMap<UUID, AddedStatus>>>.produceAllGlobalAddedData() = transactionLaunch {
+    override suspend fun produceAllGlobalAddedData(channel: SendChannel<Pair<ParcelOwner, MutableMap<UUID, AddedStatus>>>) = transactionLaunch {
         AddedGlobalT.sendAllAddedData(channel)
         channel.close()
     }
@@ -174,7 +174,7 @@ class ExposedBacking(private val dataSourceFactory: suspend () -> DataSource) : 
     }
 
     private fun rowToParcelData(row: ResultRow) = ParcelDataHolder().apply {
-        owner = row[ParcelsT.owner_id]?.let { OwnersT.getSerializable(it) }
+        owner = row[ParcelsT.owner_id]?.let { OwnersT.getId(it) }
         since = row[ParcelsT.claim_time]
 
         val parcelId = row[ParcelsT.id]

@@ -1,9 +1,8 @@
 package io.dico.parcels2.util
 
 import org.bukkit.Bukkit
-import org.jetbrains.annotations.Contract
 import java.nio.ByteBuffer
-import java.util.*
+import java.util.UUID
 
 @Suppress("UsePropertyAccessSyntax")
 fun getPlayerNameOrDefault(uuid: UUID?, ifUnknown: String? = null): String {
