@@ -32,7 +32,7 @@ sealed class IdTransactionsTable<TableT : IdTransactionsTable<TableT, QueryObj, 
         return table.insert(body)[id] ?: insertError(objName)
     }
 
-    private inline fun insertError(obj: String): Nothing = throw ExposedDatabaseException("This should not happen - failed to insert $obj and get its id")
+    private inline fun insertError(obj: String): Nothing = throw ExposedDatabaseException("This should not happen - failed to insert $obj and getParcelDeferred its id")
 
     abstract fun getId(obj: QueryObj): Int?
     abstract fun getOrInitId(obj: QueryObj): Int
@@ -91,31 +91,32 @@ object ParcelsT : IdTransactionsTable<ParcelsT, Parcel, SerializableParcel>("par
 
 object OwnersT : IdTransactionsTable<OwnersT, ParcelOwner, ParcelOwner>("parcel_owners", "owner_id") {
     val uuid = binary("uuid", 2).nullable()
-    val name = varchar("name", 32).nullable()
+    val name = varchar("name", 32)
     val index_pair = uniqueIndexR("index_pair", uuid, name)
 
     private inline fun getId(binaryUuid: ByteArray) = getId { uuid eq binaryUuid }
     private inline fun getId(uuid: UUID) = getId(uuid.toByteArray())
-    private inline fun getId(name: String) = getId { OwnersT.name eq name }
+    private inline fun getId(nameIn: String) = getId { uuid.isNull() and (name eq nameIn) }
 
-    private inline fun getOrInitId(uuid: UUID) = uuid.toByteArray().let { binaryUuid ->
-        getId(binaryUuid)
-            ?: insertAndGetId("owner(uuid = $uuid)") { it[OwnersT.uuid] = binaryUuid }
+    private inline fun getOrInitId(uuid: UUID, name: String) = uuid.toByteArray().let { binaryUuid ->
+        getId(binaryUuid) ?: insertAndGetId("owner(uuid = $uuid)") {
+            it[this@OwnersT.uuid] = binaryUuid
+            it[this@OwnersT.name] = name
+        }
     }
 
     private inline fun getOrInitId(name: String) =
-        getId(name)
-            ?: insertAndGetId("owner(name = $name)") { it[OwnersT.name] = name }
+        getId(name) ?: insertAndGetId("owner(name = $name)") { it[OwnersT.name] = name }
 
     override fun getId(owner: ParcelOwner): Int? =
         if (owner.hasUUID) getId(owner.uuid!!)
         else getId(owner.name!!)
 
     override fun getOrInitId(owner: ParcelOwner): Int =
-        if (owner.hasUUID) getOrInitId(owner.uuid!!)
+        if (owner.hasUUID) getOrInitId(owner.uuid!!, owner.notNullName)
         else getOrInitId(owner.name!!)
 
     override fun getSerializable(row: ResultRow): ParcelOwner {
-        return row[uuid]?.toUUID()?.let { ParcelOwner(it) } ?: ParcelOwner(row[name]!!)
+        return row[uuid]?.toUUID()?.let { ParcelOwner(it) } ?: ParcelOwner(row[name])
     }
 }

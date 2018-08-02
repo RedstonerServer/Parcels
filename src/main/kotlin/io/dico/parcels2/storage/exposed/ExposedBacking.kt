@@ -107,7 +107,7 @@ class ExposedBacking(private val dataSourceFactory: suspend () -> DataSource) : 
 
         setParcelOwner(parcelFor, data.owner)
 
-        for ((uuid, status) in data.added) {
+        for ((uuid, status) in data.addedMap) {
             setLocalPlayerStatus(parcelFor, uuid, status)
         }
 
@@ -168,7 +168,7 @@ class ExposedBacking(private val dataSourceFactory: suspend () -> DataSource) : 
         since = row[ParcelsT.claim_time]
 
         val parcelId = row[ParcelsT.id]
-        added = AddedLocalT.readAddedData(parcelId)
+        addedMap = AddedLocalT.readAddedData(parcelId)
 
         AddedLocalT.select { AddedLocalT.attach_id eq parcelId }.forEach {
             val uuid = it[AddedLocalT.player_uuid].toUUID()

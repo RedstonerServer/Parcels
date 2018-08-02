@@ -19,8 +19,8 @@ object AddedGlobalT : AddedTable<ParcelOwner, ParcelOwner>("parcels_added_global
 
 object ParcelOptionsT : Table("parcel_options") {
     val parcel_id = integer("parcel_id").primaryKey().references(ParcelsT.id, ReferenceOption.CASCADE)
-    val interact_inventory = bool("interact_inventory").default(false)
-    val interact_inputs = bool("interact_inputs").default(false)
+    val interact_inventory = bool("interact_inventory").default(true)
+    val interact_inputs = bool("interact_inputs").default(true)
 }
 
 typealias AddedStatusSendChannel<AttachT> = SendChannel<Pair<AttachT, MutableMap<UUID, AddedStatus>>>

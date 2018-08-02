@@ -64,7 +64,8 @@ class Worlds(val plugin: ParcelsPlugin) {
                     worldName,
                     worldOptions,
                     worldOptions.generator.getGenerator(this, worldName),
-                    plugin.storage)
+                    plugin.storage,
+                    plugin.globalAddedData)
 
             } catch (ex: Exception) {
                 ex.printStackTrace()
@@ -117,7 +118,8 @@ interface ParcelProvider {
 class ParcelWorld constructor(val name: String,
                               val options: WorldOptions,
                               val generator: ParcelGenerator,
-                              val storage: Storage) : ParcelProvider by generator, ParcelContainer {
+                              val storage: Storage,
+                              val globalAddedData: GlobalAddedDataManager) : ParcelProvider by generator, ParcelContainer {
     val world: World by lazy {
         Bukkit.getWorld(name) ?: throw NullPointerException("World $name does not appear to be loaded")
     }

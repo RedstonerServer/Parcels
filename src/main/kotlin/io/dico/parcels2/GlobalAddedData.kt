@@ -23,7 +23,7 @@ class GlobalAddedDataManagerImpl(val plugin: ParcelsPlugin) : GlobalAddedDataMan
                                             data: MutableMap<UUID, AddedStatus> = emptyData)
         : AddedDataHolder(data), GlobalAddedData {
 
-        private inline var data get() = added; set(value) = run { added = value }
+        private inline var data get() = addedMap; set(value) = run { addedMap = value }
         private inline val isEmpty get() = data === emptyData
 
         override fun setAddedStatus(uuid: UUID, status: AddedStatus): Boolean {

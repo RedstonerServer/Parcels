@@ -24,6 +24,8 @@ abstract class ParcelGenerator : ChunkGenerator(), ParcelProvider {
 
     abstract val factory: GeneratorFactory
 
+    abstract fun parcelIDAt(x: Int, z: Int): Vec2i?
+
     abstract override fun generateChunkData(world: World?, random: Random?, chunkX: Int, chunkZ: Int, biome: BiomeGrid?): ChunkData
 
     abstract fun populate(world: World?, random: Random?, chunk: Chunk?)
@@ -171,17 +173,27 @@ class DefaultParcelGenerator(val worlds: Worlds, val name: String, private val o
         return Location(world, o.offsetX + fix, o.floorHeight + 1.0, o.offsetZ + fix)
     }
 
-    override fun parcelAt(x: Int, z: Int): Parcel? {
+    private inline fun <T> convertBlockLocationToID(x: Int, z: Int, mapper: (Int, Int) -> T): T? {
         val sectionSize = sectionSize
         val parcelSize = o.parcelSize
         val absX = x - o.offsetX - pathOffset
         val absZ = z - o.offsetZ - pathOffset
         val modX = absX umod sectionSize
         val modZ = absZ umod sectionSize
-        if (0 <= modX && modX < parcelSize && 0 <= modZ && modZ < parcelSize) {
-            return world.parcelByID((absX - modX) / sectionSize, (absZ - modZ) / sectionSize)
+        if (modX in 0 until parcelSize && modZ in 0 until parcelSize) {
+            return mapper((absX - modX) / sectionSize, (absZ - modZ) / sectionSize)
         }
         return null
+    }
+
+    override fun parcelIDAt(x: Int, z: Int): Vec2i? {
+        return convertBlockLocationToID(x, z) { idx, idz -> Vec2i(idx, idz) }
+    }
+
+    override fun parcelAt(x: Int, z: Int): Parcel? {
+        return convertBlockLocationToID(x, z) { idx, idz ->
+            world.parcelByID(idx, idz)
+        }
     }
 
     override fun getBottomCoord(parcel: Parcel): Vec2i = Vec2i(sectionSize * parcel.pos.x + pathOffset + o.offsetX,

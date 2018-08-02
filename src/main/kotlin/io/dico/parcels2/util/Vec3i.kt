@@ -19,7 +19,7 @@ data class Vec3i(
 inline operator fun World.get(vec: Vec3i): Block = getBlockAt(vec.x, vec.y, vec.z)
 
 /*
-inline class IVec3i(private val data: Long) {
+private /*inline */class IVec3i(private val data: Long) {
 
     private companion object {
         const val mask = 0x001F_FFFF
@@ -34,7 +34,8 @@ inline class IVec3i(private val data: Long) {
 
         @Suppress("NOTHING_TO_INLINE")
         inline fun Long.extractInt(offset: Int): Int {
-            return ushr(offset).toInt().and(mask)
+            val result = ushr(offset).toInt().and(mask)
+            return if (result > max) result or mask.inv() else result
         }
     }
 

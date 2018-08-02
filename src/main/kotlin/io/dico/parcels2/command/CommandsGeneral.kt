@@ -9,7 +9,6 @@ import io.dico.dicore.command.annotation.RequireParameters
 import io.dico.parcels2.ParcelOwner
 import io.dico.parcels2.ParcelsPlugin
 import io.dico.parcels2.blockvisitor.RegionTraversal
-import io.dico.parcels2.command.NamedParcelDefaultValue.FIRST_OWNED
 import io.dico.parcels2.storage.getParcelBySerializedValue
 import io.dico.parcels2.util.hasAdminManage
 import io.dico.parcels2.util.hasParcelHomeOthers
@@ -49,18 +48,17 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
         "more than one parcel",
         shortVersion = "teleports you to parcels")
     @RequireParameters(0)
-    suspend fun cmdHome(player: Player,
-                        @NamedParcelDefault(FIRST_OWNED) target: NamedParcelTarget): Any? {
-        if (player !== target.player && !player.hasParcelHomeOthers) {
+    suspend fun cmdHome(player: Player, @ParcelTarget.Kind(ParcelTarget.OWNER_REAL) target: ParcelTarget): Any? {
+        val ownerTarget = target as ParcelTarget.ByOwner
+        if (!ownerTarget.owner.matches(player) && !player.hasParcelHomeOthers) {
             error("You do not have permission to teleport to other people's parcels")
         }
 
-        val ownedParcelsResult = plugin.storage.getOwnedParcels(ParcelOwner(uuid = target.player.uuid)).await()
+        val ownedParcelsResult = plugin.storage.getOwnedParcels(ownerTarget.owner).await()
 
-        val uuid = target.player.uuid
         val ownedParcels = ownedParcelsResult
             .map { worlds.getParcelBySerializedValue(it) }
-            .filter { it != null && it.world == target.world && it.owner?.uuid == uuid }
+            .filter { it != null && ownerTarget.world == it.world && ownerTarget.owner == it.owner }
 
         val targetMatch = ownedParcels.getOrNull(target.index)
             ?: error("The specified parcel could not be matched")
@@ -79,7 +77,7 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
         }
 
         checkParcelLimit(player)
-        parcel.owner = ParcelOwner(uuid = player.uuid, name = player.name)
+        parcel.owner = ParcelOwner(player)
         return "Enjoy your new parcel!"
     }
 
@@ -100,7 +98,7 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
 
     @Cmd("swap")
     fun ParcelScope.cmdSwap(context: ExecutionContext, @Flag sure: Boolean): Any? {
-
+        TODO()
     }
 
     @Cmd("make_mess")

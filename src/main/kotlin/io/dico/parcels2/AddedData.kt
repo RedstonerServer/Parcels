@@ -5,7 +5,7 @@ import org.bukkit.OfflinePlayer
 import java.util.*
 
 interface AddedData {
-    val added: Map<UUID, AddedStatus>
+    val addedMap: Map<UUID, AddedStatus>
 
     fun getAddedStatus(uuid: UUID): AddedStatus
     fun setAddedStatus(uuid: UUID, status: AddedStatus): Boolean
@@ -28,12 +28,12 @@ interface AddedData {
     fun unban(player: OfflinePlayer) = unban(player.uuid)
 }
 
-open class AddedDataHolder(override var added: MutableMap<UUID, AddedStatus>
+open class AddedDataHolder(override var addedMap: MutableMap<UUID, AddedStatus>
                            = mutableMapOf<UUID, AddedStatus>()) : AddedData {
-    override fun getAddedStatus(uuid: UUID): AddedStatus = added.getOrDefault(uuid, AddedStatus.DEFAULT)
+    override fun getAddedStatus(uuid: UUID): AddedStatus = addedMap.getOrDefault(uuid, AddedStatus.DEFAULT)
     override fun setAddedStatus(uuid: UUID, status: AddedStatus): Boolean = status.takeIf { it != AddedStatus.DEFAULT }
-        ?.let { added.put(uuid, it) != it }
-        ?: added.remove(uuid) != null
+        ?.let { addedMap.put(uuid, it) != it }
+        ?: addedMap.remove(uuid) != null
 }
 
 enum class AddedStatus {
