@@ -15,7 +15,7 @@ class CommandsAddedStatus(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin
         shortVersion = "allows a player to build on this parcel")
     @ParcelRequire(owner = true)
     fun ParcelScope.cmdAllow(sender: Player, player: OfflinePlayer): Any? {
-        Validate.isTrue(parcel.owner != null && !sender.hasAdminManage, "This parcel is unowned")
+        Validate.isTrue(parcel.owner != null || sender.hasAdminManage, "This parcel is unowned")
         Validate.isTrue(!parcel.owner!!.matches(player), "The target already owns the parcel")
         Validate.isTrue(parcel.allow(player), "${player.name} is already allowed to build on this parcel")
         return "${player.name} is now allowed to build on this parcel"
@@ -37,7 +37,7 @@ class CommandsAddedStatus(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin
         shortVersion = "bans a player from this parcel")
     @ParcelRequire(owner = true)
     fun ParcelScope.cmdBan(sender: Player, player: OfflinePlayer): Any? {
-        Validate.isTrue(parcel.owner != null && !sender.hasAdminManage, "This parcel is unowned")
+        Validate.isTrue(parcel.owner != null || sender.hasAdminManage, "This parcel is unowned")
         Validate.isTrue(!parcel.owner!!.matches(player), "The owner cannot be banned from the parcel")
         Validate.isTrue(parcel.ban(player), "${player.name} is already banned from this parcel")
         return "${player.name} is now banned from this parcel"

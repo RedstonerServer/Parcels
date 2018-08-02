@@ -39,7 +39,7 @@ class GlobalAddedDataManagerImpl(val plugin: ParcelsPlugin) : GlobalAddedDataMan
     }
 
     private companion object {
-        val emptyData = mapOf<UUID, AddedStatus>() as MutableMap<UUID, AddedStatus>
+        val emptyData = Collections.emptyMap<UUID, AddedStatus>() as MutableMap<UUID, AddedStatus>
     }
 
 }

@@ -7,7 +7,6 @@ import io.dico.parcels2.ParcelOwner
 import io.dico.parcels2.ParcelWorld
 import io.dico.parcels2.storage.SerializableParcel
 import io.dico.parcels2.storage.SerializableWorld
-import io.dico.parcels2.storage.uniqueIndexR
 import io.dico.parcels2.util.Vec2i
 import io.dico.parcels2.util.toByteArray
 import io.dico.parcels2.util.toUUID
@@ -42,7 +41,7 @@ sealed class IdTransactionsTable<TableT : IdTransactionsTable<TableT, QueryObj, 
 
 object WorldsT : IdTransactionsTable<WorldsT, ParcelWorld, SerializableWorld>("parcel_worlds", "world_id") {
     val name = varchar("name", 50)
-    val uid = binary("uid", 2)
+    val uid = binary("uid", 16)
     val index_uid = uniqueIndexR("index_uid", uid)
 
     internal inline fun getId(binaryUid: ByteArray): Int? = getId { uid eq binaryUid }
@@ -90,7 +89,7 @@ object ParcelsT : IdTransactionsTable<ParcelsT, Parcel, SerializableParcel>("par
 }
 
 object OwnersT : IdTransactionsTable<OwnersT, ParcelOwner, ParcelOwner>("parcel_owners", "owner_id") {
-    val uuid = binary("uuid", 2).nullable()
+    val uuid = binary("uuid", 16).nullable()
     val name = varchar("name", 32)
     val index_pair = uniqueIndexR("index_pair", uuid, name)
 

@@ -6,8 +6,6 @@ import io.dico.parcels2.AddedStatus
 import io.dico.parcels2.Parcel
 import io.dico.parcels2.ParcelOwner
 import io.dico.parcels2.storage.SerializableParcel
-import io.dico.parcels2.storage.uniqueIndexR
-import io.dico.parcels2.storage.upsert
 import io.dico.parcels2.util.toByteArray
 import io.dico.parcels2.util.toUUID
 import kotlinx.coroutines.experimental.channels.SendChannel
@@ -55,6 +53,7 @@ sealed class AddedTable<AttachT, SerializableT>(name: String, val idTable: IdTra
     }
 
     suspend fun sendAllAddedData(channel: AddedStatusSendChannel<SerializableT>) {
+        /*
         val iterator = selectAll().orderBy(attach_id).iterator()
 
         if (iterator.hasNext()) {
@@ -96,7 +95,7 @@ sealed class AddedTable<AttachT, SerializableT>(name: String, val idTable: IdTra
             }
 
             sendIfPresent()
-        }
+        }*/
     }
 
     private inline fun Boolean?.asAddedStatus() = if (this == null) AddedStatus.DEFAULT else if (this) AddedStatus.ALLOWED else AddedStatus.BANNED

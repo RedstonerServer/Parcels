@@ -3,8 +3,8 @@ package io.dico.parcels2
 import io.dico.parcels2.storage.SerializableParcel
 import io.dico.parcels2.storage.SerializableWorld
 import io.dico.parcels2.storage.Storage
+import io.dico.parcels2.storage.getParcelBySerializedValue
 import io.dico.parcels2.util.Vec2i
-import io.dico.parcels2.util.doAwait
 import io.dico.parcels2.util.floor
 import kotlinx.coroutines.experimental.launch
 import org.bukkit.Bukkit
@@ -17,8 +17,6 @@ import org.bukkit.entity.Player
 import java.util.*
 import kotlin.coroutines.experimental.buildIterator
 import kotlin.coroutines.experimental.buildSequence
-import kotlin.reflect.jvm.javaMethod
-import kotlin.reflect.jvm.kotlinFunction
 
 class Worlds(val plugin: ParcelsPlugin) {
     val worlds: Map<String, ParcelWorld> get() = _worlds
@@ -40,11 +38,6 @@ class Worlds(val plugin: ParcelsPlugin) {
         with(getWorld(world) ?: return null) {
             return generator.parcelAt(x, z)
         }
-    }
-
-    init {
-        val function = ::loadWorlds
-        function.javaMethod!!.kotlinFunction
     }
 
     operator fun SerializableParcel.invoke(): Parcel? {
@@ -72,31 +65,28 @@ class Worlds(val plugin: ParcelsPlugin) {
                 continue
             }
 
-            _worlds.put(worldName, world)
+            _worlds[worldName] = world
+        }
 
-            if (Bukkit.getWorld(worldName) == null) {
-                plugin.doAwait {
-                    cond = {
-                        try {
-                            // server.getDefaultGameMode() throws an error before any worlds are initialized.
-                            // createWorld() below calls that method.
-                            // Plugin needs to load on STARTUP for generators to be registered correctly.
-                            // Means we need to await the initial worlds getting loaded.
-
-                            plugin.server.defaultGameMode; true
-                        } catch (ex: Throwable) {
-                            false
-                        }
-                    }
-
-                    onSuccess = {
-                        val bworld = WorldCreator(worldName).generator(world.generator).createWorld()
-                        val spawn = world.generator.getFixedSpawnLocation(bworld, null)
-                        bworld.setSpawnLocation(spawn.x.floor(), spawn.y.floor(), spawn.z.floor())
-                    }
+        plugin.functionHelper.schedule(10) {
+            println("Parcels generating worlds now")
+            for ((name, world) in _worlds) {
+                if (Bukkit.getWorld(name) == null) {
+                    val bworld = WorldCreator(name).generator(world.generator).createWorld()
+                    val spawn = world.generator.getFixedSpawnLocation(bworld, null)
+                    bworld.setSpawnLocation(spawn.x.floor(), spawn.y.floor(), spawn.z.floor())
                 }
             }
 
+            val channel = plugin.storage.readAllParcelData()
+            val job = plugin.functionHelper.launchLazilyOnMainThread {
+                do {
+                    val pair = channel.receiveOrNull() ?: break
+                    val parcel = getParcelBySerializedValue(pair.first) ?: continue
+                    pair.second?.let { parcel.copyDataIgnoringDatabase(it) }
+                } while (true)
+            }
+            job.start()
         }
 
     }
@@ -205,7 +195,8 @@ class DefaultParcelContainer(private val world: ParcelWorld,
         buildIterator {
             val center = world.options.axisLimit
             for (radius in 0..center) {
-                var x = center - radius; var z = center - radius
+                var x = center - radius;
+                var z = center - radius
                 repeat(radius * 2) { yield(parcels[x++][z]) }
                 repeat(radius * 2) { yield(parcels[x][z++]) }
                 repeat(radius * 2) { yield(parcels[x--][z]) }

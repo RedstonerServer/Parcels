@@ -1,4 +1,4 @@
-package io.dico.parcels2.storage
+package io.dico.parcels2.storage.exposed
 
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.Index

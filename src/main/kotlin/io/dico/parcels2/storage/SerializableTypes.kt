@@ -17,6 +17,8 @@ data class SerializableWorld(val name: String? = null,
 
     val world: World? by lazy { uid?.let { Bukkit.getWorld(it) } ?: name?.let { Bukkit.getWorld(it) } }
     //val parcelWorld: ParcelWorld? by lazy { TODO() }
+
+    constructor(world: World) : this(world.name, world.uid)
 }
 
 /**
@@ -33,5 +35,6 @@ fun Worlds.getWorldBySerializedValue(input: SerializableWorld): ParcelWorld? {
 }
 
 fun Worlds.getParcelBySerializedValue(input: SerializableParcel): Parcel? {
-    return getWorldBySerializedValue(input.world)?.parcelByID(input.pos)
+    return getWorldBySerializedValue(input.world)
+        ?.parcelByID(input.pos)
 }

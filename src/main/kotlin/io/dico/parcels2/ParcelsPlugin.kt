@@ -12,14 +12,13 @@ import io.dico.parcels2.storage.Storage
 import io.dico.parcels2.storage.yamlObjectMapper
 import io.dico.parcels2.util.FunctionHelper
 import io.dico.parcels2.util.tryCreate
-import kotlinx.coroutines.experimental.asCoroutineDispatcher
 import org.bukkit.Bukkit
 import org.bukkit.plugin.java.JavaPlugin
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
-import java.util.concurrent.Executor
 
-val logger = LoggerFactory.getLogger("ParcelsPlugin")
+val logger: Logger = LoggerFactory.getLogger("ParcelsPlugin")
 private inline val plogger get() = logger
 
 class ParcelsPlugin : JavaPlugin() {
@@ -64,14 +63,14 @@ class ParcelsPlugin : JavaPlugin() {
                 return false
             }
 
+            globalAddedData = GlobalAddedDataManagerImpl(this)
             worlds.loadWorlds(options)
+            entityTracker = ParcelEntityTracker(worlds)
         } catch (ex: Exception) {
             plogger.error("Error loading options", ex)
             return false
         }
 
-        globalAddedData = GlobalAddedDataManagerImpl(this)
-        entityTracker = ParcelEntityTracker(worlds)
         registerListeners()
         registerCommands()
 
@@ -79,21 +78,23 @@ class ParcelsPlugin : JavaPlugin() {
     }
 
     fun loadOptions(): Boolean {
-        if (optionsFile.exists()) {
-            yamlObjectMapper.readerForUpdating(options).readValue<Options>(optionsFile)
-        } else if (optionsFile.tryCreate()) {
-            options.addWorld("parcels", WorldOptions())
-            try {
-                yamlObjectMapper.writeValue(optionsFile, options)
-            } catch (ex: Throwable) {
-                optionsFile.delete()
-                throw ex
+        when {
+            optionsFile.exists() -> yamlObjectMapper.readerForUpdating(options).readValue<Options>(optionsFile)
+            optionsFile.tryCreate() -> {
+                options.addWorld("parcels", WorldOptions())
+                try {
+                    yamlObjectMapper.writeValue(optionsFile, options)
+                } catch (ex: Throwable) {
+                    optionsFile.delete()
+                    throw ex
+                }
+                plogger.warn("Created options file with a world template. Please review it before next start.")
+                return false
             }
-            plogger.warn("Created options file with a world template. Please review it before next start.")
-            return false
-        } else {
-            plogger.error("Failed to save options file ${optionsFile.canonicalPath}")
-            return false
+            else -> {
+                plogger.error("Failed to save options file ${optionsFile.canonicalPath}")
+                return false
+            }
         }
         return true
     }
@@ -105,7 +106,7 @@ class ParcelsPlugin : JavaPlugin() {
     }
 
     private fun registerListeners() {
-        if (listeners != null) {
+        if (listeners == null) {
             listeners = ParcelListeners(worlds, entityTracker)
             registrator.registerListeners(listeners!!)
         }

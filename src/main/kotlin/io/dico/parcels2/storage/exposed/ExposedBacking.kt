@@ -4,9 +4,13 @@ package io.dico.parcels2.storage.exposed
 
 import com.zaxxer.hikari.HikariDataSource
 import io.dico.parcels2.*
-import io.dico.parcels2.storage.*
+import io.dico.parcels2.storage.Backing
+import io.dico.parcels2.storage.SerializableParcel
 import io.dico.parcels2.util.toUUID
+import kotlinx.coroutines.experimental.CoroutineStart
+import kotlinx.coroutines.experimental.Unconfined
 import kotlinx.coroutines.experimental.channels.ProducerScope
+import kotlinx.coroutines.experimental.launch
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SchemaUtils.create
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -35,6 +39,12 @@ class ExposedBacking(private val dataSourceFactory: suspend () -> DataSource) : 
 
     private fun <T> transaction(statement: Transaction.() -> T) = transaction(database!!, statement)
 
+    private suspend fun transactionLaunch(statement: suspend Transaction.() -> Unit): Unit = transaction(database!!) {
+        launch(context = Unconfined, start = CoroutineStart.UNDISPATCHED) {
+            statement(this@transaction)
+        }
+    }
+
     override suspend fun init() {
         if (isShutdown) throw IllegalStateException()
         dataSource = dataSourceFactory()
@@ -61,7 +71,7 @@ class ExposedBacking(private val dataSourceFactory: suspend () -> DataSource) : 
         channel.close()
     }
 
-    override suspend fun ProducerScope<Pair<SerializableParcel, ParcelData?>>.produceAllParcelData() {
+    override suspend fun ProducerScope<Pair<SerializableParcel, ParcelData?>>.produceAllParcelData() = transactionLaunch {
         ParcelsT.selectAll().forEach { row ->
             val parcel = ParcelsT.getSerializable(row) ?: return@forEach
             val data = rowToParcelData(row)
@@ -150,13 +160,13 @@ class ExposedBacking(private val dataSourceFactory: suspend () -> DataSource) : 
         }
     }
 
-    override suspend fun ProducerScope<Pair<ParcelOwner, MutableMap<UUID, AddedStatus>>>.produceAllGlobalAddedData() {
+    override suspend fun ProducerScope<Pair<ParcelOwner, MutableMap<UUID, AddedStatus>>>.produceAllGlobalAddedData() = transactionLaunch {
         AddedGlobalT.sendAllAddedData(channel)
         channel.close()
     }
 
-    override suspend fun readGlobalAddedData(owner: ParcelOwner): MutableMap<UUID, AddedStatus> {
-        return AddedGlobalT.readAddedData(OwnersT.getId(owner) ?: return hashMapOf())
+    override suspend fun readGlobalAddedData(owner: ParcelOwner): MutableMap<UUID, AddedStatus> = transaction {
+        return@transaction AddedGlobalT.readAddedData(OwnersT.getId(owner) ?: return@transaction hashMapOf())
     }
 
     override suspend fun setGlobalPlayerStatus(owner: ParcelOwner, player: UUID, status: AddedStatus) = transaction {

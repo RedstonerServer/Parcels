@@ -8,16 +8,12 @@ import io.dico.dicore.command.annotation.Flag
 import io.dico.dicore.command.annotation.RequireParameters
 import io.dico.parcels2.ParcelOwner
 import io.dico.parcels2.ParcelsPlugin
-import io.dico.parcels2.blockvisitor.RegionTraversal
 import io.dico.parcels2.storage.getParcelBySerializedValue
 import io.dico.parcels2.util.hasAdminManage
 import io.dico.parcels2.util.hasParcelHomeOthers
 import io.dico.parcels2.util.uuid
-import org.bukkit.Material
 import org.bukkit.entity.Player
-import java.util.*
 
-//@Suppress("unused")
 class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
 
     @Cmd("auto")
@@ -26,7 +22,7 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
         shortVersion = "sets you up with a fresh, unclaimed parcel")
     suspend fun WorldScope.cmdAuto(player: Player): Any? {
         checkConnected("be claimed")
-        checkParcelLimit(player)
+        checkParcelLimit(player, world)
 
         val parcel = world.nextEmptyParcel()
             ?: error("This world is full, please ask an admin to upsize it")
@@ -58,7 +54,7 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
 
         val ownedParcels = ownedParcelsResult
             .map { worlds.getParcelBySerializedValue(it) }
-            .filter { it != null && ownerTarget.world == it.world && ownerTarget.owner == it.owner }
+            .filter { it != null && ownerTarget.world == it.world }
 
         val targetMatch = ownedParcels.getOrNull(target.index)
             ?: error("The specified parcel could not be matched")
@@ -76,9 +72,17 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
             error(if (it.matches(player)) "You already own this parcel" else "This parcel is not available")
         }
 
-        checkParcelLimit(player)
+        checkParcelLimit(player, world)
         parcel.owner = ParcelOwner(player)
         return "Enjoy your new parcel!"
+    }
+
+    @Cmd("unclaim")
+    @Desc("Unclaims this parcel")
+    @ParcelRequire(owner = true)
+    fun ParcelScope.cmdUnclaim(player: Player): Any? {
+        parcel.dispose()
+        return "Your parcel has been disposed"
     }
 
     @Cmd("clear")
@@ -99,25 +103,6 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
     @Cmd("swap")
     fun ParcelScope.cmdSwap(context: ExecutionContext, @Flag sure: Boolean): Any? {
         TODO()
-    }
-
-    @Cmd("make_mess")
-    @ParcelRequire(owner = true)
-    fun ParcelScope.cmdMakeMess(context: ExecutionContext) {
-        val server = plugin.server
-        val blockDatas = arrayOf(
-            server.createBlockData(Material.STICKY_PISTON),
-            server.createBlockData(Material.GLASS),
-            server.createBlockData(Material.STONE_SLAB),
-            server.createBlockData(Material.QUARTZ_BLOCK)
-        )
-        val random = Random()
-        world.generator.doBlockOperation(parcel, direction = RegionTraversal.UPDARD) { block ->
-            block.blockData = blockDatas[random.nextInt(4)]
-        }.onProgressUpdate(1000, 1000) { progress, elapsedTime ->
-            context.sendMessage(EMessageType.INFORMATIVE, "Mess progress: %.02f%%, %.2fs elapsed"
-                .format(progress * 100, elapsedTime / 1000.0))
-        }
     }
 
 }

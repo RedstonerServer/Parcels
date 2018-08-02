@@ -15,7 +15,7 @@ fun getParcelCommands(plugin: ParcelsPlugin): ICommandDispatcher {
     return CommandBuilder()
         .setChatController(ParcelsChatController())
         .addParameterType(false, ParcelParameterType(plugin.worlds))
-        .addParameterType(true, ParcelHomeParameterType(plugin.worlds))
+        .addParameterType(true, ParcelTarget.PType(plugin.worlds))
 
         .group("parcel", "plot", "plots", "p")
             .registerCommands(CommandsGeneral(plugin))

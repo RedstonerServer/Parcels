@@ -31,8 +31,13 @@ class Parcel(val world: ParcelWorld, val pos: Vec2i) : ParcelData {
     }
 
     fun copyData(data: ParcelData) {
-        world.storage.setParcelData(this, data)
         copyDataIgnoringDatabase(data)
+        world.storage.setParcelData(this, data)
+    }
+
+    fun dispose() {
+        copyDataIgnoringDatabase(ParcelDataHolder())
+        world.storage.setParcelData(this, null)
     }
 
     override val addedMap: Map<UUID, AddedStatus> get() = data.addedMap
