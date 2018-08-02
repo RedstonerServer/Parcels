@@ -2,7 +2,7 @@ package io.dico.parcels2.blockvisitor
 
 import org.bukkit.Material
 import org.bukkit.Material.*
-import java.util.*
+import java.util.EnumSet
 
 val attachables: Set<Material> = EnumSet.of(
     ACACIA_DOOR,
@@ -64,4 +64,4 @@ val attachables: Set<Material> = EnumSet.of(
     WALL_SIGN,
     LILY_PAD,
     DANDELION
-);
+)

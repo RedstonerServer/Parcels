@@ -6,31 +6,37 @@ import io.dico.dicore.command.ICommandDispatcher
 import io.dico.parcels2.blockvisitor.TickWorktimeLimiter
 import io.dico.parcels2.blockvisitor.WorktimeLimiter
 import io.dico.parcels2.command.getParcelCommands
+import io.dico.parcels2.defaultimpl.GlobalAddedDataManagerImpl
+import io.dico.parcels2.defaultimpl.ParcelProviderImpl
 import io.dico.parcels2.listener.ParcelEntityTracker
 import io.dico.parcels2.listener.ParcelListeners
 import io.dico.parcels2.storage.Storage
 import io.dico.parcels2.storage.yamlObjectMapper
+import io.dico.parcels2.util.FunctionHelper
 import io.dico.parcels2.util.tryCreate
-import kotlinx.coroutines.experimental.asCoroutineDispatcher
 import org.bukkit.Bukkit
+import org.bukkit.generator.ChunkGenerator
 import org.bukkit.plugin.java.JavaPlugin
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
-import java.util.concurrent.Executor
 
-val logger = LoggerFactory.getLogger("ParcelsPlugin")
+val logger: Logger = LoggerFactory.getLogger("ParcelsPlugin")
 private inline val plogger get() = logger
 
 class ParcelsPlugin : JavaPlugin() {
     lateinit var optionsFile: File; private set
     lateinit var options: Options; private set
-    lateinit var worlds: Worlds; private set
+    lateinit var parcelProvider: ParcelProvider; private set
     lateinit var storage: Storage; private set
+    lateinit var globalAddedData: GlobalAddedDataManager; private set
 
     val registrator = Registrator(this)
     lateinit var entityTracker: ParcelEntityTracker; private set
     private var listeners: ParcelListeners? = null
     private var cmdDispatcher: ICommandDispatcher? = null
+
+    val functionHelper: FunctionHelper = FunctionHelper(this)
     val worktimeLimiter: WorktimeLimiter by lazy { TickWorktimeLimiter(this, options.tickWorktime) }
 
     override fun onEnable() {
@@ -41,13 +47,14 @@ class ParcelsPlugin : JavaPlugin() {
     }
 
     override fun onDisable() {
+        worktimeLimiter.completeAllTasks()
         cmdDispatcher?.unregisterFromCommandMap()
     }
 
     private fun init(): Boolean {
         optionsFile = File(dataFolder, "options.yml")
         options = Options()
-        worlds = Worlds(this)
+        parcelProvider = ParcelProviderImpl(this)
 
         try {
             if (!loadOptions()) return false
@@ -60,37 +67,44 @@ class ParcelsPlugin : JavaPlugin() {
                 return false
             }
 
-            worlds.loadWorlds(options)
+            globalAddedData = GlobalAddedDataManagerImpl(this)
+            entityTracker = ParcelEntityTracker(parcelProvider)
         } catch (ex: Exception) {
             plogger.error("Error loading options", ex)
             return false
         }
 
-        entityTracker = ParcelEntityTracker(worlds)
         registerListeners()
         registerCommands()
 
+        parcelProvider.loadWorlds()
         return true
     }
 
     fun loadOptions(): Boolean {
-        if (optionsFile.exists()) {
-            yamlObjectMapper.readerForUpdating(options).readValue<Options>(optionsFile)
-        } else if (optionsFile.tryCreate()) {
-            options.addWorld("parcels", WorldOptions())
-            try {
-                yamlObjectMapper.writeValue(optionsFile, options)
-            } catch (ex: Throwable) {
-                optionsFile.delete()
-                throw ex
+        when {
+            optionsFile.exists() -> yamlObjectMapper.readerForUpdating(options).readValue<Options>(optionsFile)
+            optionsFile.tryCreate() -> {
+                options.addWorld("parcels")
+                try {
+                    yamlObjectMapper.writeValue(optionsFile, options)
+                } catch (ex: Throwable) {
+                    optionsFile.delete()
+                    throw ex
+                }
+                plogger.warn("Created options file with a world template. Please review it before next start.")
+                return false
             }
-            plogger.warn("Created options file with a world template. Please review it before next start.")
-            return false
-        } else {
-            plogger.error("Failed to save options file ${optionsFile.canonicalPath}")
-            return false
+            else -> {
+                plogger.error("Failed to save options file ${optionsFile.canonicalPath}")
+                return false
+            }
         }
         return true
+    }
+
+    override fun getDefaultWorldGenerator(worldName: String, generatorId: String?): ChunkGenerator? {
+        return parcelProvider.getWorldGenerator(worldName)
     }
 
     private fun registerCommands() {
@@ -100,8 +114,8 @@ class ParcelsPlugin : JavaPlugin() {
     }
 
     private fun registerListeners() {
-        if (listeners != null) {
-            listeners = ParcelListeners(worlds, entityTracker)
+        if (listeners == null) {
+            listeners = ParcelListeners(parcelProvider, entityTracker)
             registrator.registerListeners(listeners!!)
         }
     }

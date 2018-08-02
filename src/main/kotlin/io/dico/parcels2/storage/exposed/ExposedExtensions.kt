@@ -1,4 +1,4 @@
-package io.dico.parcels2.storage
+package io.dico.parcels2.storage.exposed
 
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.Index
@@ -40,7 +40,7 @@ class UpsertStatement<Key : Any>(table: Table, conflictColumn: Column<*>? = null
 
         } else {
 
-            append (" ON DUPLICATE KEY UPDATE ")
+            append(" ON DUPLICATE KEY UPDATE ")
             values.keys.filter { it !in indexColumns }.joinTo(this) { "${transaction.identity(it)}=VALUES(${transaction.identity(it)})" }
 
         }

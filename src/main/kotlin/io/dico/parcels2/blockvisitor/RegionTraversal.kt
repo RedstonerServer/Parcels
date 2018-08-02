@@ -20,7 +20,7 @@ enum class RegionTraversal(private val builder: suspend SequenceBuilder<Vec3i>.(
 
     }),
 
-    UPDARD({ region ->
+    UPWARD({ region ->
         val origin = region.origin
         val size = region.size
 

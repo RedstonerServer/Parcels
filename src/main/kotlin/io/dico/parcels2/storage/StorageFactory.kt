@@ -2,6 +2,7 @@ package io.dico.parcels2.storage
 
 import com.zaxxer.hikari.HikariDataSource
 import io.dico.parcels2.DataConnectionOptions
+import io.dico.parcels2.storage.exposed.ExposedBacking
 import kotlin.reflect.KClass
 
 interface StorageFactory {
@@ -35,7 +36,7 @@ class ConnectionStorageFactory : StorageFactory {
 
     override fun newStorageInstance(dialect: String, options: Any): Storage {
         val hikariConfig = getHikariConfig(dialect, options as DataConnectionOptions)
-        val dataSourceFactory = { HikariDataSource(hikariConfig) }
+        val dataSourceFactory = suspend { HikariDataSource(hikariConfig) }
         return StorageWithCoroutineBacking(ExposedBacking(dataSourceFactory))
     }
 

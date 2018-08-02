@@ -9,7 +9,8 @@ import org.bukkit.plugin.java.JavaPlugin
 
 inline val OfflinePlayer.uuid get() = uniqueId
 @Suppress("UsePropertyAccessSyntax")
-inline val OfflinePlayer.isValid get() = isOnline() || hasPlayedBefore()
+inline val OfflinePlayer.isValid
+    get() = isOnline() || hasPlayedBefore()
 
 inline val Player.hasBanBypass get() = hasPermission("parcels.admin.bypass.ban")
 inline val Player.hasGamemodeBypass get() = hasPermission("parcels.admin.bypass.gamemode")

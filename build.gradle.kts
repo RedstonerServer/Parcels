@@ -10,7 +10,7 @@ import java.net.URL
 val stdout = PrintWriter("gradle-output.txt")
 
 group = "io.dico"
-version = "0.1"
+version = "0.2"
 
 plugins {
     java
@@ -51,7 +51,7 @@ project(":dicore3:dicore3-command") {
     dependencies {
         c.kotlinStd(kotlin("stdlib-jdk8"))
         c.kotlinStd(kotlin("reflect"))
-        c.kotlinStd(kotlinx("coroutines-core:0.23.4"))
+        c.kotlinStd(kotlinx("coroutines-core:0.24.0"))
 
         compile(project(":dicore3:dicore3-core"))
         compile("com.thoughtworks.paranamer:paranamer:2.8")
@@ -72,6 +72,7 @@ dependencies {
     compile("org.jetbrains.exposed:exposed:0.10.3") { isTransitive = false }
     compile("joda-time:joda-time:2.10")
     compile("com.zaxxer:HikariCP:3.2.0")
+    compile("ch.qos.logback:logback-classic:1.2.3")
 
     val jacksonVersion = "2.9.6"
     compile("com.fasterxml.jackson.core:jackson-core:$jacksonVersion")
@@ -86,6 +87,8 @@ tasks {
     val compileKotlin by getting(KotlinCompile::class) {
         kotlinOptions {
             javaParameters = true
+            suppressWarnings = true
+            //freeCompilerArgs = listOf("-XXLanguage:+InlineClasses", "-Xuse-experimental=kotlin.Experimental")
         }
     }
 
