@@ -88,11 +88,13 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
     @ParcelRequire(owner = true)
     fun ParcelScope.cmdClear(context: ExecutionContext, @Flag sure: Boolean): Any? {
         if (!sure) return "Are you sure? You cannot undo this action!\n" +
-            "Type ${context.rawInput} -sure if you want to go through with this."
+            "Run \"/${context.rawInput} -sure\" if you want to go through with this."
 
         world.clearParcel(parcel.id)
             .onProgressUpdate(1000, 1000) { progress, elapsedTime ->
-                context.sendMessage(EMessageType.INFORMATIVE, "Clear progress: %.02f%%, %.2fs elapsed"
+                val alt = context.getFormat(EMessageType.NUMBER)
+                val main = context.getFormat(EMessageType.INFORMATIVE)
+                context.sendMessage(EMessageType.INFORMATIVE, false, "Clear progress: $alt%.02f$main%%, $alt%.2f${main}s elapsed"
                     .format(progress * 100, elapsedTime / 1000.0))
             }
 

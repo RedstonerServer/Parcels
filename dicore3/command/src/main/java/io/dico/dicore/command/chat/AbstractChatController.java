@@ -36,7 +36,7 @@ public class AbstractChatController implements IChatController {
     @Override
     public void sendMessage(CommandSender sender, EMessageType type, String message) {
         if (message != null && !message.isEmpty()) {
-            sender.sendMessage(getMessagePrefixForType(type) + getChatFormatForType(type) + message);
+            sender.sendMessage(filterMessage(getMessagePrefixForType(type) + getChatFormatForType(type) + message));
         }
     }
 
