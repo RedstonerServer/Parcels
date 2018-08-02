@@ -84,6 +84,15 @@ private object ParcelInfoStringComputer {
     val infoStringColor1 = Formatting.GREEN
     val infoStringColor2 = Formatting.AQUA
 
+    private inline fun StringBuilder.appendField(field: StringBuilder.() -> Unit, value: StringBuilder.() -> Unit) {
+        append(infoStringColor1)
+        field()
+        append(": ")
+        append(infoStringColor2)
+        value()
+        append(' ')
+    }
+
     private inline fun StringBuilder.appendField(name: String, value: StringBuilder.() -> Unit) {
         append(infoStringColor1)
         append(name)
@@ -93,6 +102,26 @@ private object ParcelInfoStringComputer {
         append(' ')
     }
 
+    private fun StringBuilder.appendAddedList(local: Map<UUID, AddedStatus>, global: Map<UUID, AddedStatus>, status: AddedStatus, fieldName: String) {
+        val globalSet = global.filterValues { it == status }.keys
+        val localList = local.filterValues { it == status }.keys.filter { it !in globalSet }
+        val stringList = globalSet.map(::getPlayerName).map { "(G)$it" } + localList.map(::getPlayerName)
+        if (stringList.isEmpty()) return
+
+        appendField({
+            append(fieldName)
+            append('(')
+            append(infoStringColor2)
+            append(stringList.size)
+            append(infoStringColor1)
+            append(')')
+        }) {
+            stringList.joinTo(this,
+                separator = infoStringColor1.toString() + ", " + infoStringColor2,
+                limit = 150)
+        }
+    }
+
     operator fun getValue(parcel: Parcel, property: KProperty<*>): String = buildString {
         appendField("ID") {
             append(parcel.x)
@@ -100,8 +129,8 @@ private object ParcelInfoStringComputer {
             append(parcel.z)
         }
 
+        val owner = parcel.owner
         appendField("Owner") {
-            val owner = parcel.owner
             if (owner == null) {
                 append(infoStringColor1)
                 append("none")
@@ -114,15 +143,11 @@ private object ParcelInfoStringComputer {
 
         append('\n')
 
-        val allowedMap = parcel.addedMap.filterValues { it.isAllowed }
-        if (allowedMap.isNotEmpty()) appendField("Allowed") {
-            allowedMap.keys.map(::getPlayerName).joinTo(this)
-        }
-
-        val bannedMap = parcel.addedMap.filterValues { it.isBanned }
-        if (bannedMap.isNotEmpty()) appendField("Banned") {
-            bannedMap.keys.map(::getPlayerName).joinTo(this)
-        }
+        val global = owner?.let { parcel.world.globalAddedData[owner].addedMap } ?: emptyMap()
+        val local = parcel.addedMap
+        appendAddedList(local, global, AddedStatus.ALLOWED, "Allowed")
+        append('\n')
+        appendAddedList(local, global, AddedStatus.BANNED, "Banned")
 
         if (!parcel.allowInteractInputs || !parcel.allowInteractInventory) {
             appendField("Options") {

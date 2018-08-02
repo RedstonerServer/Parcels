@@ -28,6 +28,11 @@ sealed class WorktimeLimiter {
      * Get a list of all workers
      */
     abstract val workers: List<Worker>
+
+    /**
+     * Attempts to complete any remaining tasks immediately, without suspension.
+     */
+    abstract fun completeAllTasks()
 }
 
 interface Timed {
@@ -91,8 +96,14 @@ interface WorkerScope : Timed {
 
 private interface WorkerContinuation : Worker, WorkerScope {
     /**
-     * Start or resume the execution of this worker
-     * returns true if the worker completed
+     * Start or resumes the execution of this worker
+     * and returns true if the worker completed
+     *
+     * [worktime] is the maximum amount of time, in milliseconds,
+     * that this job may run for until suspension.
+     *
+     * If [worktime] is not positive, the worker will complete
+     * without suspension and this method will always return true.
      */
     fun resume(worktime: Long): Boolean
 }
@@ -106,7 +117,7 @@ class TickWorktimeLimiter(private val plugin: ParcelsPlugin, var options: TickWo
     // The currently registered bukkit scheduler task
     private var bukkitTask: BukkitTask? = null
     // The workers.
-    private var _workers = LinkedList<WorkerContinuation>()
+    private val _workers = LinkedList<WorkerContinuation>()
     override val workers: List<Worker> = _workers
 
     override fun submit(task: TimeLimitedTask): Worker {
@@ -143,6 +154,15 @@ class TickWorktimeLimiter(private val plugin: ParcelsPlugin, var options: TickWo
         }
     }
 
+    override fun completeAllTasks() {
+        _workers.forEach {
+            it.resume(-1)
+        }
+        _workers.clear()
+        bukkitTask?.cancel()
+        bukkitTask = null
+    }
+
 }
 
 private class WorkerImpl(val functionHelper: FunctionHelper,
@@ -168,6 +188,7 @@ private class WorkerImpl(val functionHelper: FunctionHelper,
     private var onCompleted: WorkerUpdateLister? = null
     private var continuation: Continuation<Unit>? = null
     private var nextSuspensionTime: Long = 0L
+    private var completeForcefully = false
 
     private fun initJob(job: Job) {
         this.job?.let { throw IllegalStateException() }
@@ -202,7 +223,7 @@ private class WorkerImpl(val functionHelper: FunctionHelper,
     }
 
     override suspend fun markSuspensionPoint() {
-        if (System.currentTimeMillis() >= nextSuspensionTime)
+        if (System.currentTimeMillis() >= nextSuspensionTime && !completeForcefully)
             suspendCoroutineUninterceptedOrReturn { cont: Continuation<Unit> ->
                 continuation = cont
                 COROUTINE_SUSPENDED
@@ -220,7 +241,11 @@ private class WorkerImpl(val functionHelper: FunctionHelper,
     }
 
     override fun resume(worktime: Long): Boolean {
-        nextSuspensionTime = currentTimeMillis() + worktime
+        if (worktime > 0) {
+            nextSuspensionTime = currentTimeMillis() + worktime
+        } else {
+            completeForcefully = true
+        }
 
         continuation?.let {
             continuation = null

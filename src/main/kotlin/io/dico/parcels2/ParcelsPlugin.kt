@@ -47,6 +47,7 @@ class ParcelsPlugin : JavaPlugin() {
     }
 
     override fun onDisable() {
+        worktimeLimiter.completeAllTasks()
         cmdDispatcher?.unregisterFromCommandMap()
     }
 
