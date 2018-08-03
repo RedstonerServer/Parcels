@@ -83,9 +83,9 @@ class ParcelListeners(val parcelProvider: ParcelProvider, val entityTracker: Par
      * Prevents players from placing blocks outside of their parcels
      */
     @field:ListenerMarker(priority = NORMAL)
-    val onBlockPlaceEvent = RegistratorListener<BlockBreakEvent> l@{ event ->
+    val onBlockPlaceEvent = RegistratorListener<BlockPlaceEvent> l@{ event ->
         val (wo, ppa) = getWoAndPPa(event.block) ?: return@l
-        if (!event.player.hasBuildAnywhere && !ppa.isNullOr { !canBuild(event.player) }) {
+        if (!event.player.hasBuildAnywhere && ppa.isNullOr { !canBuild(event.player) }) {
             event.isCancelled = true
         }
     }
@@ -184,62 +184,69 @@ class ParcelListeners(val parcelProvider: ParcelProvider, val entityTracker: Par
         }
 
         when (event.action) {
-            Action.RIGHT_CLICK_BLOCK -> when (clickedBlock.type) {
-                REPEATER,
-                COMPARATOR -> run {
-                    if (!parcel.canBuildN(user)) {
-                        event.isCancelled = true; return@l
+            Action.RIGHT_CLICK_BLOCK -> run {
+                when (clickedBlock.type) {
+                    REPEATER,
+                    COMPARATOR -> run {
+                        if (!parcel.canBuildN(user)) {
+                            event.isCancelled = true; return@l
+                        }
                     }
-                }
-                LEVER,
-                STONE_BUTTON,
-                ANVIL,
-                TRAPPED_CHEST,
-                OAK_BUTTON, BIRCH_BUTTON, SPRUCE_BUTTON, JUNGLE_BUTTON, ACACIA_BUTTON, DARK_OAK_BUTTON,
-                OAK_FENCE_GATE, BIRCH_FENCE_GATE, SPRUCE_FENCE_GATE, JUNGLE_FENCE_GATE, ACACIA_FENCE_GATE, DARK_OAK_FENCE_GATE,
-                OAK_DOOR, BIRCH_DOOR, SPRUCE_DOOR, JUNGLE_DOOR, ACACIA_DOOR, DARK_OAK_DOOR,
-                OAK_TRAPDOOR, BIRCH_TRAPDOOR, SPRUCE_TRAPDOOR, JUNGLE_TRAPDOOR, ACACIA_TRAPDOOR, DARK_OAK_TRAPDOOR
-                -> run {
-                    if (!user.hasBuildAnywhere && !parcel.isNullOr { canBuild(user) || allowInteractInputs }) {
-                        user.sendParcelMessage(nopermit = true, message = "You cannot use inputs in this parcel")
-                        event.isCancelled = true; return@l
+                    LEVER,
+                    STONE_BUTTON,
+                    ANVIL,
+                    TRAPPED_CHEST,
+                    OAK_BUTTON, BIRCH_BUTTON, SPRUCE_BUTTON, JUNGLE_BUTTON, ACACIA_BUTTON, DARK_OAK_BUTTON,
+                    OAK_FENCE_GATE, BIRCH_FENCE_GATE, SPRUCE_FENCE_GATE, JUNGLE_FENCE_GATE, ACACIA_FENCE_GATE, DARK_OAK_FENCE_GATE,
+                    OAK_DOOR, BIRCH_DOOR, SPRUCE_DOOR, JUNGLE_DOOR, ACACIA_DOOR, DARK_OAK_DOOR,
+                    OAK_TRAPDOOR, BIRCH_TRAPDOOR, SPRUCE_TRAPDOOR, JUNGLE_TRAPDOOR, ACACIA_TRAPDOOR, DARK_OAK_TRAPDOOR
+                    -> run {
+                        if (!user.hasBuildAnywhere && !parcel.isNullOr { canBuild(user) || allowInteractInputs }) {
+                            user.sendParcelMessage(nopermit = true, message = "You cannot use inputs in this parcel")
+                            event.isCancelled = true; return@l
+                        }
                     }
-                }
 
-                WHITE_BED, ORANGE_BED, MAGENTA_BED, LIGHT_BLUE_BED, YELLOW_BED, LIME_BED, PINK_BED, GRAY_BED, LIGHT_GRAY_BED, CYAN_BED, PURPLE_BED, BLUE_BED, BROWN_BED, GREEN_BED, RED_BED, BLACK_BED
-                -> run {
-                    if (world.options.disableExplosions) {
-                        val bed = clickedBlock.blockData as Bed
-                        val head = if (bed == Bed.Part.FOOT) clickedBlock.getRelative(bed.facing) else clickedBlock
-                        when (head.biome) {
-                            Biome.NETHER, Biome.THE_END -> run {
-                                user.sendParcelMessage(nopermit = true, message = "You cannot use this bed because it would explode")
-                                event.isCancelled = true; return@l
+                    WHITE_BED, ORANGE_BED, MAGENTA_BED, LIGHT_BLUE_BED, YELLOW_BED, LIME_BED, PINK_BED, GRAY_BED, LIGHT_GRAY_BED, CYAN_BED, PURPLE_BED, BLUE_BED, BROWN_BED, GREEN_BED, RED_BED, BLACK_BED
+                    -> run {
+                        if (world.options.disableExplosions) {
+                            val bed = clickedBlock.blockData as Bed
+                            val head = if (bed == Bed.Part.FOOT) clickedBlock.getRelative(bed.facing) else clickedBlock
+                            when (head.biome) {
+                                Biome.NETHER, Biome.THE_END -> run {
+                                    user.sendParcelMessage(nopermit = true, message = "You cannot use this bed because it would explode")
+                                    event.isCancelled = true; return@l
+                                }
                             }
+
                         }
 
                     }
-
                 }
+                onPlayerInteractEvent_RightClick(event, world, parcel)
             }
 
-            Action.RIGHT_CLICK_AIR -> if (event.hasItem()) {
-                val item = event.item.type
-                if (world.options.blockedItems.contains(item)) {
-                    user.sendParcelMessage(nopermit = true, message = "You cannot use this bed because it would explode")
-                    event.isCancelled = true; return@l
-                }
-
-                if (!parcel.canBuildN(user)) {
-                    when (item) {
-                        LAVA_BUCKET, WATER_BUCKET, BUCKET, FLINT_AND_STEEL -> event.isCancelled = true
-                    }
-                }
-            }
-
-
+            Action.RIGHT_CLICK_AIR -> onPlayerInteractEvent_RightClick(event, world, parcel)
             Action.PHYSICAL -> if (!user.hasBuildAnywhere && !parcel.isPresentAnd { canBuild(user) || allowInteractInputs }) {
+                user.sendParcelMessage(nopermit = true, message = "You cannot use inputs in this parcel")
                 event.isCancelled = true; return@l
+            }
+        }
+    }
+
+    @Suppress("NON_EXHAUSTIVE_WHEN")
+    private fun onPlayerInteractEvent_RightClick(event: PlayerInteractEvent, world: ParcelWorld, parcel: Parcel?) {
+        if (event.hasItem()) {
+            val item = event.item.type
+            if (world.options.blockedItems.contains(item)) {
+                event.player.sendParcelMessage(nopermit = true, message = "You cannot use this item because it is disabled in this world")
+                event.isCancelled = true; return
+            }
+
+            if (!parcel.canBuildN(event.player)) {
+                when (item) {
+                    LAVA_BUCKET, WATER_BUCKET, BUCKET, FLINT_AND_STEEL -> event.isCancelled = true
+                }
             }
         }
     }
@@ -352,7 +359,7 @@ class ParcelListeners(val parcelProvider: ParcelProvider, val entityTracker: Par
         world.weatherDuration = Int.MAX_VALUE
     }
 
-    // TODO: BlockFormEvent, BlockSpreadEvent, BlockFadeEvent
+// TODO: BlockFormEvent, BlockSpreadEvent, BlockFadeEvent, Fireworks
 
     /*
      * Prevents natural blocks forming
@@ -370,10 +377,10 @@ class ParcelListeners(val parcelProvider: ParcelProvider, val entityTracker: Par
         val hasEntity = event is EntityBlockFormEvent
         val player = (event as? EntityBlockFormEvent)?.entity as? Player
 
-        val cancel: Boolean = when (block.type) {
+        val cancel: Boolean = when (event.newState.type) {
 
         // prevent ice generation from Frost Walkers enchantment
-            ICE -> player != null && !ppa.canBuild(player)
+            FROSTED_ICE -> player != null && !ppa.canBuild(player)
 
         // prevent snow generation from weather
             SNOW -> !hasEntity && wo.options.preventWeatherBlockChanges
@@ -406,12 +413,13 @@ class ParcelListeners(val parcelProvider: ParcelProvider, val entityTracker: Par
     val onVehicleMoveEvent = RegistratorListener<VehicleMoveEvent> l@{ event ->
         val (wo, ppa) = getWoAndPPa(event.to.block) ?: return@l
         if (ppa == null) {
-            event.vehicle.eject()
             event.vehicle.passengers.forEach {
                 if (it.type == EntityType.PLAYER) {
                     (it as Player).sendParcelMessage(except = true, message = "Your ride ends here")
                 } else it.remove()
             }
+            event.vehicle.eject()
+            event.vehicle.remove()
         } else if (ppa.hasBlockVisitors) {
             event.to.subtract(event.to).add(event.from)
         }

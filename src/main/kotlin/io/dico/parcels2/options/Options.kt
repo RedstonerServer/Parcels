@@ -10,14 +10,15 @@ import java.util.EnumSet
 class Options {
     var worlds: Map<String, WorldOptions> = hashMapOf()
         private set
-    var storage: StorageOptions = StorageOptions("postgresql", DataConnectionOptions())
+    var storage: StorageOptions = StorageOptions()
     var tickWorktime: TickWorktimeOptions = TickWorktimeOptions(20, 1)
+    var migration = MigrationOptionsHolder()
 
     fun addWorld(name: String,
                  generatorOptions: GeneratorOptions? = null,
                  worldOptions: RuntimeWorldOptions? = null) {
         val optionsHolder = WorldOptions(
-            generatorOptions ?: GeneratorOptions("default", DefaultGeneratorOptions()),
+            generatorOptions ?: GeneratorOptions(),
             worldOptions ?: RuntimeWorldOptions()
         )
 
@@ -49,3 +50,9 @@ class RuntimeWorldOptions(var gameMode: GameMode? = GameMode.CREATIVE,
                           var axisLimit: Int = 10)
 
 class DataFileOptions(val location: String = "/flatfile-storage/")
+
+class MigrationOptionsHolder {
+    var enabled = false
+    var disableWhenComplete = true
+    var instance: MigrationOptions? = MigrationOptions()
+}

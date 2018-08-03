@@ -60,6 +60,21 @@ class ParcelProviderImpl(val plugin: ParcelsPlugin) : ParcelProvider {
 
     private fun loadStoredData() {
         plugin.functionHelper.launchLazilyOnMainThread {
+            val migration = plugin.options.migration
+            if (migration.enabled) {
+                migration.instance?.newInstance()?.apply {
+                    logger.warn("Migrating database now...")
+                    migrateTo(plugin.storage).join()
+                    logger.warn("Migration completed")
+
+                    if (migration.disableWhenComplete) {
+                        migration.enabled = false
+                        plugin.saveOptions()
+                    }
+                }
+            }
+
+            logger.info("Loading all parcel data...")
             val channel = plugin.storage.readAllParcelData()
             do {
                 val pair = channel.receiveOrNull() ?: break
@@ -67,6 +82,7 @@ class ParcelProviderImpl(val plugin: ParcelsPlugin) : ParcelProvider {
                 pair.second?.let { parcel.copyDataIgnoringDatabase(it) }
             } while (true)
 
+            logger.info("Loading data completed")
             _dataIsLoaded = true
         }.start()
     }

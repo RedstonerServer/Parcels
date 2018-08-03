@@ -6,7 +6,36 @@
         </encoder>
     </appender>
 
-    <root level="debug">
+    <root level="info">
         <appender-ref ref="STDOUT" />
     </root>
+
+    <appender name="SQLLOG" class="ch.qos.logback.core.RollingFileAppender">
+        <append>true</append>
+        <file>C:/Parcels/sql.log</file>
+
+        <encoder>
+            <!-- old pattern <pattern>%d{HH:mm:ss.SSS} %magenta(%-8.-8(%thread)) %highlight(%-5level) %boldCyan(%8.-32logger{32}) - %msg</pattern>-->
+            <pattern>%magenta(%-8.-8(%thread)) %highlight(%-5level) %boldCyan(%6.-32logger{32}) - %msg</pattern>
+        </encoder>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
+            <fileNamePattern>C:/Parcels/sql%i.log</fileNamePattern>
+            <minIndex>1</minIndex>
+            <maxIndex>3</maxIndex>
+        </rollingPolicy>
+
+        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
+            <maxFileSize>1MB</maxFileSize>
+        </triggeringPolicy>
+    </appender>
+
+    <appender name="ASYNC_SQLLOG" class="ch.qos.logback.classic.AsyncAppender">
+        <appender-ref ref="SQLLOG"/>
+        <neverBlock>true</neverBlock>
+    </appender>
+
+    <logger name="Exposed" level="DEBUG">
+        <appender-ref ref="ASYNC_SQLLOG"/>
+    </logger>
 </configuration>

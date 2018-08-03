@@ -4,9 +4,12 @@ import io.dico.parcels2.logger
 import java.io.File
 
 fun File.tryCreate(): Boolean {
+    if (exists()) {
+        return !isDirectory
+    }
     val parent = parentFile
     if (parent == null || !(parent.exists() || parent.mkdirs()) || !createNewFile()) {
-        logger.warn("Failed to create file ${canonicalPath}")
+        logger.warn("Failed to create file $canonicalPath")
         return false
     }
     return true

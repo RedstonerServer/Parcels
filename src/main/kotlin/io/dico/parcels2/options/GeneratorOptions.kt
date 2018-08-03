@@ -10,7 +10,7 @@ import kotlin.reflect.KClass
 
 object GeneratorOptionsFactories : PolymorphicOptionsFactories<ParcelGenerator>("name", GeneratorOptions::class, DefaultGeneratorOptionsFactory())
 
-class GeneratorOptions(name: String, options: Any) : PolymorphicOptions<ParcelGenerator>(name, options, GeneratorOptionsFactories) {
+class GeneratorOptions (name: String = "default", options: Any = DefaultGeneratorOptions()) : PolymorphicOptions<ParcelGenerator>(name, options, GeneratorOptionsFactories) {
     fun newInstance(worldName: String) = factory.newInstance(key, options, worldName)
 }
 

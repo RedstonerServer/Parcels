@@ -46,7 +46,7 @@ interface ParcelData : AddedData {
     }
 }
 
-class ParcelDataHolder : AddedDataHolder(), ParcelData {
+class ParcelDataHolder(addedMap: MutableAddedDataMap = mutableMapOf()) : AddedDataHolder(addedMap), ParcelData {
 
     override var owner: ParcelOwner? = null
     override var since: DateTime? = null

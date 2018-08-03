@@ -146,7 +146,7 @@ class DefaultParcelGenerator(val name: String, private val o: DefaultGeneratorOp
 
         override fun getHomeLocation(parcel: ParcelId): Location {
             val bottom = getBottomBlock(parcel)
-            return Location(world, bottom.x.toDouble(), o.floorHeight + 1.0, bottom.z + (o.parcelSize - 1) / 2.0, -90F, 0F)
+            return Location(world, bottom.x.toDouble() + 0.5, o.floorHeight + 1.0, bottom.z + 0.5 + (o.parcelSize - 1) / 2.0, -90F, 0F)
         }
 
         override fun setOwnerBlock(parcel: ParcelId, owner: ParcelOwner?) {

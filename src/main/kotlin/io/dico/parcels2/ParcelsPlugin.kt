@@ -85,23 +85,30 @@ class ParcelsPlugin : JavaPlugin() {
     fun loadOptions(): Boolean {
         when {
             optionsFile.exists() -> optionsMapper.readerForUpdating(options).readValue<Options>(optionsFile)
-            optionsFile.tryCreate() -> {
+            else -> run {
                 options.addWorld("parcels")
-                try {
-                    optionsMapper.writeValue(optionsFile, options)
-                } catch (ex: Throwable) {
-                    optionsFile.delete()
-                    throw ex
+                if (saveOptions()) {
+                    plogger.warn("Created options file with a world template. Please review it before next start.")
+                } else {
+                    plogger.error("Failed to save options file ${optionsFile.canonicalPath}")
                 }
-                plogger.warn("Created options file with a world template. Please review it before next start.")
-                return false
-            }
-            else -> {
-                plogger.error("Failed to save options file ${optionsFile.canonicalPath}")
                 return false
             }
         }
         return true
+    }
+
+    fun saveOptions(): Boolean {
+        if (optionsFile.tryCreate()) {
+            try {
+                optionsMapper.writeValue(optionsFile, options)
+            } catch (ex: Throwable) {
+                optionsFile.delete()
+                throw ex
+            }
+            return true
+        }
+        return false
     }
 
     override fun getDefaultWorldGenerator(worldName: String, generatorId: String?): ChunkGenerator? {
@@ -119,6 +126,8 @@ class ParcelsPlugin : JavaPlugin() {
             listeners = ParcelListeners(parcelProvider, entityTracker)
             registrator.registerListeners(listeners!!)
         }
+
+        functionHelper.scheduleRepeating(100, 5, entityTracker::tick)
     }
 
 }

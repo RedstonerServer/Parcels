@@ -26,7 +26,7 @@ class ParcelEntityTracker(val parcelProvider: ParcelProvider) {
      */
     fun tick() {
         map.editLoop { entity, parcel ->
-            if (entity.isDead || entity.isOnGround) {
+            if (entity.isDead) {
                 remove(); return@editLoop
             }
             if (parcel.isPresentAnd { hasBlockVisitors }) {

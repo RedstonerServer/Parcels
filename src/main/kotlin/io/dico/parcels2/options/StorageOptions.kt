@@ -3,22 +3,36 @@ package io.dico.parcels2.options
 import com.zaxxer.hikari.HikariDataSource
 import io.dico.parcels2.logger
 import io.dico.parcels2.storage.Storage
-import io.dico.parcels2.storage.StorageWithCoroutineBacking
+import io.dico.parcels2.storage.BackedStorage
 import io.dico.parcels2.storage.exposed.ExposedBacking
 import io.dico.parcels2.storage.getHikariConfig
+import javax.sql.DataSource
 
 object StorageOptionsFactories : PolymorphicOptionsFactories<Storage>("dialect", StorageOptions::class, ConnectionStorageFactory())
 
-class StorageOptions(dialect: String, options: Any) : SimplePolymorphicOptions<Storage>(dialect, options, StorageOptionsFactories)
+class StorageOptions(dialect: String = "mariadb", options: Any = DataConnectionOptions()) : SimplePolymorphicOptions<Storage>(dialect, options, StorageOptionsFactories) {
+
+    fun getDataSourceFactory(): DataSourceFactory? {
+        return when (factory) {
+            is ConnectionStorageFactory -> factory.getDataSourceFactory(key, options)
+            else -> return null
+        }
+    }
+}
+
+typealias DataSourceFactory = () -> DataSource
 
 private class ConnectionStorageFactory : PolymorphicOptionsFactory<Storage> {
     override val optionsClass = DataConnectionOptions::class
     override val supportedKeys: List<String> = listOf("postgresql", "mariadb")
 
-    override fun newInstance(key: String, options: Any, vararg extra: Any?): Storage {
+    fun getDataSourceFactory(key: String, options: Any): DataSourceFactory {
         val hikariConfig = getHikariConfig(key, options as DataConnectionOptions)
-        val dataSourceFactory = suspend { HikariDataSource(hikariConfig) }
-        return StorageWithCoroutineBacking(ExposedBacking(dataSourceFactory))
+        return { HikariDataSource(hikariConfig) }
+    }
+
+    override fun newInstance(key: String, options: Any, vararg extra: Any?): Storage {
+        return BackedStorage(ExposedBacking(getDataSourceFactory(key, options), (options as DataConnectionOptions).poolSize))
     }
 }
 
