@@ -1,7 +1,7 @@
 package io.dico.parcels2.storage
 
 import com.zaxxer.hikari.HikariConfig
-import io.dico.parcels2.DataConnectionOptions
+import io.dico.parcels2.options.DataConnectionOptions
 
 fun getHikariConfig(dialectName: String,
                     dco: DataConnectionOptions): HikariConfig = HikariConfig().apply {

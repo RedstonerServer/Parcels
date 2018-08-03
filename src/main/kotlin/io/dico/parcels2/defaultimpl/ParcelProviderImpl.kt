@@ -28,7 +28,7 @@ class ParcelProviderImpl(val plugin: ParcelsPlugin) : ParcelProvider {
     override fun getWorldGenerator(worldName: String): ParcelGenerator? {
         return _worlds[worldName]?.generator
             ?: _generators[worldName]
-            ?: options.worlds[worldName]?.generator?.newGenerator(worldName)?.also { _generators[worldName] = it }
+            ?: options.worlds[worldName]?.generator?.newInstance(worldName)?.also { _generators[worldName] = it }
     }
 
     override fun loadWorlds() {

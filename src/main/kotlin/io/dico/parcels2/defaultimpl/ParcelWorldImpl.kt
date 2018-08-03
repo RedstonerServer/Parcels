@@ -4,6 +4,7 @@ package io.dico.parcels2.defaultimpl
 
 import io.dico.parcels2.*
 import io.dico.parcels2.blockvisitor.WorktimeLimiter
+import io.dico.parcels2.options.RuntimeWorldOptions
 import io.dico.parcels2.storage.Storage
 import org.bukkit.World
 import java.util.UUID
@@ -11,7 +12,7 @@ import java.util.UUID
 class ParcelWorldImpl private
 constructor(override val world: World,
             override val generator: ParcelGenerator,
-            override var options: WorldOptions,
+            override var options: RuntimeWorldOptions,
             override val storage: Storage,
             override val globalAddedData: GlobalAddedDataManager,
             containerFactory: ParcelContainerFactory,
@@ -62,7 +63,7 @@ constructor(override val world: World,
         // Use this to be able to delegate blockManager and assign it to a property too, at least.
         operator fun invoke(world: World,
                             generator: ParcelGenerator,
-                            options: WorldOptions,
+                            options: RuntimeWorldOptions,
                             storage: Storage,
                             globalAddedData: GlobalAddedDataManager,
                             containerFactory: ParcelContainerFactory,

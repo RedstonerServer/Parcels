@@ -4,6 +4,7 @@ import io.dico.parcels2.*
 import io.dico.parcels2.blockvisitor.RegionTraversal
 import io.dico.parcels2.blockvisitor.Worker
 import io.dico.parcels2.blockvisitor.WorktimeLimiter
+import io.dico.parcels2.options.DefaultGeneratorOptions
 import io.dico.parcels2.util.*
 import org.bukkit.*
 import org.bukkit.block.Biome
@@ -17,21 +18,6 @@ import java.util.Random
 
 private val airType = Bukkit.createBlockData(Material.AIR)
 
-data class DefaultGeneratorOptions(var defaultBiome: Biome = Biome.JUNGLE,
-                                   var wallType: BlockData = Bukkit.createBlockData(Material.STONE_SLAB),
-                                   var floorType: BlockData = Bukkit.createBlockData(Material.QUARTZ_BLOCK),
-                                   var fillType: BlockData = Bukkit.createBlockData(Material.QUARTZ_BLOCK),
-                                   var pathMainType: BlockData = Bukkit.createBlockData(Material.SANDSTONE),
-                                   var pathAltType: BlockData = Bukkit.createBlockData(Material.REDSTONE_BLOCK),
-                                   var parcelSize: Int = 101,
-                                   var pathSize: Int = 9,
-                                   var floorHeight: Int = 64,
-                                   var offsetX: Int = 0,
-                                   var offsetZ: Int = 0) : GeneratorOptions() {
-
-    override fun generatorFactory(): GeneratorFactory = DefaultParcelGenerator.Factory
-}
-
 class DefaultParcelGenerator(val name: String, private val o: DefaultGeneratorOptions) : ParcelGenerator() {
     private var _world: World? = null
     override val world: World
@@ -44,15 +30,6 @@ class DefaultParcelGenerator(val name: String, private val o: DefaultGeneratorOp
         }
 
     private var maxHeight = 0
-
-    companion object Factory : GeneratorFactory {
-        override val name get() = "default"
-        override val optionsClass get() = DefaultGeneratorOptions::class
-        override fun newParcelGenerator(worldName: String, options: GeneratorOptions): ParcelGenerator {
-            return DefaultParcelGenerator(worldName, options as DefaultGeneratorOptions)
-        }
-    }
-
     val sectionSize = o.parcelSize + o.pathSize
     val pathOffset = (if (o.pathSize % 2 == 0) o.pathSize + 2 else o.pathSize + 1) / 2
     val makePathMain = o.pathSize > 2

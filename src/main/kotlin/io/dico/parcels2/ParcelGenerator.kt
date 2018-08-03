@@ -4,6 +4,7 @@ import io.dico.parcels2.blockvisitor.RegionTraversal
 import io.dico.parcels2.blockvisitor.Worker
 import io.dico.parcels2.blockvisitor.WorktimeLimiter
 import io.dico.parcels2.defaultimpl.DefaultParcelGenerator
+import io.dico.parcels2.options.GeneratorOptions
 import io.dico.parcels2.util.Vec2i
 import org.bukkit.Chunk
 import org.bukkit.Location
@@ -16,26 +17,6 @@ import org.bukkit.generator.ChunkGenerator
 import java.util.HashMap
 import java.util.Random
 import kotlin.reflect.KClass
-
-object GeneratorFactories {
-    private val map: MutableMap<String, GeneratorFactory> = HashMap()
-
-    fun registerFactory(generator: GeneratorFactory): Boolean = map.putIfAbsent(generator.name, generator) == null
-
-    fun getFactory(name: String): GeneratorFactory? = map.get(name)
-
-    init {
-        registerFactory(DefaultParcelGenerator.Factory)
-    }
-}
-
-interface GeneratorFactory {
-    val name: String
-
-    val optionsClass: KClass<out GeneratorOptions>
-
-    fun newParcelGenerator(worldName: String, options: GeneratorOptions): ParcelGenerator
-}
 
 abstract class ParcelGenerator : ChunkGenerator() {
     abstract val world: World

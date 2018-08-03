@@ -10,8 +10,9 @@ import io.dico.parcels2.defaultimpl.GlobalAddedDataManagerImpl
 import io.dico.parcels2.defaultimpl.ParcelProviderImpl
 import io.dico.parcels2.listener.ParcelEntityTracker
 import io.dico.parcels2.listener.ParcelListeners
+import io.dico.parcels2.options.Options
+import io.dico.parcels2.options.optionsMapper
 import io.dico.parcels2.storage.Storage
-import io.dico.parcels2.storage.yamlObjectMapper
 import io.dico.parcels2.util.FunctionHelper
 import io.dico.parcels2.util.tryCreate
 import org.bukkit.Bukkit
@@ -60,7 +61,7 @@ class ParcelsPlugin : JavaPlugin() {
             if (!loadOptions()) return false
 
             try {
-                storage = options.storage.newStorageInstance()
+                storage = options.storage.newInstance()
                 storage.init()
             } catch (ex: Exception) {
                 plogger.error("Failed to connect to database", ex)
@@ -83,11 +84,11 @@ class ParcelsPlugin : JavaPlugin() {
 
     fun loadOptions(): Boolean {
         when {
-            optionsFile.exists() -> yamlObjectMapper.readerForUpdating(options).readValue<Options>(optionsFile)
+            optionsFile.exists() -> optionsMapper.readerForUpdating(options).readValue<Options>(optionsFile)
             optionsFile.tryCreate() -> {
                 options.addWorld("parcels")
                 try {
-                    yamlObjectMapper.writeValue(optionsFile, options)
+                    optionsMapper.writeValue(optionsFile, options)
                 } catch (ex: Throwable) {
                     optionsFile.delete()
                     throw ex

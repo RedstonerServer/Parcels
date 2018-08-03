@@ -1,5 +1,6 @@
 package io.dico.parcels2
 
+import io.dico.parcels2.options.RuntimeWorldOptions
 import io.dico.parcels2.storage.Storage
 import io.dico.parcels2.util.Vec2i
 import io.dico.parcels2.util.floor
@@ -76,7 +77,7 @@ interface ParcelWorld : ParcelLocator, ParcelContainer, ParcelBlockManager {
     val id: ParcelWorldId
     val name: String
     val uid: UUID?
-    val options: WorldOptions
+    val options: RuntimeWorldOptions
     val generator: ParcelGenerator
     val storage: Storage
     val container: ParcelContainer
