@@ -15,6 +15,9 @@ fun File.tryCreate(): Boolean {
     return true
 }
 
+inline fun Boolean.alsoIfTrue(block: () -> Unit): Boolean = also { if (it) block() }
+inline fun Boolean.alsoIfFalse(block: () -> Unit): Boolean = also { if (!it) block() }
+
 inline fun <R> Any.synchronized(block: () -> R): R = synchronized(this, block)
 
 inline fun <T> T?.isNullOr(condition: T.() -> Boolean): Boolean = this == null || condition()

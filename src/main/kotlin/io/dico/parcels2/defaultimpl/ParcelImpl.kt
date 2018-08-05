@@ -3,6 +3,7 @@ package io.dico.parcels2.defaultimpl
 import io.dico.dicore.Formatting
 import io.dico.parcels2.*
 import io.dico.parcels2.util.Vec2i
+import io.dico.parcels2.util.alsoIfTrue
 import io.dico.parcels2.util.getPlayerName
 import org.bukkit.OfflinePlayer
 import org.joda.time.DateTime
@@ -33,20 +34,24 @@ class ParcelImpl(override val world: ParcelWorld,
         world.storage.setParcelData(this, null)
     }
 
-    override val addedMap: Map<UUID, AddedStatus> get() = data.addedMap
-    override fun getAddedStatus(uuid: UUID) = data.getAddedStatus(uuid)
-    override fun isBanned(uuid: UUID) = data.isBanned(uuid)
-    override fun isAllowed(uuid: UUID) = data.isAllowed(uuid)
+    override val addedMap: AddedDataMap get() = data.addedMap
+    override fun getAddedStatus(key: StatusKey) = data.getAddedStatus(key)
+    override fun isBanned(key: StatusKey) = data.isBanned(key)
+    override fun isAllowed(key: StatusKey) = data.isAllowed(key)
     override fun canBuild(player: OfflinePlayer, checkAdmin: Boolean, checkGlobal: Boolean): Boolean {
         return (data.canBuild(player, checkAdmin, false))
             || checkGlobal && world.globalAddedData[owner ?: return false].isAllowed(player)
     }
 
-    val globalAddedMap: Map<UUID, AddedStatus>? get() = owner?.let { world.globalAddedData[it].addedMap }
+    override var addedStatusOfStar: AddedStatus
+        get() = data.addedStatusOfStar
+        set(value) = run { setAddedStatus(PlayerProfile.Star, value) }
+
+    val globalAddedMap: AddedDataMap? get() = owner?.let { world.globalAddedData[it].addedMap }
 
     override val since: DateTime? get() = data.since
 
-    override var owner: ParcelOwner?
+    override var owner: PlayerProfile?
         get() = data.owner
         set(value) {
             if (data.owner != value) {
@@ -55,9 +60,9 @@ class ParcelImpl(override val world: ParcelWorld,
             }
         }
 
-    override fun setAddedStatus(uuid: UUID, status: AddedStatus): Boolean {
-        return data.setAddedStatus(uuid, status).also {
-            if (it) world.storage.setParcelPlayerStatus(this, uuid, status)
+    override fun setAddedStatus(key: StatusKey, status: AddedStatus): Boolean {
+        return data.setAddedStatus(key, status).alsoIfTrue {
+            world.storage.setParcelPlayerStatus(this, key, status)
         }
     }
 
@@ -102,10 +107,10 @@ private object ParcelInfoStringComputer {
         append(' ')
     }
 
-    private fun StringBuilder.appendAddedList(local: Map<UUID, AddedStatus>, global: Map<UUID, AddedStatus>, status: AddedStatus, fieldName: String) {
+    private fun StringBuilder.appendAddedList(local: AddedDataMap, global: AddedDataMap, status: AddedStatus, fieldName: String) {
         val globalSet = global.filterValues { it == status }.keys
         val localList = local.filterValues { it == status }.keys.filter { it !in globalSet }
-        val stringList = globalSet.map(::getPlayerName).map { "(G)$it" } + localList.map(::getPlayerName)
+        val stringList = globalSet.map(StatusKey::notNullName).map { "(G)$it" } + localList.map(StatusKey::notNullName)
         if (stringList.isEmpty()) return
 
         appendField({

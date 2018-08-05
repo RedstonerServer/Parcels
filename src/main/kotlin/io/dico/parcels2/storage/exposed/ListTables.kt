@@ -2,17 +2,13 @@
 
 package io.dico.parcels2.storage.exposed
 
-import io.dico.parcels2.AddedStatus
-import io.dico.parcels2.ParcelId
-import io.dico.parcels2.ParcelOwner
-import io.dico.parcels2.util.toByteArray
-import io.dico.parcels2.util.toUUID
+import io.dico.parcels2.*
 import kotlinx.coroutines.experimental.channels.SendChannel
 import org.jetbrains.exposed.sql.*
 import java.util.UUID
 
 object AddedLocalT : AddedTable<ParcelId>("parcels_added_local", ParcelsT)
-object AddedGlobalT : AddedTable<ParcelOwner>("parcels_added_global", OwnersT)
+object AddedGlobalT : AddedTable<PlayerProfile>("parcels_added_global", ProfilesT)
 
 object ParcelOptionsT : Table("parcel_options") {
     val parcel_id = integer("parcel_id").primaryKey().references(ParcelsT.id, ReferenceOption.CASCADE)
@@ -20,55 +16,59 @@ object ParcelOptionsT : Table("parcel_options") {
     val interact_inputs = bool("interact_inputs").default(true)
 }
 
-typealias AddedStatusSendChannel<AttachT> = SendChannel<Pair<AttachT, MutableMap<UUID, AddedStatus>>>
+typealias AddedStatusSendChannel<AttachT> = SendChannel<Pair<AttachT, MutableAddedDataMap>>
 
 sealed class AddedTable<AttachT>(name: String, val idTable: IdTransactionsTable<*, AttachT>) : Table(name) {
     val attach_id = integer("attach_id").references(idTable.id, ReferenceOption.CASCADE)
-    val player_uuid = binary("player_uuid", 16)
+    val profile_id = integer("profile_id").references(ProfilesT.id, ReferenceOption.CASCADE)
     val allowed_flag = bool("allowed_flag")
-    val index_pair = uniqueIndexR("index_pair", attach_id, player_uuid)
+    val index_pair = uniqueIndexR("index_pair", attach_id, profile_id)
 
-    fun setPlayerStatus(attachedOn: AttachT, player: UUID, status: AddedStatus) {
-        val binaryUuid = player.toByteArray()
-
+    fun setPlayerStatus(attachedOn: AttachT, player: PlayerProfile.Real, status: AddedStatus) {
         if (status.isDefault) {
-            idTable.getId(attachedOn)?.let { id ->
-                deleteWhere { (attach_id eq id) and (player_uuid eq binaryUuid) }
+            val player_id = ProfilesT.getId(player) ?: return
+            idTable.getId(attachedOn)?.let { holder ->
+                deleteWhere { (attach_id eq holder) and (profile_id eq player_id) }
             }
             return
         }
 
-        val id = idTable.getOrInitId(attachedOn)
+        val holder = idTable.getOrInitId(attachedOn)
+        val player_id = ProfilesT.getOrInitId(player)
         upsert(conflictIndex = index_pair) {
-            it[attach_id] = id
-            it[player_uuid] = binaryUuid
+            it[attach_id] = holder
+            it[profile_id] = player_id
             it[allowed_flag] = status.isAllowed
         }
     }
 
-    fun readAddedData(id: Int): MutableMap<UUID, AddedStatus> {
-        return slice(player_uuid, allowed_flag).select { attach_id eq id }
-            .associateByTo(hashMapOf(), { it[player_uuid].toUUID() }, { it[allowed_flag].asAddedStatus() })
+    fun readAddedData(id: Int): MutableAddedDataMap {
+        val list = slice(profile_id, allowed_flag).select { attach_id eq id }
+        val result = MutableAddedDataMap()
+        for (row in list) {
+            val profile = ProfilesT.getRealItem(row[profile_id]) ?: continue
+            result[profile] = row[allowed_flag].asAddedStatus()
+        }
+        return result
     }
 
-    suspend fun sendAllAddedData(channel: AddedStatusSendChannel<AttachT>) {
-        /*
+    fun sendAllAddedData(channel: AddedStatusSendChannel<AttachT>) {
         val iterator = selectAll().orderBy(attach_id).iterator()
 
         if (iterator.hasNext()) {
             val firstRow = iterator.next()
             var id: Int = firstRow[attach_id]
-            var attach: SerializableT? = null
-            var map: MutableMap<UUID, AddedStatus>? = null
+            var attach: AttachT? = null
+            var map: MutableAddedDataMap? = null
 
             fun initAttachAndMap() {
-                attach = idTable.getId(id)
+                attach = idTable.getItem(id)
                 map = attach?.let { mutableMapOf() }
             }
 
-            suspend fun sendIfPresent() {
+            fun sendIfPresent() {
                 if (attach != null && map != null && map!!.isNotEmpty()) {
-                    channel.send(attach!! to map!!)
+                    channel.offer(attach!! to map!!)
                 }
                 attach = null
                 map = null
@@ -88,13 +88,13 @@ sealed class AddedTable<AttachT>(name: String, val idTable: IdTransactionsTable<
                     continue // owner not found for this owner id
                 }
 
-                val player_uuid = row[player_uuid].toUUID()
+                val profile = ProfilesT.getRealItem(row[profile_id]) ?: continue
                 val status = row[allowed_flag].asAddedStatus()
-                map!![player_uuid] = status
+                map!![profile] = status
             }
 
             sendIfPresent()
-        }*/
+        }
     }
 
     private inline fun Boolean?.asAddedStatus() = if (this == null) AddedStatus.DEFAULT else if (this) AddedStatus.ALLOWED else AddedStatus.BANNED

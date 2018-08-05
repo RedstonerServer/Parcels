@@ -6,6 +6,7 @@ import io.dico.dicore.RegistratorListener
 import io.dico.parcels2.Parcel
 import io.dico.parcels2.ParcelProvider
 import io.dico.parcels2.ParcelWorld
+import io.dico.parcels2.statusKey
 import io.dico.parcels2.util.*
 import org.bukkit.Material.*
 import org.bukkit.World
@@ -51,7 +52,7 @@ class ParcelListeners(val parcelProvider: ParcelProvider, val entityTracker: Par
         val user = event.player
         if (user.hasBanBypass) return@l
         val parcel = parcelProvider.getParcelAt(event.to) ?: return@l
-        if (parcel.isBanned(user.uuid)) {
+        if (parcel.isBanned(user.statusKey)) {
             parcelProvider.getParcelAt(event.from)?.also {
                 user.teleport(it.world.getHomeLocation(it.id))
                 user.sendParcelMessage(nopermit = true, message = "You are banned from this parcel")
@@ -178,7 +179,7 @@ class ParcelListeners(val parcelProvider: ParcelProvider, val entityTracker: Par
         val clickedBlock = event.clickedBlock
         val parcel = clickedBlock?.let { world.getParcelAt(it) }
 
-        if (!user.hasBuildAnywhere && parcel.isPresentAnd { isBanned(user.uuid) }) {
+        if (!user.hasBuildAnywhere && parcel.isPresentAnd { isBanned(user.statusKey) }) {
             user.sendParcelMessage(nopermit = true, message = "You cannot interact with parcels you're banned from")
             event.isCancelled = true; return@l
         }

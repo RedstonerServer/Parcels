@@ -75,7 +75,7 @@ class ParcelProviderImpl(val plugin: ParcelsPlugin) : ParcelProvider {
             }
 
             logger.info("Loading all parcel data...")
-            val channel = plugin.storage.readAllParcelData()
+            val channel = plugin.storage.transmitAllParcelData()
             do {
                 val pair = channel.receiveOrNull() ?: break
                 val parcel = getParcelById(pair.first) ?: continue
@@ -119,7 +119,7 @@ class ParcelProviderImpl(val plugin: ParcelsPlugin) : ParcelProvider {
                 }
             }
 
-            val channel = plugin.storage.readAllParcelData()
+            val channel = plugin.storage.transmitAllParcelData()
             val job = plugin.functionHelper.launchLazilyOnMainThread {
                 do {
                     val pair = channel.receiveOrNull() ?: break

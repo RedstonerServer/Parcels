@@ -3,8 +3,6 @@ package io.dico.parcels2
 import io.dico.parcels2.blockvisitor.RegionTraversal
 import io.dico.parcels2.blockvisitor.Worker
 import io.dico.parcels2.blockvisitor.WorktimeLimiter
-import io.dico.parcels2.defaultimpl.DefaultParcelGenerator
-import io.dico.parcels2.options.GeneratorOptions
 import io.dico.parcels2.util.Vec2i
 import org.bukkit.Chunk
 import org.bukkit.Location
@@ -14,9 +12,7 @@ import org.bukkit.block.Block
 import org.bukkit.entity.Entity
 import org.bukkit.generator.BlockPopulator
 import org.bukkit.generator.ChunkGenerator
-import java.util.HashMap
 import java.util.Random
-import kotlin.reflect.KClass
 
 abstract class ParcelGenerator : ChunkGenerator() {
     abstract val world: World
@@ -40,6 +36,7 @@ abstract class ParcelGenerator : ChunkGenerator() {
     abstract fun makeParcelLocator(container: ParcelContainer): ParcelLocator
 }
 
+@Suppress("DeprecatedCallableAddReplaceWith")
 interface ParcelBlockManager {
     val world: World
     val worktimeLimiter: WorktimeLimiter
@@ -48,7 +45,7 @@ interface ParcelBlockManager {
 
     fun getHomeLocation(parcel: ParcelId): Location
 
-    fun setOwnerBlock(parcel: ParcelId, owner: ParcelOwner?)
+    fun setOwnerBlock(parcel: ParcelId, owner: PlayerProfile?)
 
     @Deprecated("")
     fun getEntities(parcel: ParcelId): Collection<Entity> = TODO()

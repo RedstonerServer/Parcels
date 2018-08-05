@@ -42,6 +42,7 @@ class ParcelsPlugin : JavaPlugin() {
 
     override fun onEnable() {
         plogger.info("Debug enabled: ${plogger.isDebugEnabled}")
+        plogger.debug(System.getProperty("user.dir"))
         if (!init()) {
             Bukkit.getPluginManager().disablePlugin(this)
         }

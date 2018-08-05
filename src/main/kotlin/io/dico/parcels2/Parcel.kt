@@ -33,7 +33,7 @@ interface Parcel : ParcelData {
 }
 
 interface ParcelData : AddedData {
-    var owner: ParcelOwner?
+    var owner: PlayerProfile?
     val since: DateTime?
 
     fun canBuild(player: OfflinePlayer, checkAdmin: Boolean = true, checkGlobal: Boolean = true): Boolean
@@ -48,9 +48,9 @@ interface ParcelData : AddedData {
 
 class ParcelDataHolder(addedMap: MutableAddedDataMap = mutableMapOf()) : AddedDataHolder(addedMap), ParcelData {
 
-    override var owner: ParcelOwner? = null
+    override var owner: PlayerProfile? = null
     override var since: DateTime? = null
-    override fun canBuild(player: OfflinePlayer, checkAdmin: Boolean, checkGlobal: Boolean) = isAllowed(player.uniqueId)
+    override fun canBuild(player: OfflinePlayer, checkAdmin: Boolean, checkGlobal: Boolean) = isAllowed(player.statusKey)
         || owner.let { it != null && it.matches(player, allowNameMatch = false) }
         || (checkAdmin && player is Player && player.hasBuildAnywhere)
 

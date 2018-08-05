@@ -7,14 +7,14 @@ import io.dico.dicore.command.parameter.type.ParameterType
 import io.dico.parcels2.*
 import io.dico.parcels2.util.Vec2i
 import io.dico.parcels2.util.floor
-import io.dico.parcels2.util.isValid
 import kotlinx.coroutines.experimental.Deferred
-import org.bukkit.Bukkit
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 
 sealed class ParcelTarget(val world: ParcelWorld, val isDefault: Boolean) {
+
     abstract suspend fun ParcelsPlugin.getParcelSuspend(): Parcel?
+
     fun ParcelsPlugin.getParcelDeferred(): Deferred<Parcel?> = functionHelper.deferUndispatchedOnMainThread { getParcelSuspend() }
 
     class ByID(world: ParcelWorld, val id: Vec2i?, isDefault: Boolean) : ParcelTarget(world, isDefault) {
@@ -23,16 +23,35 @@ sealed class ParcelTarget(val world: ParcelWorld, val isDefault: Boolean) {
         val isPath: Boolean get() = id == null
     }
 
-    class ByOwner(world: ParcelWorld, val owner: ParcelOwner, val index: Int, isDefault: Boolean) : ParcelTarget(world, isDefault) {
+    class ByOwner(world: ParcelWorld,
+                  owner: PlayerProfile,
+                  val index: Int,
+                  isDefault: Boolean,
+                  val onResolveFailure: (() -> Unit)? = null) : ParcelTarget(world, isDefault) {
         init {
             if (index < 0) throw IllegalArgumentException("Invalid parcel home index: $index")
         }
 
+        var owner = owner; private set
+
         override suspend fun ParcelsPlugin.getParcelSuspend(): Parcel? {
+            onResolveFailure?.let { onFail ->
+                val owner = owner
+                if (owner is PlayerProfile.Unresolved) {
+                    val new = owner.tryResolveSuspendedly(storage)
+                    if (new == null) {
+                        onFail()
+                        return@let
+                    }
+                    this@ByOwner.owner = new
+                }
+            }
+
             val ownedParcelsSerialized = storage.getOwnedParcels(owner).await()
             val ownedParcels = ownedParcelsSerialized
                 .map { parcelProvider.getParcelById(it) }
                 .filter { it != null && world == it.world && owner == it.owner }
+
             return ownedParcels.getOrNull(index)
         }
     }
@@ -80,8 +99,8 @@ sealed class ParcelTarget(val world: ParcelWorld, val isDefault: Boolean) {
             }
 
             if (kind and OWNER == 0) invalidInput(parameter, "You must specify a parcel by ID, that is, the x and z component separated by a comma")
-            val (owner, index) = getHomeIndex(parameter, sender, input)
-            return ByOwner(world, owner, index, false)
+            val (owner, index) = getHomeIndex(parameter, kind, sender, input)
+            return ByOwner(world, owner, index, false, onResolveFailure = { invalidInput(parameter, "The player $input does not exist") })
         }
 
         private fun getId(parameter: Parameter<*, *>, input: String): Vec2i {
@@ -94,7 +113,7 @@ sealed class ParcelTarget(val world: ParcelWorld, val isDefault: Boolean) {
             return Vec2i(x, z)
         }
 
-        private fun getHomeIndex(parameter: Parameter<*, Int>, sender: CommandSender, input: String): Pair<ParcelOwner, Int> {
+        private fun getHomeIndex(parameter: Parameter<*, *>, kind: Int, sender: CommandSender, input: String): Pair<PlayerProfile, Int> {
             val splitIdx = input.indexOf(':')
             val ownerString: String
             val indexString: String
@@ -109,9 +128,9 @@ sealed class ParcelTarget(val world: ParcelWorld, val isDefault: Boolean) {
             }
 
             val owner = if (ownerString.isEmpty())
-                ParcelOwner(requirePlayer(sender, parameter, "the player"))
+                PlayerProfile(requirePlayer(sender, parameter, "the player"))
             else
-                inputAsOwner(parameter, ownerString)
+                PlayerProfile.byName(ownerString, allowReal = kind and OWNER_REAL != 0, allowFake = kind and OWNER_FAKE != 0)
 
             val index = if (indexString.isEmpty()) 0 else indexString.toIntOrNull()
                 ?: invalidInput(parameter, "The home index must be an integer, $indexString is not an integer")
@@ -122,22 +141,6 @@ sealed class ParcelTarget(val world: ParcelWorld, val isDefault: Boolean) {
         private fun requirePlayer(sender: CommandSender, parameter: Parameter<*, *>, objName: String): Player {
             if (sender !is Player) invalidInput(parameter, "console cannot omit the $objName")
             return sender
-        }
-
-        @Suppress("DEPRECATION")
-        private fun inputAsOwner(parameter: Parameter<*, Int>, input: String): ParcelOwner {
-            val kind = parameter.paramInfo ?: DEFAULT_KIND
-            if (kind and OWNER_REAL == 0) {
-                return ParcelOwner(input)
-            }
-
-            val player = Bukkit.getOfflinePlayer(input).takeIf { it.isValid }
-            if (player == null) {
-                if (kind and OWNER_FAKE == 0) invalidInput(parameter, "The player $input does not exist")
-                return ParcelOwner(input)
-            }
-
-            return ParcelOwner(player)
         }
 
         override fun getDefaultValue(parameter: Parameter<ParcelTarget, Int>, sender: CommandSender, buffer: ArgumentBuffer): ParcelTarget? {
@@ -156,7 +159,8 @@ sealed class ParcelTarget(val world: ParcelWorld, val isDefault: Boolean) {
                 return ByID(world, id, true)
             }
 
-            return ByOwner(world, ParcelOwner(player), 0, true)
+            return ByOwner(world, PlayerProfile(player), 0, true)
         }
     }
+
 }
