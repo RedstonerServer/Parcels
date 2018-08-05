@@ -72,7 +72,8 @@ dependencies {
     compile("org.jetbrains.exposed:exposed:0.10.3") { isTransitive = false }
     compile("joda-time:joda-time:2.10")
     compile("com.zaxxer:HikariCP:3.2.0")
-    compile("ch.qos.logback:logback-classic:1.2.3")
+    compile("ch.qos.logback:logback-classic:1.2.3") { isTransitive = false }
+    compile("ch.qos.logback:logback-core:1.2.3") { isTransitive = false }
 
     val jacksonVersion = "2.9.6"
     compile("com.fasterxml.jackson.core:jackson-core:$jacksonVersion")

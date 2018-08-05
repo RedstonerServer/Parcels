@@ -4,6 +4,7 @@ import io.dico.parcels2.*
 import io.dico.parcels2.blockvisitor.RegionTraversal
 import io.dico.parcels2.blockvisitor.Worker
 import io.dico.parcels2.blockvisitor.WorktimeLimiter
+import io.dico.parcels2.options.DefaultGeneratorOptions
 import io.dico.parcels2.util.*
 import org.bukkit.*
 import org.bukkit.block.Biome
@@ -17,21 +18,6 @@ import java.util.Random
 
 private val airType = Bukkit.createBlockData(Material.AIR)
 
-data class DefaultGeneratorOptions(var defaultBiome: Biome = Biome.JUNGLE,
-                                   var wallType: BlockData = Bukkit.createBlockData(Material.STONE_SLAB),
-                                   var floorType: BlockData = Bukkit.createBlockData(Material.QUARTZ_BLOCK),
-                                   var fillType: BlockData = Bukkit.createBlockData(Material.QUARTZ_BLOCK),
-                                   var pathMainType: BlockData = Bukkit.createBlockData(Material.SANDSTONE),
-                                   var pathAltType: BlockData = Bukkit.createBlockData(Material.REDSTONE_BLOCK),
-                                   var parcelSize: Int = 101,
-                                   var pathSize: Int = 9,
-                                   var floorHeight: Int = 64,
-                                   var offsetX: Int = 0,
-                                   var offsetZ: Int = 0) : GeneratorOptions() {
-
-    override fun generatorFactory(): GeneratorFactory = DefaultParcelGenerator.Factory
-}
-
 class DefaultParcelGenerator(val name: String, private val o: DefaultGeneratorOptions) : ParcelGenerator() {
     private var _world: World? = null
     override val world: World
@@ -44,15 +30,6 @@ class DefaultParcelGenerator(val name: String, private val o: DefaultGeneratorOp
         }
 
     private var maxHeight = 0
-
-    companion object Factory : GeneratorFactory {
-        override val name get() = "default"
-        override val optionsClass get() = DefaultGeneratorOptions::class
-        override fun newParcelGenerator(worldName: String, options: GeneratorOptions): ParcelGenerator {
-            return DefaultParcelGenerator(worldName, options as DefaultGeneratorOptions)
-        }
-    }
-
     val sectionSize = o.parcelSize + o.pathSize
     val pathOffset = (if (o.pathSize % 2 == 0) o.pathSize + 2 else o.pathSize + 1) / 2
     val makePathMain = o.pathSize > 2
@@ -142,7 +119,7 @@ class DefaultParcelGenerator(val name: String, private val o: DefaultGeneratorOp
         val modX = absX umod sectionSize
         val modZ = absZ umod sectionSize
         if (modX in 0 until parcelSize && modZ in 0 until parcelSize) {
-            return mapper((absX - modX) / sectionSize, (absZ - modZ) / sectionSize)
+            return mapper((absX - modX) / sectionSize + 1, (absZ - modZ) / sectionSize + 1)
         }
         return null
     }
@@ -163,16 +140,18 @@ class DefaultParcelGenerator(val name: String, private val o: DefaultGeneratorOp
         override val world: World = this@DefaultParcelGenerator.world
 
         override fun getBottomBlock(parcel: ParcelId): Vec2i = Vec2i(
-            sectionSize * parcel.pos.x + pathOffset + o.offsetX,
-            sectionSize * parcel.pos.z + pathOffset + o.offsetZ
+            sectionSize * (parcel.x - 1) + pathOffset + o.offsetX,
+            sectionSize * (parcel.z - 1) + pathOffset + o.offsetZ
         )
 
         override fun getHomeLocation(parcel: ParcelId): Location {
             val bottom = getBottomBlock(parcel)
-            return Location(world, bottom.x.toDouble(), o.floorHeight + 1.0, bottom.z + (o.parcelSize - 1) / 2.0, -90F, 0F)
+            val x = bottom.x + (o.parcelSize - 1) / 2.0
+            val z = bottom.z - 2
+            return Location(world, x + 0.5, o.floorHeight + 1.0, z + 0.5, 0F, 0F)
         }
 
-        override fun setOwnerBlock(parcel: ParcelId, owner: ParcelOwner?) {
+        override fun setOwnerBlock(parcel: ParcelId, owner: PlayerProfile?) {
             val b = getBottomBlock(parcel)
 
             val wallBlock = world.getBlockAt(b.x - 1, o.floorHeight + 1, b.z - 1)
@@ -201,8 +180,8 @@ class DefaultParcelGenerator(val name: String, private val o: DefaultGeneratorOp
 
                 skullBlock.type = Material.PLAYER_HEAD
                 val skull = skullBlock.state as Skull
-                if (owner.uuid != null) {
-                    skull.owningPlayer = owner.offlinePlayer
+                if (owner is PlayerProfile.Real) {
+                    skull.owningPlayer = owner.playerUnchecked
                 } else {
                     skull.owner = owner.name
                 }

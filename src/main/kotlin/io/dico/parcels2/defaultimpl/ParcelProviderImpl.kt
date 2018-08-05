@@ -28,7 +28,7 @@ class ParcelProviderImpl(val plugin: ParcelsPlugin) : ParcelProvider {
     override fun getWorldGenerator(worldName: String): ParcelGenerator? {
         return _worlds[worldName]?.generator
             ?: _generators[worldName]
-            ?: options.worlds[worldName]?.generator?.newGenerator(worldName)?.also { _generators[worldName] = it }
+            ?: options.worlds[worldName]?.generator?.newInstance(worldName)?.also { _generators[worldName] = it }
     }
 
     override fun loadWorlds() {
@@ -60,13 +60,29 @@ class ParcelProviderImpl(val plugin: ParcelsPlugin) : ParcelProvider {
 
     private fun loadStoredData() {
         plugin.functionHelper.launchLazilyOnMainThread {
-            val channel = plugin.storage.readAllParcelData()
+            val migration = plugin.options.migration
+            if (migration.enabled) {
+                migration.instance?.newInstance()?.apply {
+                    logger.warn("Migrating database now...")
+                    migrateTo(plugin.storage).join()
+                    logger.warn("Migration completed")
+
+                    if (migration.disableWhenComplete) {
+                        migration.enabled = false
+                        plugin.saveOptions()
+                    }
+                }
+            }
+
+            logger.info("Loading all parcel data...")
+            val channel = plugin.storage.transmitAllParcelData()
             do {
                 val pair = channel.receiveOrNull() ?: break
                 val parcel = getParcelById(pair.first) ?: continue
                 pair.second?.let { parcel.copyDataIgnoringDatabase(it) }
             } while (true)
 
+            logger.info("Loading data completed")
             _dataIsLoaded = true
         }.start()
     }
@@ -103,7 +119,7 @@ class ParcelProviderImpl(val plugin: ParcelsPlugin) : ParcelProvider {
                 }
             }
 
-            val channel = plugin.storage.readAllParcelData()
+            val channel = plugin.storage.transmitAllParcelData()
             val job = plugin.functionHelper.launchLazilyOnMainThread {
                 do {
                     val pair = channel.receiveOrNull() ?: break

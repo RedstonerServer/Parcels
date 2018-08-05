@@ -3,21 +3,18 @@
 package io.dico.parcels2.storage
 
 import io.dico.parcels2.*
-import kotlinx.coroutines.experimental.*
-import kotlinx.coroutines.experimental.channels.ProducerScope
+import kotlinx.coroutines.experimental.Deferred
+import kotlinx.coroutines.experimental.Job
 import kotlinx.coroutines.experimental.channels.ReceiveChannel
-import kotlinx.coroutines.experimental.channels.produce
+import kotlinx.coroutines.experimental.channels.SendChannel
+import kotlinx.coroutines.experimental.launch
 import java.util.UUID
-import java.util.concurrent.Executor
-import java.util.concurrent.Executors
 
 typealias DataPair = Pair<ParcelId, ParcelData?>
 typealias AddedDataPair<TAttach> = Pair<TAttach, MutableAddedDataMap>
 
 interface Storage {
     val name: String
-    val syncDispatcher: CoroutineDispatcher
-    val asyncDispatcher: CoroutineDispatcher
     val isConnected: Boolean
 
     fun init(): Job
@@ -25,84 +22,77 @@ interface Storage {
     fun shutdown(): Job
 
 
+    fun getPlayerUuidForName(name: String): Deferred<UUID?>
+
     fun readParcelData(parcel: ParcelId): Deferred<ParcelData?>
 
-    fun readParcelData(parcels: Sequence<ParcelId>): ReceiveChannel<DataPair>
+    fun transmitParcelData(parcels: Sequence<ParcelId>): ReceiveChannel<DataPair>
 
-    fun readAllParcelData(): ReceiveChannel<DataPair>
+    fun transmitAllParcelData(): ReceiveChannel<DataPair>
 
-    fun getOwnedParcels(user: ParcelOwner): Deferred<List<ParcelId>>
+    fun getOwnedParcels(user: PlayerProfile): Deferred<List<ParcelId>>
 
-    fun getNumParcels(user: ParcelOwner): Deferred<Int>
+    fun getNumParcels(user: PlayerProfile): Deferred<Int>
 
 
     fun setParcelData(parcel: ParcelId, data: ParcelData?): Job
 
-    fun setParcelOwner(parcel: ParcelId, owner: ParcelOwner?): Job
+    fun setParcelOwner(parcel: ParcelId, owner: PlayerProfile?): Job
 
-    fun setParcelPlayerStatus(parcel: ParcelId, player: UUID, status: AddedStatus): Job
+    fun setParcelPlayerStatus(parcel: ParcelId, player: PlayerProfile, status: AddedStatus): Job
 
     fun setParcelAllowsInteractInventory(parcel: ParcelId, value: Boolean): Job
 
     fun setParcelAllowsInteractInputs(parcel: ParcelId, value: Boolean): Job
 
 
-    fun readAllGlobalAddedData(): ReceiveChannel<AddedDataPair<ParcelOwner>>
+    fun transmitAllGlobalAddedData(): ReceiveChannel<AddedDataPair<PlayerProfile>>
 
-    fun readGlobalAddedData(owner: ParcelOwner): Deferred<MutableAddedDataMap?>
+    fun readGlobalAddedData(owner: PlayerProfile): Deferred<MutableAddedDataMap?>
 
-    fun setGlobalAddedStatus(owner: ParcelOwner, player: UUID, status: AddedStatus): Job
+    fun setGlobalAddedStatus(owner: PlayerProfile, player: PlayerProfile, status: AddedStatus): Job
+
+
+    fun getChannelToUpdateParcelData(): SendChannel<Pair<ParcelId, ParcelData>>
 }
 
-class StorageWithCoroutineBacking internal constructor(val backing: Backing) : Storage {
-    override val name get() = backing.name
-    override val syncDispatcher = Executor { it.run() }.asCoroutineDispatcher()
-    val poolSize: Int get() = 4
-    override val asyncDispatcher = Executors.newFixedThreadPool(poolSize) { Thread(it, "Parcels2_StorageThread") }.asCoroutineDispatcher()
-    override val isConnected get() = backing.isConnected
-    val channelCapacity = 16
+class BackedStorage internal constructor(val b: Backing) : Storage {
+    override val name get() = b.name
+    override val isConnected get() = b.isConnected
 
-    private inline fun <T> defer(noinline block: suspend CoroutineScope.() -> T): Deferred<T> {
-        return async(context = asyncDispatcher, start = CoroutineStart.ATOMIC, block = block)
-    }
+    override fun init() = launch(b.dispatcher) { b.init() }
 
-    private inline fun job(noinline block: suspend CoroutineScope.() -> Unit): Job {
-        return launch(context = asyncDispatcher, start = CoroutineStart.ATOMIC, block = block)
-    }
-
-    private inline fun <T> openChannel(noinline block: suspend ProducerScope<T>.() -> Unit): ReceiveChannel<T> {
-        return produce(asyncDispatcher, capacity = channelCapacity, block = block)
-    }
-
-    override fun init() = job { backing.init() }
-
-    override fun shutdown() = job { backing.shutdown() }
+    override fun shutdown() = launch(b.dispatcher) { b.shutdown() }
 
 
-    override fun readParcelData(parcel: ParcelId) = defer { backing.readParcelData(parcel) }
+    override fun getPlayerUuidForName(name: String): Deferred<UUID?> = b.launchFuture { b.getPlayerUuidForName(name) }
 
-    override fun readParcelData(parcels: Sequence<ParcelId>) = openChannel<DataPair> { backing.produceParcelData(channel, parcels) }
+    override fun readParcelData(parcel: ParcelId) = b.launchFuture { b.readParcelData(parcel) }
 
-    override fun readAllParcelData() = openChannel<DataPair> { backing.produceAllParcelData(channel) }
+    override fun transmitParcelData(parcels: Sequence<ParcelId>) = b.openChannel<DataPair> { b.transmitParcelData(it, parcels) }
 
-    override fun getOwnedParcels(user: ParcelOwner) = defer { backing.getOwnedParcels(user) }
+    override fun transmitAllParcelData() = b.openChannel<DataPair> { b.transmitAllParcelData(it) }
 
-    override fun getNumParcels(user: ParcelOwner) = defer { backing.getNumParcels(user) }
+    override fun getOwnedParcels(user: PlayerProfile) = b.launchFuture { b.getOwnedParcels(user) }
 
-    override fun setParcelData(parcel: ParcelId, data: ParcelData?) = job { backing.setParcelData(parcel, data) }
+    override fun getNumParcels(user: PlayerProfile) = b.launchFuture { b.getNumParcels(user) }
 
-    override fun setParcelOwner(parcel: ParcelId, owner: ParcelOwner?) = job { backing.setParcelOwner(parcel, owner) }
+    override fun setParcelData(parcel: ParcelId, data: ParcelData?) = b.launchJob { b.setParcelData(parcel, data) }
 
-    override fun setParcelPlayerStatus(parcel: ParcelId, player: UUID, status: AddedStatus) = job { backing.setLocalPlayerStatus(parcel, player, status) }
+    override fun setParcelOwner(parcel: ParcelId, owner: PlayerProfile?) = b.launchJob { b.setParcelOwner(parcel, owner) }
 
-    override fun setParcelAllowsInteractInventory(parcel: ParcelId, value: Boolean) = job { backing.setParcelAllowsInteractInventory(parcel, value) }
+    override fun setParcelPlayerStatus(parcel: ParcelId, player: PlayerProfile, status: AddedStatus) = b.launchJob { b.setLocalPlayerStatus(parcel, player, status) }
 
-    override fun setParcelAllowsInteractInputs(parcel: ParcelId, value: Boolean) = job { backing.setParcelAllowsInteractInputs(parcel, value) }
+    override fun setParcelAllowsInteractInventory(parcel: ParcelId, value: Boolean) = b.launchJob { b.setParcelAllowsInteractInventory(parcel, value) }
+
+    override fun setParcelAllowsInteractInputs(parcel: ParcelId, value: Boolean) = b.launchJob { b.setParcelAllowsInteractInputs(parcel, value) }
 
 
-    override fun readAllGlobalAddedData(): ReceiveChannel<AddedDataPair<ParcelOwner>> = openChannel { backing.produceAllGlobalAddedData(channel) }
+    override fun transmitAllGlobalAddedData(): ReceiveChannel<AddedDataPair<PlayerProfile>> = b.openChannel { b.transmitAllGlobalAddedData(it) }
 
-    override fun readGlobalAddedData(owner: ParcelOwner): Deferred<MutableAddedDataMap?> = defer { backing.readGlobalAddedData(owner) }
+    override fun readGlobalAddedData(owner: PlayerProfile): Deferred<MutableAddedDataMap?> = b.launchFuture { b.readGlobalAddedData(owner) }
 
-    override fun setGlobalAddedStatus(owner: ParcelOwner, player: UUID, status: AddedStatus) = job { backing.setGlobalPlayerStatus(owner, player, status) }
+    override fun setGlobalAddedStatus(owner: PlayerProfile, player: PlayerProfile, status: AddedStatus) = b.launchJob { b.setGlobalPlayerStatus(owner, player, status) }
+
+    override fun getChannelToUpdateParcelData(): SendChannel<Pair<ParcelId, ParcelData>> = b.openChannelForWriting { b.setParcelData(it.first, it.second) }
 }

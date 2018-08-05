@@ -33,15 +33,18 @@ class CommandsDebug(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
     fun ParcelScope.cmdMakeMess(context: ExecutionContext) {
         val server = plugin.server
         val blockDatas = arrayOf(
-            server.createBlockData(Material.STICKY_PISTON),
+            server.createBlockData(Material.BLUE_WOOL),
+            server.createBlockData(Material.LIME_WOOL),
             server.createBlockData(Material.GLASS),
             server.createBlockData(Material.STONE_SLAB),
-            server.createBlockData(Material.QUARTZ_BLOCK)
+            server.createBlockData(Material.STONE),
+            server.createBlockData(Material.QUARTZ_BLOCK),
+            server.createBlockData(Material.BROWN_CONCRETE)
         )
         val random = Random()
 
         world.doBlockOperation(parcel.id, direction = RegionTraversal.UPWARD) { block ->
-            block.blockData = blockDatas[random.nextInt(4)]
+            block.blockData = blockDatas[random.nextInt(7)]
         }.onProgressUpdate(1000, 1000) { progress, elapsedTime ->
             context.sendMessage(EMessageType.INFORMATIVE, "Mess progress: %.02f%%, %.2fs elapsed"
                 .format(progress * 100, elapsedTime / 1000.0))

@@ -4,13 +4,19 @@ import io.dico.parcels2.logger
 import java.io.File
 
 fun File.tryCreate(): Boolean {
+    if (exists()) {
+        return !isDirectory
+    }
     val parent = parentFile
     if (parent == null || !(parent.exists() || parent.mkdirs()) || !createNewFile()) {
-        logger.warn("Failed to create file ${canonicalPath}")
+        logger.warn("Failed to create file $canonicalPath")
         return false
     }
     return true
 }
+
+inline fun Boolean.alsoIfTrue(block: () -> Unit): Boolean = also { if (it) block() }
+inline fun Boolean.alsoIfFalse(block: () -> Unit): Boolean = also { if (!it) block() }
 
 inline fun <R> Any.synchronized(block: () -> R): R = synchronized(this, block)
 

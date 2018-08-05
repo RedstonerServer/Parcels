@@ -6,7 +6,7 @@ import io.dico.dicore.command.annotation.Cmd
 import io.dico.dicore.command.annotation.Desc
 import io.dico.dicore.command.annotation.Flag
 import io.dico.dicore.command.annotation.RequireParameters
-import io.dico.parcels2.ParcelOwner
+import io.dico.parcels2.PlayerProfile
 import io.dico.parcels2.ParcelsPlugin
 import io.dico.parcels2.util.hasAdminManage
 import io.dico.parcels2.util.hasParcelHomeOthers
@@ -25,7 +25,7 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
 
         val parcel = world.nextEmptyParcel()
             ?: error("This world is full, please ask an admin to upsize it")
-        parcel.owner = ParcelOwner(uuid = player.uuid)
+        parcel.owner = PlayerProfile(uuid = player.uuid)
         player.teleport(parcel.world.getHomeLocation(parcel.id))
         return "Enjoy your new parcel!"
     }
@@ -72,7 +72,7 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
         }
 
         checkParcelLimit(player, world)
-        parcel.owner = ParcelOwner(player)
+        parcel.owner = PlayerProfile(player)
         return "Enjoy your new parcel!"
     }
 

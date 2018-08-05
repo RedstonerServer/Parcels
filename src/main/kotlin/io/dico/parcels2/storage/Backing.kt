@@ -1,6 +1,10 @@
 package io.dico.parcels2.storage
 
 import io.dico.parcels2.*
+import kotlinx.coroutines.experimental.CoroutineDispatcher
+import kotlinx.coroutines.experimental.Deferred
+import kotlinx.coroutines.experimental.Job
+import kotlinx.coroutines.experimental.channels.ReceiveChannel
 import kotlinx.coroutines.experimental.channels.SendChannel
 import java.util.UUID
 
@@ -10,41 +14,49 @@ interface Backing {
 
     val isConnected: Boolean
 
-    suspend fun init()
+    val dispatcher: CoroutineDispatcher
 
-    suspend fun shutdown()
+    fun launchJob(job: Backing.() -> Unit): Job
 
+    fun <T> launchFuture(future: Backing.() -> T): Deferred<T>
 
-    /**
-     * This producer function is capable of constantly reading parcels from a potentially infinite sequence,
-     * and provide parcel data for it as read from the database.
-     */
-    suspend fun produceParcelData(channel: SendChannel<DataPair>, parcels: Sequence<ParcelId>)
+    fun <T> openChannel(future: Backing.(SendChannel<T>) -> Unit): ReceiveChannel<T>
 
-    suspend fun produceAllParcelData(channel: SendChannel<DataPair>)
-
-    suspend fun readParcelData(parcel: ParcelId): ParcelData?
-
-    suspend fun getOwnedParcels(user: ParcelOwner): List<ParcelId>
-
-    suspend fun getNumParcels(user: ParcelOwner): Int = getOwnedParcels(user).size
+    fun <T> openChannelForWriting(future: Backing.(T) -> Unit): SendChannel<T>
 
 
-    suspend fun setParcelData(parcel: ParcelId, data: ParcelData?)
+    fun init()
 
-    suspend fun setParcelOwner(parcel: ParcelId, owner: ParcelOwner?)
-
-    suspend fun setLocalPlayerStatus(parcel: ParcelId, player: UUID, status: AddedStatus)
-
-    suspend fun setParcelAllowsInteractInventory(parcel: ParcelId, value: Boolean)
-
-    suspend fun setParcelAllowsInteractInputs(parcel: ParcelId, value: Boolean)
+    fun shutdown()
 
 
-    suspend fun produceAllGlobalAddedData(channel: SendChannel<AddedDataPair<ParcelOwner>>)
+    fun getPlayerUuidForName(name: String): UUID?
 
-    suspend fun readGlobalAddedData(owner: ParcelOwner): MutableAddedDataMap
+    fun transmitParcelData(channel: SendChannel<DataPair>, parcels: Sequence<ParcelId>)
 
-    suspend fun setGlobalPlayerStatus(owner: ParcelOwner, player: UUID, status: AddedStatus)
+    fun transmitAllParcelData(channel: SendChannel<DataPair>)
 
+    fun readParcelData(parcel: ParcelId): ParcelData?
+
+    fun getOwnedParcels(user: PlayerProfile): List<ParcelId>
+
+    fun getNumParcels(user: PlayerProfile): Int = getOwnedParcels(user).size
+
+
+    fun setParcelData(parcel: ParcelId, data: ParcelData?)
+
+    fun setParcelOwner(parcel: ParcelId, owner: PlayerProfile?)
+
+    fun setLocalPlayerStatus(parcel: ParcelId, player: PlayerProfile, status: AddedStatus)
+
+    fun setParcelAllowsInteractInventory(parcel: ParcelId, value: Boolean)
+
+    fun setParcelAllowsInteractInputs(parcel: ParcelId, value: Boolean)
+
+
+    fun transmitAllGlobalAddedData(channel: SendChannel<AddedDataPair<PlayerProfile>>)
+
+    fun readGlobalAddedData(owner: PlayerProfile): MutableAddedDataMap
+
+    fun setGlobalPlayerStatus(owner: PlayerProfile, player: PlayerProfile, status: AddedStatus)
 }

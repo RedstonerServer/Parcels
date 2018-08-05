@@ -3,7 +3,7 @@ package io.dico.parcels2.command
 import io.dico.dicore.command.CommandException
 import io.dico.dicore.command.ExecutionContext
 import io.dico.dicore.command.ICommandReceiver
-import io.dico.parcels2.ParcelOwner
+import io.dico.parcels2.PlayerProfile
 import io.dico.parcels2.ParcelWorld
 import io.dico.parcels2.ParcelsPlugin
 import io.dico.parcels2.util.hasAdminManage
@@ -31,7 +31,7 @@ abstract class AbstractParcelCommands(val plugin: ParcelsPlugin) : ICommandRecei
 
     protected suspend fun checkParcelLimit(player: Player, world: ParcelWorld) {
         if (player.hasAdminManage) return
-        val numOwnedParcels = plugin.storage.getOwnedParcels(ParcelOwner(player)).await()
+        val numOwnedParcels = plugin.storage.getOwnedParcels(PlayerProfile(player)).await()
             .filter { it.worldId.equals(world.id) }.size
 
         val limit = player.parcelLimit

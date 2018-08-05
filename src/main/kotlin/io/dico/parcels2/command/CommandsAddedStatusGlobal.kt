@@ -5,7 +5,7 @@ import io.dico.dicore.command.annotation.Cmd
 import io.dico.dicore.command.annotation.Desc
 import io.dico.parcels2.GlobalAddedData
 import io.dico.parcels2.GlobalAddedDataManager
-import io.dico.parcels2.ParcelOwner
+import io.dico.parcels2.PlayerProfile
 import io.dico.parcels2.ParcelsPlugin
 import org.bukkit.OfflinePlayer
 import org.bukkit.entity.Player
@@ -13,7 +13,7 @@ import org.bukkit.entity.Player
 class CommandsAddedStatusGlobal(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
     private inline val data get() = plugin.globalAddedData
     @Suppress("NOTHING_TO_INLINE")
-    private inline operator fun GlobalAddedDataManager.get(player: OfflinePlayer): GlobalAddedData = data[ParcelOwner(player)]
+    private inline operator fun GlobalAddedDataManager.get(player: OfflinePlayer): GlobalAddedData = data[PlayerProfile(player)]
 
     @Cmd("allow", aliases = ["add", "permit"])
     @Desc("Globally allows a player to build on all",

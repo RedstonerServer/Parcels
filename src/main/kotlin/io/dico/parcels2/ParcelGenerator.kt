@@ -3,7 +3,6 @@ package io.dico.parcels2
 import io.dico.parcels2.blockvisitor.RegionTraversal
 import io.dico.parcels2.blockvisitor.Worker
 import io.dico.parcels2.blockvisitor.WorktimeLimiter
-import io.dico.parcels2.defaultimpl.DefaultParcelGenerator
 import io.dico.parcels2.util.Vec2i
 import org.bukkit.Chunk
 import org.bukkit.Location
@@ -13,29 +12,7 @@ import org.bukkit.block.Block
 import org.bukkit.entity.Entity
 import org.bukkit.generator.BlockPopulator
 import org.bukkit.generator.ChunkGenerator
-import java.util.HashMap
 import java.util.Random
-import kotlin.reflect.KClass
-
-object GeneratorFactories {
-    private val map: MutableMap<String, GeneratorFactory> = HashMap()
-
-    fun registerFactory(generator: GeneratorFactory): Boolean = map.putIfAbsent(generator.name, generator) == null
-
-    fun getFactory(name: String): GeneratorFactory? = map.get(name)
-
-    init {
-        registerFactory(DefaultParcelGenerator.Factory)
-    }
-}
-
-interface GeneratorFactory {
-    val name: String
-
-    val optionsClass: KClass<out GeneratorOptions>
-
-    fun newParcelGenerator(worldName: String, options: GeneratorOptions): ParcelGenerator
-}
 
 abstract class ParcelGenerator : ChunkGenerator() {
     abstract val world: World
@@ -59,6 +36,7 @@ abstract class ParcelGenerator : ChunkGenerator() {
     abstract fun makeParcelLocator(container: ParcelContainer): ParcelLocator
 }
 
+@Suppress("DeprecatedCallableAddReplaceWith")
 interface ParcelBlockManager {
     val world: World
     val worktimeLimiter: WorktimeLimiter
@@ -67,7 +45,7 @@ interface ParcelBlockManager {
 
     fun getHomeLocation(parcel: ParcelId): Location
 
-    fun setOwnerBlock(parcel: ParcelId, owner: ParcelOwner?)
+    fun setOwnerBlock(parcel: ParcelId, owner: PlayerProfile?)
 
     @Deprecated("")
     fun getEntities(parcel: ParcelId): Collection<Entity> = TODO()

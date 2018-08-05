@@ -7,9 +7,9 @@ const val uppercase: Boolean = false
 fun String.toCorrectCase() = if (uppercase) this else toLowerCase()
 
 sealed class PlotmeTable(name: String) : Table(name) {
-    val px = PlotmePlotsT.integer("idX").primaryKey()
-    val pz = PlotmePlotsT.integer("idZ").primaryKey()
-    val world_name = PlotmePlotsT.varchar("world", 32).primaryKey()
+    val px = integer("idX").primaryKey()
+    val pz = integer("idZ").primaryKey()
+    val world_name = varchar("world", 32).primaryKey()
 }
 
 object PlotmePlotsT : PlotmeTable("plotmePlots".toCorrectCase()) {
@@ -18,8 +18,8 @@ object PlotmePlotsT : PlotmeTable("plotmePlots".toCorrectCase()) {
 }
 
 sealed class PlotmePlotPlayerMap(name: String) : PlotmeTable(name) {
-    val player_name = PlotmePlotsT.varchar("player", 32)
-    val player_uuid = PlotmePlotsT.blob("playerid").nullable()
+    val player_name = varchar("player", 32)
+    val player_uuid = blob("playerid").nullable()
 }
 
 object PlotmeAllowedT : PlotmePlotPlayerMap("plotmeAllowed".toCorrectCase())

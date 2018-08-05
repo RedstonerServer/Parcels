@@ -1,11 +1,17 @@
-<configuration debug="true">
+<configuration>
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{HH:mm:ss.SSS} %magenta(%-8.-8(%thread)) %highlight(%-5level) %boldCyan(%32.-32logger{32}) - %msg</pattern>
+            <!-- old pattern <pattern>%d{HH:mm:ss.SSS} %magenta(%-8.-8(%thread)) %highlight(%-5level) %boldCyan(%8.-32logger{32}) - %msg\n</pattern>-->
+            <pattern>%magenta(%-16.-16(%thread)) %highlight(%-5level) %boldCyan(%6.-32logger{32}) - %msg</pattern>
         </encoder>
     </appender>
 
-    <root level="info">
+    <root level="debug">
         <appender-ref ref="STDOUT" />
     </root>
+
+    <logger name="com.zaxxer.hikari.pool.HikariPool" level="info"/>
+    <logger name="com.zaxxer.hikari.pool.PoolBase" level="info"/>
+    <logger name="com.zaxxer.hikari.HikariConfig" level="info"/>
+    <logger name="Exposed" level="info"/>
 </configuration>
