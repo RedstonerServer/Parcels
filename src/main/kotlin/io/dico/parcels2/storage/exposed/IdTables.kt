@@ -91,15 +91,19 @@ object ParcelsT : IdTransactionsTable<ParcelsT, ParcelId>("parcels", "parcel_id"
 
 object ProfilesT : IdTransactionsTable<ProfilesT, PlayerProfile>("parcel_profiles", "owner_id") {
     val uuid = binary("uuid", 16).nullable()
-    val name = varchar("name", 32)
+    val name = varchar("name", 32).nullable()
+
+    // MySQL dialect MUST permit multiple null values for this to work
+    val uuid_constraint = uniqueIndexR("uuid_constraint", uuid)
     val index_pair = uniqueIndexR("index_pair", uuid, name)
+
 
     private inline fun getId(binaryUuid: ByteArray) = getId { uuid eq binaryUuid }
     private inline fun getId(uuid: UUID) = getId(uuid.toByteArray())
     private inline fun getId(nameIn: String) = getId { uuid.isNull() and (name.lowerCase() eq nameIn.toLowerCase()) }
     private inline fun getRealId(nameIn: String) = getId { uuid.isNotNull() and (name.lowerCase() eq nameIn.toLowerCase()) }
 
-    private inline fun getOrInitId(uuid: UUID, name: String) = uuid.toByteArray().let { binaryUuid -> getOrInitId(
+    private inline fun getOrInitId(uuid: UUID, name: String?) = uuid.toByteArray().let { binaryUuid -> getOrInitId(
             { getId(binaryUuid) },
             { it[this@ProfilesT.uuid] = binaryUuid; it[this@ProfilesT.name] = name },
             { "profile(uuid = $uuid, name = $name)" })
@@ -119,7 +123,7 @@ object ProfilesT : IdTransactionsTable<ProfilesT, PlayerProfile>("parcel_profile
     }
 
     override fun getOrInitId(profile: PlayerProfile): Int = when (profile) {
-        is PlayerProfile.Real -> getOrInitId(profile.uuid, profile.notNullName)
+        is PlayerProfile.Real -> getOrInitId(profile.uuid, profile.name)
         is PlayerProfile.Fake -> getOrInitId(profile.name)
         else -> throw IllegalArgumentException()
     }

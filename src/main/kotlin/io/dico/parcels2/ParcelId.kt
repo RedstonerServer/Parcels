@@ -12,7 +12,7 @@ import java.util.UUID
 interface ParcelWorldId {
     val name: String
     val uid: UUID?
-    fun equals(id: ParcelWorldId): Boolean = name == name || (uid != null && uid == id.uid)
+    fun equals(id: ParcelWorldId): Boolean = name == id.name || (uid != null && uid == id.uid)
 
     val bukkitWorld: World? get() = Bukkit.getWorld(name) ?: uid?.let { Bukkit.getWorld(it) }
 

@@ -22,6 +22,10 @@ inline fun <R> Any.synchronized(block: () -> R): R = synchronized(this, block)
 
 inline fun <T> T?.isNullOr(condition: T.() -> Boolean): Boolean = this == null || condition()
 inline fun <T> T?.isPresentAnd(condition: T.() -> Boolean): Boolean = this != null && condition()
+inline fun <T> T?.ifNullRun(block: () -> Unit): T? {
+    if (this == null) block()
+    return this
+}
 
 inline fun <T, U> MutableMap<T, U>.editLoop(block: EditLoopScope<T, U>.(T, U) -> Unit) {
     return EditLoopScope(this).doEditLoop(block)

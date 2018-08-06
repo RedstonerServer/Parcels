@@ -92,8 +92,9 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource, val poolSi
         }
     }
 
+    @Suppress("RedundantObjectTypeCheck")
     private fun PlayerProfile.toOwnerProfile(): PlayerProfile {
-        if (this is PlayerProfile.Star) return PlayerProfile.Fake(PlayerProfile.Star.name)
+        if (this is PlayerProfile.Star) return PlayerProfile.Fake(name)
         return this
     }
 

@@ -5,20 +5,21 @@ import io.dico.dicore.command.parameter.Parameter
 import io.dico.dicore.command.parameter.type.ParameterConfig
 import io.dico.dicore.command.parameter.type.ParameterType
 import io.dico.parcels2.*
+import io.dico.parcels2.storage.Storage
 import io.dico.parcels2.util.Vec2i
 import io.dico.parcels2.util.floor
 import kotlinx.coroutines.experimental.Deferred
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 
-sealed class ParcelTarget(val world: ParcelWorld, val isDefault: Boolean) {
+sealed class ParcelTarget(val world: ParcelWorld, val parsedKind: Int, val isDefault: Boolean) {
 
-    abstract suspend fun ParcelsPlugin.getParcelSuspend(): Parcel?
+    abstract suspend fun getParcelSuspend(storage: Storage): Parcel?
 
-    fun ParcelsPlugin.getParcelDeferred(): Deferred<Parcel?> = functionHelper.deferUndispatchedOnMainThread { getParcelSuspend() }
+    fun ParcelsPlugin.getParcelDeferred(): Deferred<Parcel?> = functionHelper.deferUndispatchedOnMainThread { getParcelSuspend(storage) }
 
-    class ByID(world: ParcelWorld, val id: Vec2i?, isDefault: Boolean) : ParcelTarget(world, isDefault) {
-        override suspend fun ParcelsPlugin.getParcelSuspend(): Parcel? = getParcel()
+    class ByID(world: ParcelWorld, val id: Vec2i?, parsedKind: Int, isDefault: Boolean) : ParcelTarget(world, parsedKind, isDefault) {
+        override suspend fun getParcelSuspend(storage: Storage): Parcel? = getParcel()
         fun getParcel() = id?.let { world.getParcelById(it) }
         val isPath: Boolean get() = id == null
     }
@@ -26,31 +27,31 @@ sealed class ParcelTarget(val world: ParcelWorld, val isDefault: Boolean) {
     class ByOwner(world: ParcelWorld,
                   owner: PlayerProfile,
                   val index: Int,
+                  parsedKind: Int,
                   isDefault: Boolean,
-                  val onResolveFailure: (() -> Unit)? = null) : ParcelTarget(world, isDefault) {
+                  val onResolveFailure: (() -> Unit)? = null) : ParcelTarget(world, parsedKind, isDefault) {
         init {
             if (index < 0) throw IllegalArgumentException("Invalid parcel home index: $index")
         }
 
         var owner = owner; private set
 
-        override suspend fun ParcelsPlugin.getParcelSuspend(): Parcel? {
-            onResolveFailure?.let { onFail ->
-                val owner = owner
-                if (owner is PlayerProfile.Unresolved) {
-                    val new = owner.tryResolveSuspendedly(storage)
-                    if (new == null) {
-                        onFail()
-                        return@let
-                    }
-                    this@ByOwner.owner = new
-                }
+        suspend fun resolveOwner(storage: Storage): Boolean {
+            val owner = owner
+            if (owner is PlayerProfile.Unresolved) {
+                this.owner = owner.tryResolveSuspendedly(storage) ?: if (parsedKind and OWNER_FAKE != 0) PlayerProfile.Fake(owner.name)
+                else run { onResolveFailure?.invoke(); return false }
             }
+            return true
+        }
+
+        override suspend fun getParcelSuspend(storage: Storage): Parcel? {
+            onResolveFailure?.let { resolveOwner(storage) }
 
             val ownedParcelsSerialized = storage.getOwnedParcels(owner).await()
             val ownedParcels = ownedParcelsSerialized
-                .map { parcelProvider.getParcelById(it) }
-                .filter { it != null && world == it.world && owner == it.owner }
+                .filter { it.worldId.equals(world.id) }
+                .map { world.getParcelById(it.x, it.z) }
 
             return ownedParcels.getOrNull(index)
         }
@@ -65,7 +66,7 @@ sealed class ParcelTarget(val world: ParcelWorld, val isDefault: Boolean) {
 
         const val ID = 1 // ID
         const val OWNER_REAL = 2 // an owner backed by a UUID
-        const val OWNER_FAKE = 3 // an owner not backed by a UUID
+        const val OWNER_FAKE = 4 // an owner not backed by a UUID
 
         const val OWNER = OWNER_REAL or OWNER_FAKE // any owner
         const val ANY = ID or OWNER_REAL or OWNER_FAKE // any
@@ -73,7 +74,7 @@ sealed class ParcelTarget(val world: ParcelWorld, val isDefault: Boolean) {
 
         const val DEFAULT_KIND = REAL
 
-        const val PREFER_OWNED_FOR_DEFAULT = 4 // if the kind can be ID and OWNER_REAL, prefer OWNER_REAL for default
+        const val PREFER_OWNED_FOR_DEFAULT = 8 // if the kind can be ID and OWNER_REAL, prefer OWNER_REAL for default
         // instead of parcel that the player is in
     }
 
@@ -95,12 +96,12 @@ sealed class ParcelTarget(val world: ParcelWorld, val isDefault: Boolean) {
             val kind = parameter.paramInfo ?: DEFAULT_KIND
             if (input.contains(',')) {
                 if (kind and ID == 0) invalidInput(parameter, "You must specify a parcel by OWNER, that is, an owner and index")
-                return ByID(world, getId(parameter, input), false)
+                return ByID(world, getId(parameter, input), kind, false)
             }
 
             if (kind and OWNER == 0) invalidInput(parameter, "You must specify a parcel by ID, that is, the x and z component separated by a comma")
             val (owner, index) = getHomeIndex(parameter, kind, sender, input)
-            return ByOwner(world, owner, index, false, onResolveFailure = { invalidInput(parameter, "The player $input does not exist") })
+            return ByOwner(world, owner, index, kind, false, onResolveFailure = { invalidInput(parameter, "The player $input does not exist") })
         }
 
         private fun getId(parameter: Parameter<*, *>, input: String): Vec2i {
@@ -156,10 +157,10 @@ sealed class ParcelTarget(val world: ParcelWorld, val isDefault: Boolean) {
             val world = parcelProvider.getWorld(player.world) ?: invalidInput(parameter, "You must be in a parcel world to omit the parcel")
             if (useLocation) {
                 val id = player.location.let { world.getParcelIdAt(it.x.floor(), it.z.floor())?.pos }
-                return ByID(world, id, true)
+                return ByID(world, id, kind, true)
             }
 
-            return ByOwner(world, PlayerProfile(player), 0, true)
+            return ByOwner(world, PlayerProfile(player), 0, kind, true)
         }
     }
 

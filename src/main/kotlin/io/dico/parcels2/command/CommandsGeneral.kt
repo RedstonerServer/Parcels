@@ -6,8 +6,8 @@ import io.dico.dicore.command.annotation.Cmd
 import io.dico.dicore.command.annotation.Desc
 import io.dico.dicore.command.annotation.Flag
 import io.dico.dicore.command.annotation.RequireParameters
-import io.dico.parcels2.PlayerProfile
 import io.dico.parcels2.ParcelsPlugin
+import io.dico.parcels2.PlayerProfile
 import io.dico.parcels2.util.hasAdminManage
 import io.dico.parcels2.util.hasParcelHomeOthers
 import io.dico.parcels2.util.uuid
@@ -44,22 +44,32 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
         shortVersion = "teleports you to parcels")
     @RequireParameters(0)
     suspend fun cmdHome(player: Player, @ParcelTarget.Kind(ParcelTarget.OWNER_REAL) target: ParcelTarget): Any? {
-        val ownerTarget = target as ParcelTarget.ByOwner
-        if (!ownerTarget.owner.matches(player) && !player.hasParcelHomeOthers) {
-            error("You do not have permission to teleport to other people's parcels")
+        return cmdGoto(player, target)
+    }
+
+    @Cmd("tp", aliases = ["teleport"])
+    suspend fun cmdTp(player: Player, @ParcelTarget.Kind(ParcelTarget.ID) target: ParcelTarget): Any? {
+        return cmdGoto(player, target)
+    }
+
+    @Cmd("goto")
+    suspend fun cmdGoto(player: Player, @ParcelTarget.Kind(ParcelTarget.ANY) target: ParcelTarget): Any? {
+        if (target is ParcelTarget.ByOwner) {
+            target.resolveOwner(plugin.storage)
+            if (!target.owner.matches(player) && !player.hasParcelHomeOthers) {
+                error("You do not have permission to teleport to other people's parcels")
+            }
         }
 
-        val ownedParcelsResult = plugin.storage.getOwnedParcels(ownerTarget.owner).await()
-
-        val ownedParcels = ownedParcelsResult
-            .map { worlds.getParcelById(it) }
-            .filter { it != null && ownerTarget.world == it.world }
-
-        val targetMatch = ownedParcels.getOrNull(target.index)
+        val match = target.getParcelSuspend(plugin.storage)
             ?: error("The specified parcel could not be matched")
-
-        player.teleport(targetMatch.world.getHomeLocation(targetMatch.id))
+        player.teleport(match.world.getHomeLocation(match.id))
         return ""
+    }
+
+    @Cmd("goto_fake")
+    suspend fun cmdGotoFake(player: Player, @ParcelTarget.Kind(ParcelTarget.OWNER_FAKE) target: ParcelTarget): Any? {
+        return cmdGoto(player, target)
     }
 
     @Cmd("claim")

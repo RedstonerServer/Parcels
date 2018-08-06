@@ -18,6 +18,7 @@ interface PlayerProfile {
     val name: String?
     val notNullName: String
     val isStar: Boolean get() = false
+    val exists: Boolean get() = this is RealImpl
 
     fun matches(player: OfflinePlayer, allowNameMatch: Boolean = false): Boolean
 

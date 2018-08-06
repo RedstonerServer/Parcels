@@ -17,7 +17,7 @@ interface AddedData {
     fun setAddedStatus(key: StatusKey, status: AddedStatus): Boolean
 
     fun compareAndSetAddedStatus(key: StatusKey, expect: AddedStatus, status: AddedStatus): Boolean =
-        (getAddedStatus(key) == expect).also { if (it) setAddedStatus(key, status) }
+        getAddedStatus(key) == expect && setAddedStatus(key, status)
 
     fun isAllowed(key: StatusKey) = getAddedStatus(key) == AddedStatus.ALLOWED
     fun allow(key: StatusKey) = setAddedStatus(key, AddedStatus.ALLOWED)
@@ -36,7 +36,7 @@ interface AddedData {
 
 inline val OfflinePlayer.statusKey get() = PlayerProfile.nameless(this)
 
-open class AddedDataHolder(override var addedMap: MutableAddedDataMap = mutableMapOf()) : AddedData {
+open class AddedDataHolder(override var addedMap: MutableAddedDataMap = MutableAddedDataMap()) : AddedData {
     override var addedStatusOfStar: AddedStatus = AddedStatus.DEFAULT
 
     override fun getAddedStatus(key: StatusKey): AddedStatus = addedMap.getOrDefault(key, addedStatusOfStar)

@@ -4,10 +4,8 @@ import io.dico.dicore.Formatting
 import io.dico.parcels2.*
 import io.dico.parcels2.util.Vec2i
 import io.dico.parcels2.util.alsoIfTrue
-import io.dico.parcels2.util.getPlayerName
 import org.bukkit.OfflinePlayer
 import org.joda.time.DateTime
-import java.util.UUID
 import kotlin.reflect.KProperty
 
 class ParcelImpl(override val world: ParcelWorld,

@@ -44,6 +44,10 @@ interface ParcelData : AddedData {
     fun isOwner(uuid: UUID): Boolean {
         return owner?.uuid == uuid
     }
+
+    fun isOwner(profile: PlayerProfile?): Boolean {
+        return owner == profile
+    }
 }
 
 class ParcelDataHolder(addedMap: MutableAddedDataMap = mutableMapOf()) : AddedDataHolder(addedMap), ParcelData {
