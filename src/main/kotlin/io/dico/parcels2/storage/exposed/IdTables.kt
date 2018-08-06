@@ -123,9 +123,9 @@ object ProfilesT : IdTransactionsTable<ProfilesT, PlayerProfile>("parcel_profile
     }
 
     override fun getOrInitId(profile: PlayerProfile): Int = when (profile) {
-        is PlayerProfile.Real -> getOrInitId(profile.uuid, profile.name)
+        is PlayerProfile.Real -> getOrInitId(profile.uuid, profile.nameOrBukkitName)
         is PlayerProfile.Fake -> getOrInitId(profile.name)
-        else -> throw IllegalArgumentException()
+        else -> throw IllegalArgumentException() // Unresolved profiles cannot be added to the database
     }
 
     override fun getItem(row: ResultRow): PlayerProfile {
