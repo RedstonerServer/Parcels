@@ -77,4 +77,6 @@ Use an atomic GET OR INSERT query so that parallel execution doesn't cause probl
 
 Implement a container that doesn't require loading all parcel data on startup (Complex).
 
+Update player profiles in the database on join to account for name changes.
+
 

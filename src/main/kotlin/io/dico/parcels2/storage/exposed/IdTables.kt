@@ -93,7 +93,7 @@ object ProfilesT : IdTransactionsTable<ProfilesT, PlayerProfile>("parcel_profile
     val uuid = binary("uuid", 16).nullable()
     val name = varchar("name", 32).nullable()
 
-    // MySQL dialect MUST permit multiple null values for this to work
+    // MySQL dialect MUST permit multiple null values for this to work. Server SQL does not allow this. That dialect is shit anyway.
     val uuid_constraint = uniqueIndexR("uuid_constraint", uuid)
     val index_pair = uniqueIndexR("index_pair", uuid, name)
 

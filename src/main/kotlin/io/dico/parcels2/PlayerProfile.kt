@@ -16,6 +16,7 @@ import java.util.UUID
 interface PlayerProfile {
     val uuid: UUID? get() = null
     val name: String?
+    val nameOrBukkitName: String?
     val notNullName: String
     val isStar: Boolean get() = false
     val exists: Boolean get() = this is RealImpl
@@ -75,6 +76,8 @@ interface PlayerProfile {
 
     interface Real : PlayerProfile {
         override val uuid: UUID
+        override val nameOrBukkitName: String?
+            get() = name ?: Bukkit.getOfflinePlayer(uuid).takeIf { it.isValid }?.name
         override val notNullName: String
             get() = name ?: getPlayerNameOrDefault(uuid)
 
@@ -121,6 +124,7 @@ interface PlayerProfile {
 
     abstract class NameOnly(override val name: String) : BaseImpl() {
         override val notNullName get() = name
+        override val nameOrBukkitName: String get() = name
 
         override fun matches(player: OfflinePlayer, allowNameMatch: Boolean): Boolean {
             return allowNameMatch && player.name == name
