@@ -2,6 +2,7 @@ package io.dico.parcels2
 
 import io.dico.parcels2.util.Vec2i
 import io.dico.parcels2.util.hasBuildAnywhere
+import org.bukkit.Location
 import org.bukkit.OfflinePlayer
 import org.bukkit.entity.Player
 import org.joda.time.DateTime
@@ -30,11 +31,14 @@ interface Parcel : ParcelData {
     fun copyData(data: ParcelData)
 
     fun dispose()
+
+    val homeLocation: Location get() = world.blockManager.getHomeLocation(id)
 }
 
 interface ParcelData : AddedData {
     var owner: PlayerProfile?
-    val since: DateTime?
+    val lastClaimTime: DateTime?
+    var ownerSignOutdated: Boolean
 
     fun canBuild(player: OfflinePlayer, checkAdmin: Boolean = true, checkGlobal: Boolean = true): Boolean
 
@@ -53,7 +57,8 @@ interface ParcelData : AddedData {
 class ParcelDataHolder(addedMap: MutableAddedDataMap = mutableMapOf()) : AddedDataHolder(addedMap), ParcelData {
 
     override var owner: PlayerProfile? = null
-    override var since: DateTime? = null
+    override var lastClaimTime: DateTime? = null
+    override var ownerSignOutdated = false
     override fun canBuild(player: OfflinePlayer, checkAdmin: Boolean, checkGlobal: Boolean) = isAllowed(player.statusKey)
         || owner.let { it != null && it.matches(player, allowNameMatch = false) }
         || (checkAdmin && player is Player && player.hasBuildAnywhere)

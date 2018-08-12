@@ -9,6 +9,7 @@ import io.dico.parcels2.util.toByteArray
 import io.dico.parcels2.util.toUUID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.statements.UpdateBuilder
+import org.joda.time.DateTime
 import java.util.UUID
 
 sealed class IdTransactionsTable<TableT : IdTransactionsTable<TableT, QueryObj>, QueryObj>(tableName: String, columnName: String)
@@ -24,7 +25,8 @@ sealed class IdTransactionsTable<TableT : IdTransactionsTable<TableT, QueryObj>,
     }
 
     internal inline fun getOrInitId(getId: () -> Int?, noinline body: TableT.(UpdateBuilder<*>) -> Unit, objName: () -> String): Int {
-        return getId() ?: table.insertIgnore(body)[id] ?: getId() ?: throw ExposedDatabaseException("This should not happen - failed to insert ${objName()} and get its id")
+        return getId() ?: table.insertIgnore(body)[id] ?: getId()
+        ?: throw ExposedDatabaseException("This should not happen - failed to insert ${objName()} and get its id")
     }
 
     abstract fun getId(obj: QueryObj): Int?
@@ -35,9 +37,10 @@ sealed class IdTransactionsTable<TableT : IdTransactionsTable<TableT, QueryObj>,
     fun getId(obj: QueryObj, init: Boolean): Int? = if (init) getOrInitId(obj) else getId(obj)
 }
 
-object WorldsT : IdTransactionsTable<WorldsT, ParcelWorldId>("parcel_worlds", "world_id") {
+object WorldsT : IdTransactionsTable<WorldsT, ParcelWorldId>("parcels_worlds", "world_id") {
     val name = varchar("name", 50)
     val uid = binary("uid", 16).nullable()
+    val creation_time = datetime("creation_time").nullable()
     val index_name = uniqueIndexR("index_name", name)
     val index_uid = uniqueIndexR("index_uid", uid)
 
@@ -56,6 +59,18 @@ object WorldsT : IdTransactionsTable<WorldsT, ParcelWorldId>("parcel_worlds", "w
     override fun getItem(row: ResultRow): ParcelWorldId {
         return ParcelWorldId(row[name], row[uid]?.toUUID())
     }
+
+    fun getWorldCreationTime(worldId: ParcelWorldId): DateTime? {
+        val id = getId(worldId) ?: return null
+        return select { WorldsT.id eq id }.firstOrNull()?.let { it[WorldsT.creation_time] }
+    }
+
+    fun setWorldCreationTime(worldId: ParcelWorldId, time: DateTime) {
+        val id = getOrInitId(worldId)
+        update({ WorldsT.id eq id }) {
+            it[WorldsT.creation_time] = time
+        }
+    }
 }
 
 object ParcelsT : IdTransactionsTable<ParcelsT, ParcelId>("parcels", "parcel_id") {
@@ -63,6 +78,7 @@ object ParcelsT : IdTransactionsTable<ParcelsT, ParcelId>("parcels", "parcel_id"
     val px = integer("px")
     val pz = integer("pz")
     val owner_id = integer("owner_id").references(ProfilesT.id).nullable()
+    val sign_oudated = bool("sign_outdated").default(false)
     val claim_time = datetime("claim_time").nullable()
     val index_location = uniqueIndexR("index_location", world_id, px, pz)
 
@@ -89,7 +105,7 @@ object ParcelsT : IdTransactionsTable<ParcelsT, ParcelId>("parcels", "parcel_id"
     }
 }
 
-object ProfilesT : IdTransactionsTable<ProfilesT, PlayerProfile>("parcel_profiles", "owner_id") {
+object ProfilesT : IdTransactionsTable<ProfilesT, PlayerProfile>("parcels_profiles", "owner_id") {
     val uuid = binary("uuid", 16).nullable()
     val name = varchar("name", 32).nullable()
 
@@ -103,7 +119,8 @@ object ProfilesT : IdTransactionsTable<ProfilesT, PlayerProfile>("parcel_profile
     private inline fun getId(nameIn: String) = getId { uuid.isNull() and (name.lowerCase() eq nameIn.toLowerCase()) }
     private inline fun getRealId(nameIn: String) = getId { uuid.isNotNull() and (name.lowerCase() eq nameIn.toLowerCase()) }
 
-    private inline fun getOrInitId(uuid: UUID, name: String?) = uuid.toByteArray().let { binaryUuid -> getOrInitId(
+    private inline fun getOrInitId(uuid: UUID, name: String?) = uuid.toByteArray().let { binaryUuid ->
+        getOrInitId(
             { getId(binaryUuid) },
             { it[this@ProfilesT.uuid] = binaryUuid; it[this@ProfilesT.name] = name },
             { "profile(uuid = $uuid, name = $name)" })

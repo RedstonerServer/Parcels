@@ -1,8 +1,11 @@
 package io.dico.parcels2.defaultimpl
 
 import io.dico.parcels2.*
+import kotlinx.coroutines.experimental.Unconfined
+import kotlinx.coroutines.experimental.launch
 import org.bukkit.Bukkit
 import org.bukkit.WorldCreator
+import org.joda.time.DateTime
 
 class ParcelProviderImpl(val plugin: ParcelsPlugin) : ParcelProvider {
     inline val options get() = plugin.options
@@ -49,9 +52,24 @@ class ParcelProviderImpl(val plugin: ParcelsPlugin) : ParcelProvider {
             if (parcelWorld != null) continue
 
             val generator: ParcelGenerator = getWorldGenerator(worldName)!!
-            val bukkitWorld = Bukkit.getWorld(worldName) ?: WorldCreator(worldName).generator(generator).createWorld()
+            val worldExists = Bukkit.getWorld(worldName) == null
+            val bukkitWorld =
+                if (worldExists) Bukkit.getWorld(worldName)!!
+                else WorldCreator(worldName).generator(generator).createWorld().also { logger.info("Creating world $worldName") }
+
             parcelWorld = ParcelWorldImpl(bukkitWorld, generator, worldOptions.runtime, plugin.storage,
                 plugin.globalAddedData, ::DefaultParcelContainer, plugin.worktimeLimiter)
+
+            if (!worldExists) {
+                val time = DateTime.now()
+                plugin.storage.setWorldCreationTime(parcelWorld.id, time)
+                parcelWorld.creationTime = time
+            } else {
+                launch(context = Unconfined) {
+                    parcelWorld.creationTime = plugin.storage.getWorldCreationTime(parcelWorld.id).await() ?: DateTime.now()
+                }
+            }
+
             _worlds[worldName] = parcelWorld
         }
 

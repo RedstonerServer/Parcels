@@ -7,6 +7,7 @@ import io.dico.parcels2.Parcel
 import io.dico.parcels2.ParcelProvider
 import io.dico.parcels2.ParcelWorld
 import io.dico.parcels2.statusKey
+import io.dico.parcels2.storage.Storage
 import io.dico.parcels2.util.*
 import org.bukkit.Material.*
 import org.bukkit.World
@@ -16,6 +17,7 @@ import org.bukkit.block.data.Directional
 import org.bukkit.block.data.type.Bed
 import org.bukkit.entity.*
 import org.bukkit.entity.minecart.ExplosiveMinecart
+import org.bukkit.event.EventPriority
 import org.bukkit.event.EventPriority.NORMAL
 import org.bukkit.event.block.*
 import org.bukkit.event.entity.*
@@ -26,11 +28,14 @@ import org.bukkit.event.inventory.InventoryInteractEvent
 import org.bukkit.event.player.*
 import org.bukkit.event.vehicle.VehicleMoveEvent
 import org.bukkit.event.weather.WeatherChangeEvent
+import org.bukkit.event.world.ChunkLoadEvent
 import org.bukkit.event.world.StructureGrowEvent
 import org.bukkit.inventory.InventoryHolder
 
 @Suppress("NOTHING_TO_INLINE")
-class ParcelListeners(val parcelProvider: ParcelProvider, val entityTracker: ParcelEntityTracker) {
+class ParcelListeners(val parcelProvider: ParcelProvider,
+                      val entityTracker: ParcelEntityTracker,
+                      val storage: Storage) {
     private inline fun Parcel?.canBuildN(user: Player) = isPresentAnd { canBuild(user) } || user.hasBuildAnywhere
 
     /**
@@ -54,7 +59,7 @@ class ParcelListeners(val parcelProvider: ParcelProvider, val entityTracker: Par
         val parcel = parcelProvider.getParcelAt(event.to) ?: return@l
         if (parcel.isBanned(user.statusKey)) {
             parcelProvider.getParcelAt(event.from)?.also {
-                user.teleport(it.world.getHomeLocation(it.id))
+                user.teleport(it.homeLocation)
                 user.sendParcelMessage(nopermit = true, message = "You are banned from this parcel")
             } ?: run { event.to = event.from }
         }
@@ -573,6 +578,28 @@ class ParcelListeners(val parcelProvider: ParcelProvider, val entityTracker: Par
         if (world.options.gameMode != null && !event.player.hasGamemodeBypass) {
             event.player.gameMode = world.options.gameMode
         }
+    }
+
+    /**
+     * Updates owner signs of parcels that get loaded if it is marked outdated
+     */
+    @ListenerMarker(priority = EventPriority.NORMAL)
+    val onChunkLoadEvent = RegistratorListener<ChunkLoadEvent> l@{ event ->
+        val world = parcelProvider.getWorld(event.chunk.world) ?: return@l
+        val parcels = world.blockManager.getParcelsWithOwnerBlockIn(event.chunk)
+        if (parcels.isEmpty()) return@l
+
+        parcels.forEach { id ->
+            val parcel = world.getParcelById(id)?.takeIf { it.ownerSignOutdated } ?: return@forEach
+            world.blockManager.setOwnerBlock(parcel.id, parcel.owner)
+            parcel.ownerSignOutdated = false
+        }
+
+    }
+
+    @ListenerMarker
+    val onPlayerJoinEvent = RegistratorListener<PlayerJoinEvent> l@{ event ->
+        storage.updatePlayerName(event.player.uuid, event.player.name)
     }
 
 }

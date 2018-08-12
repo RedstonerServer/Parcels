@@ -210,13 +210,37 @@ public final class CommandBuilder {
      * @param shortDescription a short description
      * @param description      the lines of a full description.
      * @return this
+     * @throws IllegalStateException if the current group has no command
      */
     public CommandBuilder setGroupDescription(String shortDescription, String... description) {
         Command command = cur.getCommand();
+        if (command == null) throw new IllegalStateException();
         cur.setCommand(command
                 .setShortDescription(shortDescription)
                 .setDescription(description));
         return this;
+    }
+
+    /**
+     * Add a context filter to the command of the current group
+     * @return this
+     * @throws IllegalStateException if the current group has no command
+     */
+    public CommandBuilder addContextFilter(IContextFilter contextFilter) {
+        Command command = cur.getCommand();
+        if (command == null) throw new IllegalStateException();
+        cur.setCommand(command
+            .addContextFilter(contextFilter));
+        return this;
+    }
+
+    /**
+     * Add a required permission to the command of the current group
+     * @return this
+     * @throws IllegalStateException if the current group has no command
+     */
+    public CommandBuilder addRequiredPermission(String permission) {
+        return addContextFilter(IContextFilter.permission(permission));
     }
 
     /**

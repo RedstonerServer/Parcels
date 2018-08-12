@@ -8,6 +8,7 @@ import kotlinx.coroutines.experimental.Job
 import kotlinx.coroutines.experimental.channels.ReceiveChannel
 import kotlinx.coroutines.experimental.channels.SendChannel
 import kotlinx.coroutines.experimental.launch
+import org.joda.time.DateTime
 import java.util.UUID
 
 typealias DataPair = Pair<ParcelId, ParcelData?>
@@ -22,7 +23,13 @@ interface Storage {
     fun shutdown(): Job
 
 
+    fun getWorldCreationTime(worldId: ParcelWorldId): Deferred<DateTime?>
+
+    fun setWorldCreationTime(worldId: ParcelWorldId, time: DateTime): Job
+
     fun getPlayerUuidForName(name: String): Deferred<UUID?>
+
+    fun updatePlayerName(uuid: UUID, name: String): Job
 
     fun readParcelData(parcel: ParcelId): Deferred<ParcelData?>
 
@@ -38,6 +45,8 @@ interface Storage {
     fun setParcelData(parcel: ParcelId, data: ParcelData?): Job
 
     fun setParcelOwner(parcel: ParcelId, owner: PlayerProfile?): Job
+
+    fun setParcelOwnerSignOutdated(parcel: ParcelId, outdated: Boolean): Job
 
     fun setParcelPlayerStatus(parcel: ParcelId, player: PlayerProfile, status: AddedStatus): Job
 
@@ -65,7 +74,13 @@ class BackedStorage internal constructor(val b: Backing) : Storage {
     override fun shutdown() = launch(b.dispatcher) { b.shutdown() }
 
 
+    override fun getWorldCreationTime(worldId: ParcelWorldId): Deferred<DateTime?> = b.launchFuture { b.getWorldCreationTime(worldId) }
+
+    override fun setWorldCreationTime(worldId: ParcelWorldId, time: DateTime): Job = b.launchJob { b.setWorldCreationTime(worldId, time) }
+
     override fun getPlayerUuidForName(name: String): Deferred<UUID?> = b.launchFuture { b.getPlayerUuidForName(name) }
+
+    override fun updatePlayerName(uuid: UUID, name: String): Job = b.launchJob { b.updatePlayerName(uuid, name) }
 
     override fun readParcelData(parcel: ParcelId) = b.launchFuture { b.readParcelData(parcel) }
 
@@ -80,6 +95,8 @@ class BackedStorage internal constructor(val b: Backing) : Storage {
     override fun setParcelData(parcel: ParcelId, data: ParcelData?) = b.launchJob { b.setParcelData(parcel, data) }
 
     override fun setParcelOwner(parcel: ParcelId, owner: PlayerProfile?) = b.launchJob { b.setParcelOwner(parcel, owner) }
+
+    override fun setParcelOwnerSignOutdated(parcel: ParcelId, outdated: Boolean): Job = b.launchJob { b.setParcelOwnerSignOutdated(parcel, outdated) }
 
     override fun setParcelPlayerStatus(parcel: ParcelId, player: PlayerProfile, status: AddedStatus) = b.launchJob { b.setLocalPlayerStatus(parcel, player, status) }
 

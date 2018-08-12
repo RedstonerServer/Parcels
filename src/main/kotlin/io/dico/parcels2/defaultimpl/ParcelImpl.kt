@@ -47,13 +47,23 @@ class ParcelImpl(override val world: ParcelWorld,
 
     val globalAddedMap: AddedDataMap? get() = owner?.let { world.globalAddedData[it].addedMap }
 
-    override val since: DateTime? get() = data.since
+    override val lastClaimTime: DateTime? get() = data.lastClaimTime
+
+    override var ownerSignOutdated: Boolean
+        get() = data.ownerSignOutdated
+        set(value) {
+            if (data.ownerSignOutdated != value) {
+                world.storage.setParcelOwnerSignOutdated(this, value)
+                data.ownerSignOutdated = value
+            }
+        }
 
     override var owner: PlayerProfile?
         get() = data.owner
         set(value) {
             if (data.owner != value) {
                 world.storage.setParcelOwner(this, value)
+                world.blockManager.setOwnerBlock(this, value)
                 data.owner = value
             }
         }

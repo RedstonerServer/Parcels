@@ -83,6 +83,7 @@ class PlotmeMigration(val options: PlotmeMigrationOptions) : Migration {
                     val parcel = getParcelId(PlotmePlotsT, row) ?: return@forEach
                     val owner = PlayerProfile.safe(row[PlotmePlotsT.owner_uuid]?.toUUID(), row[PlotmePlotsT.owner_name])
                     target.setParcelOwner(parcel, owner)
+                    target.setParcelOwnerSignOutdated(parcel, true)
                 }
         }
 

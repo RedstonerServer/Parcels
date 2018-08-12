@@ -1,5 +1,6 @@
 package io.dico.dicore.command;
 
+import io.dico.dicore.command.predef.DefaultGroupCommand;
 import io.dico.dicore.command.predef.HelpCommand;
 
 import java.util.*;
@@ -23,7 +24,7 @@ public class ChildCommandAddress extends ModifiableCommandAddress {
     }
 
     public static ChildCommandAddress newPlaceHolderCommand(String name, String... aliases) {
-        ChildCommandAddress rv = new ChildCommandAddress(null, name, aliases);
+        ChildCommandAddress rv = new ChildCommandAddress(DefaultGroupCommand.getInstance(), name, aliases);
         HelpCommand.registerAsChild(rv);
         return rv;
     }

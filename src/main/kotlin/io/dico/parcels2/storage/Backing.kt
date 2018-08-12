@@ -6,6 +6,7 @@ import kotlinx.coroutines.experimental.Deferred
 import kotlinx.coroutines.experimental.Job
 import kotlinx.coroutines.experimental.channels.ReceiveChannel
 import kotlinx.coroutines.experimental.channels.SendChannel
+import org.joda.time.DateTime
 import java.util.UUID
 
 interface Backing {
@@ -30,7 +31,13 @@ interface Backing {
     fun shutdown()
 
 
+    fun getWorldCreationTime(worldId: ParcelWorldId): DateTime?
+
+    fun setWorldCreationTime(worldId: ParcelWorldId, time: DateTime)
+
     fun getPlayerUuidForName(name: String): UUID?
+
+    fun updatePlayerName(uuid: UUID, name: String)
 
     fun transmitParcelData(channel: SendChannel<DataPair>, parcels: Sequence<ParcelId>)
 
@@ -46,6 +53,8 @@ interface Backing {
     fun setParcelData(parcel: ParcelId, data: ParcelData?)
 
     fun setParcelOwner(parcel: ParcelId, owner: PlayerProfile?)
+
+    fun setParcelOwnerSignOutdated(parcel: ParcelId, outdated: Boolean)
 
     fun setLocalPlayerStatus(parcel: ParcelId, player: PlayerProfile, status: AddedStatus)
 

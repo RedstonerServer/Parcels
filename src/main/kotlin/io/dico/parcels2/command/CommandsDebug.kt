@@ -5,7 +5,8 @@ import io.dico.dicore.command.EMessageType
 import io.dico.dicore.command.ExecutionContext
 import io.dico.dicore.command.annotation.Cmd
 import io.dico.parcels2.ParcelsPlugin
-import io.dico.parcels2.blockvisitor.RegionTraversal
+import io.dico.parcels2.blockvisitor.RegionTraverser
+import io.dico.parcels2.doBlockOperation
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.entity.Player
@@ -43,7 +44,7 @@ class CommandsDebug(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
         )
         val random = Random()
 
-        world.doBlockOperation(parcel.id, direction = RegionTraversal.UPWARD) { block ->
+        world.blockManager.doBlockOperation(parcel.id, traverser = RegionTraverser.upward) { block ->
             block.blockData = blockDatas[random.nextInt(7)]
         }.onProgressUpdate(1000, 1000) { progress, elapsedTime ->
             context.sendMessage(EMessageType.INFORMATIVE, "Mess progress: %.02f%%, %.2fs elapsed"

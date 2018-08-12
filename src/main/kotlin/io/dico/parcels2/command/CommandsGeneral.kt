@@ -26,7 +26,7 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
         val parcel = world.nextEmptyParcel()
             ?: error("This world is full, please ask an admin to upsize it")
         parcel.owner = PlayerProfile(uuid = player.uuid)
-        player.teleport(parcel.world.getHomeLocation(parcel.id))
+        player.teleport(parcel.homeLocation)
         return "Enjoy your new parcel!"
     }
 
@@ -63,7 +63,7 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
 
         val match = target.getParcelSuspend(plugin.storage)
             ?: error("The specified parcel could not be matched")
-        player.teleport(match.world.getHomeLocation(match.id))
+        player.teleport(match.homeLocation)
         return ""
     }
 
@@ -100,7 +100,7 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
         if (!sure) return "Are you sure? You cannot undo this action!\n" +
             "Run \"/${context.rawInput} -sure\" if you want to go through with this."
 
-        world.clearParcel(parcel.id)
+        world.blockManager.clearParcel(parcel.id)
             .onProgressUpdate(1000, 1000) { progress, elapsedTime ->
                 val alt = context.getFormat(EMessageType.NUMBER)
                 val main = context.getFormat(EMessageType.INFORMATIVE)

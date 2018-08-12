@@ -3,6 +3,22 @@ package io.dico.parcels2.util
 import org.bukkit.World
 import org.bukkit.block.Block
 
+data class Vec3d(
+    val x: Double,
+    val y: Double,
+    val z: Double
+) {
+    operator fun plus(o: Vec3d) = Vec3d(x + o.x, y + o.y, z + o.z)
+    operator fun minus(o: Vec3i) = Vec3d(x - o.x, y - o.y, z - o.z)
+    infix fun addX(o: Double) = Vec3d(x + o, y, z)
+    infix fun addY(o: Double) = Vec3d(x, y + o, z)
+    infix fun addZ(o: Double) = Vec3d(x, y, z + o)
+    infix fun withX(o: Double) = Vec3d(o, y, z)
+    infix fun withY(o: Double) = Vec3d(x, o, z)
+    infix fun withZ(o: Double) = Vec3d(x, y, o)
+    fun add(ox: Double, oy: Double, oz: Double) = Vec3d(x + ox, y + oy, z + oz)
+}
+
 data class Vec3i(
     val x: Int,
     val y: Int,
@@ -12,6 +28,9 @@ data class Vec3i(
     infix fun addX(o: Int) = Vec3i(x + o, y, z)
     infix fun addY(o: Int) = Vec3i(x, y + o, z)
     infix fun addZ(o: Int) = Vec3i(x, y, z + o)
+    infix fun withX(o: Int) = Vec3i(o, y, z)
+    infix fun withY(o: Int) = Vec3i(x, o, z)
+    infix fun withZ(o: Int) = Vec3i(x, y, o)
     fun add(ox: Int, oy: Int, oz: Int) = Vec3i(x + ox, y + oy, z + oz)
 }
 

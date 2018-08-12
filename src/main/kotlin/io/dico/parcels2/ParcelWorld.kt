@@ -4,10 +4,12 @@ import io.dico.parcels2.options.RuntimeWorldOptions
 import io.dico.parcels2.storage.Storage
 import io.dico.parcels2.util.Vec2i
 import io.dico.parcels2.util.floor
+import org.bukkit.Chunk
 import org.bukkit.Location
 import org.bukkit.World
 import org.bukkit.block.Block
 import org.bukkit.entity.Entity
+import org.joda.time.DateTime
 import java.util.UUID
 
 interface ParcelProvider {
@@ -58,7 +60,6 @@ interface ParcelLocator {
     fun getParcelAt(entity: Entity): Parcel? = getParcelAt(entity.location).takeIf { entity.world == world }
 
     fun getParcelAt(block: Block): Parcel? = getParcelAt(block.x, block.z).takeIf { block.world == world }
-
 }
 
 typealias ParcelContainerFactory = (ParcelWorld) -> ParcelContainer
@@ -73,7 +74,7 @@ interface ParcelContainer {
 
 }
 
-interface ParcelWorld : ParcelLocator, ParcelContainer, ParcelBlockManager {
+interface ParcelWorld : ParcelLocator, ParcelContainer {
     val id: ParcelWorldId
     val name: String
     val uid: UUID?
@@ -84,4 +85,7 @@ interface ParcelWorld : ParcelLocator, ParcelContainer, ParcelBlockManager {
     val locator: ParcelLocator
     val blockManager: ParcelBlockManager
     val globalAddedData: GlobalAddedDataManager
+
+    val creationTime: DateTime?
+
 }

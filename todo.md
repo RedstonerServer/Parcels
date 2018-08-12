@@ -17,8 +17,8 @@ Modify home command:
 * Make `:` not be required if prior component cannot be parsed to an int
 * Listen for command events that use plotme-style argument, and transform the command
 
-Add permissions to commands (replace or fix `IContextFilter` from command lib
-to allow inheriting permissions properly).
+~~Add permissions to commands (replace or fix `IContextFilter` from command lib
+to allow inheriting permissions properly).~~
 
 Parcel Options
 -
@@ -39,8 +39,8 @@ This could become optional.
 
 Block Management
 - 
-Update the parcel corner with owner info when a player flies into the parcel (after migrations).
-Parcels has a player head in that corner in addition to the sign that PlotMe uses.
+~~Update the parcel corner with owner info when a player flies into the parcel (after migrations).
+Parcels has a player head in that corner in addition to the sign that PlotMe uses.~~
 
 Commands that modify parcel blocks must be kept track of to prevent multiple
 from running simultaneously in the same parcel. `hasBlockVisitors` field must be updated.
@@ -50,9 +50,9 @@ Swap - schematic is in place, but proper placement order must be enforced to mak
 blocks are placed properly. Alternatively, if a block change method can be found that doesn't
 cause block updates, that would be preferred subject to having good performance.
 
-Change `RegionTraversal` to allow traversing different parts of a region in a different order. 
+~~Change `RegionTraversal` to allow traversing different parts of a region in a different order.
 This could apply to clearing of plots, for example. It would be better if the bottom 64 (floor height) 
-layers are done upwards, and the rest downwards.
+layers are done upwards, and the rest downwards.~~
 
 Events
 -

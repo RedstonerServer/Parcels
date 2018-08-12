@@ -5,3 +5,7 @@ data class Vec2i(
     val z: Int
 )
 
+data class Region2i(
+    val bottom: Vec2i,
+    val top: Vec2i
+)

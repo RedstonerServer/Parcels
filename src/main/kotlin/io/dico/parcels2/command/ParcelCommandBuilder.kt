@@ -17,11 +17,12 @@ fun getParcelCommands(plugin: ParcelsPlugin): ICommandDispatcher {
         .addParameterType(true, ParcelTarget.PType(plugin.parcelProvider))
 
         .group("parcel", "plot", "plots", "p")
+            .addRequiredPermission("parcels.command")
             .registerCommands(CommandsGeneral(plugin))
             .registerCommands(CommandsAddedStatusLocal(plugin))
 
             .group("option", "opt", "o")
-                //.apply { CommandsParcelOptions.setGroupDescription(this) }
+                .apply { CommandsParcelOptions.setGroupDescription(this) }
                 .registerCommands(CommandsParcelOptions(plugin))
                 .parent()
 

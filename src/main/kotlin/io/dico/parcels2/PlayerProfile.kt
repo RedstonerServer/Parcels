@@ -77,7 +77,8 @@ interface PlayerProfile {
     interface Real : PlayerProfile {
         override val uuid: UUID
         override val nameOrBukkitName: String?
-            get() = name ?: Bukkit.getOfflinePlayer(uuid).takeIf { it.isValid }?.name
+            // If a player is online, their name is prioritized to get name changes right immediately
+            get() = Bukkit.getPlayer(uuid)?.name ?: name ?: Bukkit.getOfflinePlayer(uuid).takeIf { it.isValid }?.name
         override val notNullName: String
             get() = name ?: getPlayerNameOrDefault(uuid)
 

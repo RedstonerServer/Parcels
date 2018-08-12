@@ -122,8 +122,14 @@ class TickWorktimeLimiter(private val plugin: ParcelsPlugin, var options: TickWo
 
     override fun submit(task: TimeLimitedTask): Worker {
         val worker: WorkerContinuation = WorkerImpl(plugin.functionHelper, task)
+
+        if (bukkitTask == null) {
+            val completed = worker.resume(options.workTime.toLong())
+            if (completed) return worker
+            bukkitTask = plugin.functionHelper.scheduleRepeating(0, options.tickInterval) { tickJobs() }
+        }
+
         _workers.addFirst(worker)
-        if (bukkitTask == null) bukkitTask = plugin.functionHelper.scheduleRepeating(0, options.tickInterval) { tickJobs() }
         return worker
     }
 

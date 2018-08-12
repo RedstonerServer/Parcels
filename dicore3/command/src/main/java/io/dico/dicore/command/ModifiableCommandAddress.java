@@ -2,6 +2,7 @@ package io.dico.dicore.command;
 
 import io.dico.dicore.command.chat.ChatControllers;
 import io.dico.dicore.command.chat.IChatController;
+import io.dico.dicore.command.predef.DefaultGroupCommand;
 import io.dico.dicore.command.predef.HelpCommand;
 import io.dico.dicore.command.predef.PredefinedCommand;
 
@@ -32,7 +33,7 @@ public abstract class ModifiableCommandAddress implements ICommandAddress {
     @Override
     public boolean hasUserDeclaredCommand() {
         Command command = getCommand();
-        return command != null && !(command instanceof PredefinedCommand);
+        return command != null && !(command instanceof PredefinedCommand) && !(command instanceof DefaultGroupCommand);
     }
 
     @Override

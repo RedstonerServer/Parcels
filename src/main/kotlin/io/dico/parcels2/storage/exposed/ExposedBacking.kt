@@ -4,10 +4,12 @@ package io.dico.parcels2.storage.exposed
 
 import com.zaxxer.hikari.HikariDataSource
 import io.dico.parcels2.*
+import io.dico.parcels2.PlayerProfile.Star.name
 import io.dico.parcels2.storage.AddedDataPair
 import io.dico.parcels2.storage.Backing
 import io.dico.parcels2.storage.DataPair
 import io.dico.parcels2.util.synchronized
+import io.dico.parcels2.util.toByteArray
 import io.dico.parcels2.util.toUUID
 import kotlinx.coroutines.experimental.*
 import kotlinx.coroutines.experimental.channels.ArrayChannel
@@ -114,9 +116,26 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource, val poolSi
         else -> throw InternalError("Case should not be reached")
     }
 
+
+    override fun getWorldCreationTime(worldId: ParcelWorldId): DateTime? {
+        return WorldsT.getWorldCreationTime(worldId)
+    }
+
+    override fun setWorldCreationTime(worldId: ParcelWorldId, time: DateTime) {
+        WorldsT.setWorldCreationTime(worldId, time)
+    }
+
     override fun getPlayerUuidForName(name: String): UUID? {
         return ProfilesT.slice(ProfilesT.uuid).select { ProfilesT.name.upperCase() eq name.toUpperCase() }
             .firstOrNull()?.let { it[ProfilesT.uuid]?.toUUID() }
+    }
+
+    override fun updatePlayerName(uuid: UUID, name: String) {
+        val binaryUuid = uuid.toByteArray()
+        ProfilesT.upsert(ProfilesT.uuid) {
+            it[ProfilesT.uuid] = binaryUuid
+            it[ProfilesT.name] = name
+        }
     }
 
     override fun transmitParcelData(channel: SendChannel<DataPair>, parcels: Sequence<ParcelId>) {
@@ -193,6 +212,14 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource, val poolSi
         ParcelsT.update({ ParcelsT.id eq id }) {
             it[ParcelsT.owner_id] = owner_id
             it[claim_time] = time
+            it[sign_oudated] = false
+        }
+    }
+
+    override fun setParcelOwnerSignOutdated(parcel: ParcelId, outdated: Boolean) {
+        val id = ParcelsT.getId(parcel) ?: return
+        ParcelsT.update({ ParcelsT.id eq id }) {
+            it[sign_oudated] = outdated
         }
     }
 
@@ -203,16 +230,16 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource, val poolSi
     override fun setParcelAllowsInteractInventory(parcel: ParcelId, value: Boolean) {
         val id = ParcelsT.getOrInitId(parcel)
         ParcelOptionsT.upsert(ParcelOptionsT.parcel_id) {
-            it[ParcelOptionsT.parcel_id] = id
-            it[ParcelOptionsT.interact_inventory] = value
+            it[parcel_id] = id
+            it[interact_inventory] = value
         }
     }
 
     override fun setParcelAllowsInteractInputs(parcel: ParcelId, value: Boolean) {
         val id = ParcelsT.getOrInitId(parcel)
         ParcelOptionsT.upsert(ParcelOptionsT.parcel_id) {
-            it[ParcelOptionsT.parcel_id] = id
-            it[ParcelOptionsT.interact_inputs] = value
+            it[parcel_id] = id
+            it[interact_inputs] = value
         }
     }
 
@@ -231,7 +258,8 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource, val poolSi
 
     private fun rowToParcelData(row: ResultRow) = ParcelDataHolder().apply {
         owner = row[ParcelsT.owner_id]?.let { ProfilesT.getItem(it) }
-        since = row[ParcelsT.claim_time]
+        lastClaimTime = row[ParcelsT.claim_time]
+        ownerSignOutdated = row[ParcelsT.sign_oudated]
 
         val id = row[ParcelsT.id]
         ParcelOptionsT.select { ParcelOptionsT.parcel_id eq id }.firstOrNull()?.let { optrow ->

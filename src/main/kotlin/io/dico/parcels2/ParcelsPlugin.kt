@@ -21,6 +21,7 @@ import org.bukkit.plugin.java.JavaPlugin
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
+import java.util.Random
 
 val logger: Logger = LoggerFactory.getLogger("ParcelsPlugin")
 private inline val plogger get() = logger
@@ -49,7 +50,15 @@ class ParcelsPlugin : JavaPlugin() {
     }
 
     override fun onDisable() {
+        val hasWorkers = worktimeLimiter.workers.isNotEmpty()
+        if (hasWorkers) {
+            plogger.warn("Parcels is attempting to complete all ${worktimeLimiter.workers.size} remaining jobs before shutdown...")
+        }
         worktimeLimiter.completeAllTasks()
+        if (hasWorkers) {
+            plogger.info("Parcels has completed the remaining jobs.")
+        }
+
         cmdDispatcher?.unregisterFromCommandMap()
     }
 
@@ -124,7 +133,7 @@ class ParcelsPlugin : JavaPlugin() {
 
     private fun registerListeners() {
         if (listeners == null) {
-            listeners = ParcelListeners(parcelProvider, entityTracker)
+            listeners = ParcelListeners(parcelProvider, entityTracker, storage)
             registrator.registerListeners(listeners!!)
         }
 

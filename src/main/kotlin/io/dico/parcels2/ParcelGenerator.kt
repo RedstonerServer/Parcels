@@ -1,9 +1,12 @@
 package io.dico.parcels2
 
-import io.dico.parcels2.blockvisitor.RegionTraversal
+import io.dico.parcels2.blockvisitor.RegionTraverser
 import io.dico.parcels2.blockvisitor.Worker
+import io.dico.parcels2.blockvisitor.WorkerScope
 import io.dico.parcels2.blockvisitor.WorktimeLimiter
+import io.dico.parcels2.util.Region
 import io.dico.parcels2.util.Vec2i
+import io.dico.parcels2.util.get
 import org.bukkit.Chunk
 import org.bukkit.Location
 import org.bukkit.World
@@ -15,6 +18,8 @@ import org.bukkit.generator.ChunkGenerator
 import java.util.Random
 
 abstract class ParcelGenerator : ChunkGenerator() {
+    abstract val worldName: String
+
     abstract val world: World
 
     abstract override fun generateChunkData(world: World?, random: Random?, chunkX: Int, chunkZ: Int, biome: BiomeGrid?): ChunkData
@@ -31,31 +36,57 @@ abstract class ParcelGenerator : ChunkGenerator() {
         })
     }
 
-    abstract fun makeParcelBlockManager(worktimeLimiter: WorktimeLimiter): ParcelBlockManager
-
-    abstract fun makeParcelLocator(container: ParcelContainer): ParcelLocator
+    abstract fun makeParcelLocatorAndBlockManager(worldId: ParcelWorldId,
+                                                  container: ParcelContainer,
+                                                  worktimeLimiter: WorktimeLimiter): Pair<ParcelLocator, ParcelBlockManager>
 }
 
-@Suppress("DeprecatedCallableAddReplaceWith")
 interface ParcelBlockManager {
     val world: World
     val worktimeLimiter: WorktimeLimiter
+    val parcelTraverser: RegionTraverser
 
-    fun getBottomBlock(parcel: ParcelId): Vec2i
+    // fun getBottomBlock(parcel: ParcelId): Vec2i
 
     fun getHomeLocation(parcel: ParcelId): Location
 
+    fun getRegion(parcel: ParcelId): Region
+
+    fun getEntities(parcel: ParcelId): Collection<Entity>
+
     fun setOwnerBlock(parcel: ParcelId, owner: PlayerProfile?)
-
-    @Deprecated("")
-    fun getEntities(parcel: ParcelId): Collection<Entity> = TODO()
-
-    @Deprecated("")
-    fun getBlocks(parcel: ParcelId, yRange: IntRange = 0..255): Iterator<Block> = TODO()
 
     fun setBiome(parcel: ParcelId, biome: Biome): Worker
 
     fun clearParcel(parcel: ParcelId): Worker
 
-    fun doBlockOperation(parcel: ParcelId, direction: RegionTraversal = RegionTraversal.DOWNWARD, operation: (Block) -> Unit): Worker
+    /**
+     * Used to update owner blocks in the corner of the parcel
+     */
+    fun getParcelsWithOwnerBlockIn(chunk: Chunk): Collection<Vec2i>
+}
+
+inline fun ParcelBlockManager.doBlockOperation(parcel: ParcelId,
+                                               traverser: RegionTraverser,
+                                               crossinline operation: suspend WorkerScope.(Block) -> Unit) = worktimeLimiter.submit {
+    val region = getRegion(parcel)
+    val blockCount = region.blockCount.toDouble()
+    val blocks = traverser.traverseRegion(region)
+    for ((index, vec) in blocks.withIndex()) {
+        markSuspensionPoint()
+        operation(world[vec])
+        setProgress((index + 1) / blockCount)
+    }
+}
+
+abstract class ParcelBlockManagerBase : ParcelBlockManager {
+
+    override fun getEntities(parcel: ParcelId): Collection<Entity> {
+        val region = getRegion(parcel)
+        val center = region.center
+        val centerLoc = Location(world, center.x, center.y, center.z)
+        val centerDist = (center - region.origin).add(0.2, 0.2, 0.2)
+        return world.getNearbyEntities(centerLoc, centerDist.x, centerDist.y, centerDist.z)
+    }
+
 }
