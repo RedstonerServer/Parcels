@@ -4,6 +4,7 @@ import io.dico.dicore.Formatting
 import io.dico.parcels2.*
 import io.dico.parcels2.util.Vec2i
 import io.dico.parcels2.util.alsoIfTrue
+import org.bukkit.Material
 import org.bukkit.OfflinePlayer
 import org.joda.time.DateTime
 import kotlin.reflect.KProperty
@@ -90,6 +91,29 @@ class ParcelImpl(override val world: ParcelWorld,
             data.allowInteractInventory = value
         }
 
+    private var _interactableConfig: InteractableConfiguration? = null
+    override var interactableConfig: InteractableConfiguration
+        get() {
+            if (_interactableConfig == null) {
+                _interactableConfig = object : InteractableConfiguration {
+                    override fun isInteractable(material: Material): Boolean = data.interactableConfig.isInteractable(material)
+                    override fun isInteractable(clazz: Interactables): Boolean = data.interactableConfig.isInteractable(clazz)
+
+                    override fun setInteractable(clazz: Interactables, interactable: Boolean): Boolean = data.interactableConfig.setInteractable(clazz, interactable).alsoIfTrue {
+                        // TODO update storage
+                    }
+
+                    override fun clear(): Boolean = data.interactableConfig.clear().alsoIfTrue {
+                        // TODO update storage
+                    }
+                }
+            }
+            return _interactableConfig!!
+        }
+        set(value) {
+            data.interactableConfig.copyFrom(value)
+            // TODO update storage
+        }
 
 }
 

@@ -74,3 +74,35 @@ val Material.isWoodButton
         DARK_OAK_BUTTON -> true
         else -> false
     }
+
+private fun getMaterialPrefixed(prefix: String, name: String): Material {
+    return Material.getMaterial("${prefix}_$name") ?: throw IllegalArgumentException("Material ${prefix}_$name doesn't exist")
+}
+
+fun findWoodKindPrefixedMaterials(name: String) = arrayOf(
+    getMaterialPrefixed("OAK", name),
+    getMaterialPrefixed("BIRCH", name),
+    getMaterialPrefixed("SPRUCE", name),
+    getMaterialPrefixed("JUNGLE", name),
+    getMaterialPrefixed("ACACIA", name),
+    getMaterialPrefixed("DARK_OAK", name)
+)
+
+fun findColorPrefixedMaterials(name: String) = arrayOf(
+    getMaterialPrefixed("WHITE", name),
+    getMaterialPrefixed("ORANGE", name),
+    getMaterialPrefixed("MAGENTA", name),
+    getMaterialPrefixed("LIGHT_BLUE", name),
+    getMaterialPrefixed("YELLOW", name),
+    getMaterialPrefixed("LIME", name),
+    getMaterialPrefixed("PINK", name),
+    getMaterialPrefixed("GRAY", name),
+    getMaterialPrefixed("LIGHT_GRAY", name),
+    getMaterialPrefixed("CYAN", name),
+    getMaterialPrefixed("PURPLE", name),
+    getMaterialPrefixed("BLUE", name),
+    getMaterialPrefixed("BROWN", name),
+    getMaterialPrefixed("GREEN", name),
+    getMaterialPrefixed("RED", name),
+    getMaterialPrefixed("BLACK", name)
+)

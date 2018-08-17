@@ -39,6 +39,7 @@ interface ParcelData : AddedData {
     var owner: PlayerProfile?
     val lastClaimTime: DateTime?
     var ownerSignOutdated: Boolean
+    var interactableConfig: InteractableConfiguration
 
     fun canBuild(player: OfflinePlayer, checkAdmin: Boolean = true, checkGlobal: Boolean = true): Boolean
 
@@ -54,8 +55,8 @@ interface ParcelData : AddedData {
     }
 }
 
-class ParcelDataHolder(addedMap: MutableAddedDataMap = mutableMapOf()) : AddedDataHolder(addedMap), ParcelData {
-
+class ParcelDataHolder(addedMap: MutableAddedDataMap = mutableMapOf())
+    : ParcelData, AddedDataHolder(addedMap) {
     override var owner: PlayerProfile? = null
     override var lastClaimTime: DateTime? = null
     override var ownerSignOutdated = false
@@ -65,5 +66,6 @@ class ParcelDataHolder(addedMap: MutableAddedDataMap = mutableMapOf()) : AddedDa
 
     override var allowInteractInputs = true
     override var allowInteractInventory = true
+    override var interactableConfig: InteractableConfiguration = BitmaskInteractableConfiguration()
 }
 
