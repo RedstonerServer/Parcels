@@ -52,7 +52,7 @@ class ParcelProviderImpl(val plugin: ParcelsPlugin) : ParcelProvider {
             if (parcelWorld != null) continue
 
             val generator: ParcelGenerator = getWorldGenerator(worldName)!!
-            val worldExists = Bukkit.getWorld(worldName) == null
+            val worldExists = Bukkit.getWorld(worldName) != null
             val bukkitWorld =
                 if (worldExists) Bukkit.getWorld(worldName)!!
                 else WorldCreator(worldName).generator(generator).createWorld().also { logger.info("Creating world $worldName") }
