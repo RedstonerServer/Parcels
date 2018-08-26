@@ -17,22 +17,22 @@ typealias WorkerUpdateLister = Worker.(Double, Long) -> Unit
 
 data class TickWorktimeOptions(var workTime: Int, var tickInterval: Int)
 
-sealed class WorktimeLimiter {
+interface WorktimeLimiter {
     /**
      * Submit a [task] that should be run synchronously, but limited such that it does not stall the server
      * a bunch
      */
-    abstract fun submit(task: TimeLimitedTask): Worker
+    fun submit(task: TimeLimitedTask): Worker
 
     /**
      * Get a list of all workers
      */
-    abstract val workers: List<Worker>
+    val workers: List<Worker>
 
     /**
      * Attempts to complete any remaining tasks immediately, without suspension.
      */
-    abstract fun completeAllTasks()
+    fun completeAllTasks()
 }
 
 interface Timed {
@@ -94,7 +94,7 @@ interface WorkerScope : Timed {
     fun setProgress(progress: Double)
 }
 
-private interface WorkerContinuation : Worker, WorkerScope {
+interface WorkerInternal : Worker, WorkerScope {
     /**
      * Start or resumes the execution of this worker
      * and returns true if the worker completed
@@ -113,15 +113,15 @@ private interface WorkerContinuation : Worker, WorkerScope {
  * There is a configurable maxiumum amount of milliseconds that can be allocated to all workers together in each server tick
  * This object attempts to split that maximum amount of milliseconds equally between all jobs
  */
-class TickWorktimeLimiter(private val plugin: ParcelsPlugin, var options: TickWorktimeOptions) : WorktimeLimiter() {
+class TickWorktimeLimiter(private val plugin: ParcelsPlugin, var options: TickWorktimeOptions) : WorktimeLimiter {
     // The currently registered bukkit scheduler task
     private var bukkitTask: BukkitTask? = null
     // The workers.
-    private val _workers = LinkedList<WorkerContinuation>()
+    private val _workers = LinkedList<WorkerInternal>()
     override val workers: List<Worker> = _workers
 
     override fun submit(task: TimeLimitedTask): Worker {
-        val worker: WorkerContinuation = WorkerImpl(plugin.functionHelper, task)
+        val worker: WorkerInternal = WorkerImpl(plugin.functionHelper, task)
         _workers.addFirst(worker)
         if (bukkitTask == null) bukkitTask = plugin.functionHelper.scheduleRepeating(0, options.tickInterval) { tickJobs() }
         return worker
@@ -166,7 +166,7 @@ class TickWorktimeLimiter(private val plugin: ParcelsPlugin, var options: TickWo
 }
 
 private class WorkerImpl(val functionHelper: FunctionHelper,
-                         val task: TimeLimitedTask) : WorkerContinuation {
+                         val task: TimeLimitedTask) : WorkerInternal {
     override var job: Job? = null; private set
 
     override val elapsedTime
