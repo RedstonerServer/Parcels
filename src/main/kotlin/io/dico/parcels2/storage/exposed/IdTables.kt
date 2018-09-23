@@ -153,6 +153,13 @@ object ProfilesT : IdTransactionsTable<ProfilesT, PlayerProfile>("parcels_profil
         return getItem(id) as? PlayerProfile.Real
     }
 
+    /*
+    fun updatePlayerProfile(profile: PlayerProfile.Real) {
+        update({ uuid eq profile.uuid.toByteArray() }) {
+            it[name] = profile.nameOrBukkitName
+        }
+    }*/
+
 }
 
 // val ParcelsWithOptionsT = ParcelsT.join(ParcelOptionsT, JoinType.INNER, onColumn = ParcelsT.id, otherColumn = ParcelOptionsT.parcel_id)

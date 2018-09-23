@@ -1,7 +1,7 @@
 package io.dico.parcels2
 
 import io.dico.parcels2.util.Vec2i
-import io.dico.parcels2.util.hasBuildAnywhere
+import io.dico.parcels2.util.ext.hasBuildAnywhere
 import org.bukkit.Location
 import org.bukkit.OfflinePlayer
 import org.bukkit.entity.Player
@@ -31,6 +31,8 @@ interface Parcel : ParcelData {
     fun copyData(data: ParcelData)
 
     fun dispose()
+
+    suspend fun withBlockVisitorPermit(block: suspend () -> Unit)
 
     val homeLocation: Location get() = world.blockManager.getHomeLocation(id)
 }

@@ -7,6 +7,7 @@ import io.dico.parcels2.blockvisitor.WorktimeLimiter
 import io.dico.parcels2.util.Region
 import io.dico.parcels2.util.Vec2i
 import io.dico.parcels2.util.get
+import kotlinx.coroutines.CoroutineScope
 import org.bukkit.Chunk
 import org.bukkit.Location
 import org.bukkit.World
@@ -38,6 +39,7 @@ abstract class ParcelGenerator : ChunkGenerator() {
 
     abstract fun makeParcelLocatorAndBlockManager(worldId: ParcelWorldId,
                                                   container: ParcelContainer,
+                                                  coroutineScope: CoroutineScope,
                                                   worktimeLimiter: WorktimeLimiter): Pair<ParcelLocator, ParcelBlockManager>
 }
 

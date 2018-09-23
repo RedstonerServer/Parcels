@@ -2,10 +2,19 @@ package io.dico.parcels2.defaultimpl
 
 import io.dico.parcels2.*
 import io.dico.parcels2.blockvisitor.RegionTraverser
+import io.dico.parcels2.blockvisitor.TimeLimitedTask
 import io.dico.parcels2.blockvisitor.Worker
 import io.dico.parcels2.blockvisitor.WorktimeLimiter
 import io.dico.parcels2.options.DefaultGeneratorOptions
-import io.dico.parcels2.util.*
+import io.dico.parcels2.util.Region
+import io.dico.parcels2.util.Vec2i
+import io.dico.parcels2.util.Vec3i
+import io.dico.parcels2.util.ext.even
+import io.dico.parcels2.util.ext.umod
+import io.dico.parcels2.util.get
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart.UNDISPATCHED
+import kotlinx.coroutines.launch
 import org.bukkit.*
 import org.bukkit.block.Biome
 import org.bukkit.block.BlockFace
@@ -13,13 +22,17 @@ import org.bukkit.block.Skull
 import org.bukkit.block.data.BlockData
 import org.bukkit.block.data.type.Sign
 import org.bukkit.block.data.type.Slab
+import java.lang.IllegalArgumentException
 import java.util.Random
 
 private val airType = Bukkit.createBlockData(Material.AIR)
 
 private const val chunkSize = 16
 
-class DefaultParcelGenerator(override val worldName: String, private val o: DefaultGeneratorOptions) : ParcelGenerator() {
+class DefaultParcelGenerator(
+    override val worldName: String,
+    private val o: DefaultGeneratorOptions
+) : ParcelGenerator() {
     private var _world: World? = null
     override val world: World
         get() {
@@ -36,13 +49,15 @@ class DefaultParcelGenerator(override val worldName: String, private val o: Defa
     val makePathMain = o.pathSize > 2
     val makePathAlt = o.pathSize > 4
 
-    private inline fun <T> generate(chunkX: Int,
-                                    chunkZ: Int,
-                                    floor: T, wall:
-                                    T, pathMain: T,
-                                    pathAlt: T,
-                                    fill: T,
-                                    setter: (Int, Int, Int, T) -> Unit) {
+    private inline fun <T> generate(
+        chunkX: Int,
+        chunkZ: Int,
+        floor: T, wall:
+        T, pathMain: T,
+        pathAlt: T,
+        fill: T,
+        setter: (Int, Int, Int, T) -> Unit
+    ) {
 
         val floorHeight = o.floorHeight
         val parcelSize = o.parcelSize
@@ -104,10 +119,13 @@ class DefaultParcelGenerator(override val worldName: String, private val o: Defa
         return Location(world, o.offsetX + fix, o.floorHeight + 1.0, o.offsetZ + fix)
     }
 
-    override fun makeParcelLocatorAndBlockManager(worldId: ParcelWorldId,
-                                                  container: ParcelContainer,
-                                                  worktimeLimiter: WorktimeLimiter): Pair<ParcelLocator, ParcelBlockManager> {
-        return ParcelLocatorImpl(worldId, container) to ParcelBlockManagerImpl(worldId, worktimeLimiter)
+    override fun makeParcelLocatorAndBlockManager(
+        worldId: ParcelWorldId,
+        container: ParcelContainer,
+        coroutineScope: CoroutineScope,
+        worktimeLimiter: WorktimeLimiter
+    ): Pair<ParcelLocator, ParcelBlockManager> {
+        return ParcelLocatorImpl(worldId, container) to ParcelBlockManagerImpl(worldId, coroutineScope, worktimeLimiter)
     }
 
     private inline fun <T> convertBlockLocationToId(x: Int, z: Int, mapper: (Int, Int) -> T): T? {
@@ -123,8 +141,10 @@ class DefaultParcelGenerator(override val worldName: String, private val o: Defa
         return null
     }
 
-    private inner class ParcelLocatorImpl(val worldId: ParcelWorldId,
-                                          val container: ParcelContainer) : ParcelLocator {
+    private inner class ParcelLocatorImpl(
+        val worldId: ParcelWorldId,
+        val container: ParcelContainer
+    ) : ParcelLocator {
         override val world: World = this@DefaultParcelGenerator.world
 
         override fun getParcelAt(x: Int, z: Int): Parcel? {
@@ -137,8 +157,11 @@ class DefaultParcelGenerator(override val worldName: String, private val o: Defa
     }
 
     @Suppress("DEPRECATION")
-    private inner class ParcelBlockManagerImpl(val worldId: ParcelWorldId,
-                                               override val worktimeLimiter: WorktimeLimiter) : ParcelBlockManagerBase() {
+    private inner class ParcelBlockManagerImpl(
+        val worldId: ParcelWorldId,
+        coroutineScope: CoroutineScope,
+        override val worktimeLimiter: WorktimeLimiter
+    ) : ParcelBlockManagerBase(), CoroutineScope by coroutineScope {
         override val world: World = this@DefaultParcelGenerator.world
         override val parcelTraverser: RegionTraverser = RegionTraverser.upToAndDownUntil(o.floorHeight)
 
@@ -198,7 +221,28 @@ class DefaultParcelGenerator(override val worldName: String, private val o: Defa
             }
         }
 
-        override fun setBiome(parcel: ParcelId, biome: Biome): Worker = worktimeLimiter.submit {
+        private fun getParcel(parcelId: ParcelId): Parcel? {
+            // todo dont rely on this cast
+            val world = worldId as? ParcelWorld ?: return null
+            return world.getParcelById(parcelId)
+        }
+
+        private fun submitBlockVisitor(parcelId: ParcelId, task: TimeLimitedTask): Worker {
+            val parcel = getParcel(parcelId) ?: return worktimeLimiter.submit(task)
+            if (parcel.hasBlockVisitors) throw IllegalArgumentException("This parcel already has a block visitor")
+
+            val worker = worktimeLimiter.submit(task)
+
+            launch(start = UNDISPATCHED) {
+                parcel.withBlockVisitorPermit {
+                    worker.awaitCompletion()
+                }
+            }
+
+            return worker
+        }
+
+        override fun setBiome(parcel: ParcelId, biome: Biome): Worker = submitBlockVisitor(parcel) {
             val world = world
             val b = getBottomBlock(parcel)
             val parcelSize = o.parcelSize
@@ -210,7 +254,7 @@ class DefaultParcelGenerator(override val worldName: String, private val o: Defa
             }
         }
 
-        override fun clearParcel(parcel: ParcelId): Worker = worktimeLimiter.submit {
+        override fun clearParcel(parcel: ParcelId): Worker = submitBlockVisitor(parcel) {
             val region = getRegion(parcel)
             val blocks = parcelTraverser.traverseRegion(region)
             val blockCount = region.blockCount.toDouble()

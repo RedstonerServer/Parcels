@@ -200,6 +200,15 @@ public class ExecutionContext {
         return originalBuffer.getArrayFromIndex(cursorStart);
     }
 
+    /**
+     * The path used to access this address.
+     *
+     * @return the path used to access this address.
+     */
+    public String[] getRoute() {
+        return Arrays.copyOf(originalBuffer.toArray(), address.getDepth());
+    }
+
     public Formatting getFormat(EMessageType type) {
         return address.getChatController().getChatFormatForType(type);
     }

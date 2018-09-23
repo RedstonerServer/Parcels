@@ -12,6 +12,11 @@ public interface ICommandReceiver {
 
         Plugin getPlugin();
 
+        // type is CoroutineContext, but we avoid referring to Kotlin runtime here
+        default Object getCoroutineContext() {
+            return null;
+        }
+
     }
 
 }

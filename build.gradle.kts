@@ -14,11 +14,9 @@ version = "0.2"
 
 plugins {
     java
-    kotlin("jvm") version "1.2.51"
+    kotlin("jvm") version "1.3.0-rc-57"
     id("com.github.johnrengelman.plugin-shadow") version "2.0.3"
 }
-
-kotlin.experimental.coroutines = ENABLE
 
 allprojects {
     apply<JavaPlugin>()
@@ -28,6 +26,8 @@ allprojects {
         maven("https://hub.spigotmc.org/nexus/content/repositories/snapshots")
         maven("https://hub.spigotmc.org/nexus/content/repositories/sonatype-nexus-snapshots")
         maven("https://dl.bintray.com/kotlin/exposed")
+        maven("https://dl.bintray.com/kotlin/kotlin-eap")
+        maven("https://dl.bintray.com/kotlin/kotlinx/")
     }
 
     dependencies {
@@ -51,7 +51,7 @@ project(":dicore3:dicore3-command") {
     dependencies {
         c.kotlinStd(kotlin("stdlib-jdk8"))
         c.kotlinStd(kotlin("reflect"))
-        c.kotlinStd(kotlinx("coroutines-core:0.24.0"))
+        c.kotlinStd(kotlinx("coroutines-core:0.26.1-eap13"))
 
         compile(project(":dicore3:dicore3-core"))
         compile("com.thoughtworks.paranamer:paranamer:2.8")
@@ -59,17 +59,19 @@ project(":dicore3:dicore3-command") {
     }
 }
 
-
 dependencies {
     compile(project(":dicore3:dicore3-core"))
     compile(project(":dicore3:dicore3-command"))
 
     c.kotlinStd(kotlin("stdlib-jdk8"))
     c.kotlinStd(kotlin("reflect"))
-    c.kotlinStd(kotlinx("coroutines-core:0.23.4"))
-    c.kotlinStd("org.jetbrains.kotlinx:atomicfu-common:0.11.0")
+    c.kotlinStd(kotlinx("coroutines-core:0.26.1-eap13"))
+    c.kotlinStd("org.jetbrains.kotlinx:atomicfu-common:0.11.7-rc-conf")
 
-    compile("org.jetbrains.exposed:exposed:0.10.3") { isTransitive = false }
+    // not on sk89q maven repo yet
+    compileClasspath(files("$rootDir/debug/plugins/worldedit-bukkit-7.0.0-beta-01.jar"))
+
+    compile("org.jetbrains.exposed:exposed:0.10.5") { isTransitive = false }
     compile("joda-time:joda-time:2.10")
     compile("com.zaxxer:HikariCP:3.2.0")
     compile("ch.qos.logback:logback-classic:1.2.3") { isTransitive = false }
@@ -131,6 +133,7 @@ tasks {
     }
 
     val createDebugServer by creating {
+        // todo
 
         val jarUrl = URL("https://yivesmirror.com/files/spigot/spigot-latest.jar")
         val serverJarFile = file("$serverDir/lib/spigot.jar")

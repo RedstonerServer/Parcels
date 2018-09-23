@@ -10,23 +10,27 @@ import io.dico.parcels2.defaultimpl.GlobalAddedDataManagerImpl
 import io.dico.parcels2.defaultimpl.ParcelProviderImpl
 import io.dico.parcels2.listener.ParcelEntityTracker
 import io.dico.parcels2.listener.ParcelListeners
+import io.dico.parcels2.listener.WorldEditListener
 import io.dico.parcels2.options.Options
 import io.dico.parcels2.options.optionsMapper
 import io.dico.parcels2.storage.Storage
-import io.dico.parcels2.util.FunctionHelper
-import io.dico.parcels2.util.tryCreate
+import io.dico.parcels2.util.MainThreadDispatcher
+import io.dico.parcels2.util.PluginScheduler
+import io.dico.parcels2.util.ext.tryCreate
+import kotlinx.coroutines.CoroutineScope
 import org.bukkit.Bukkit
 import org.bukkit.generator.ChunkGenerator
+import org.bukkit.plugin.Plugin
 import org.bukkit.plugin.java.JavaPlugin
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.File
-import java.util.Random
+import kotlin.coroutines.CoroutineContext
 
 val logger: Logger = LoggerFactory.getLogger("ParcelsPlugin")
 private inline val plogger get() = logger
 
-class ParcelsPlugin : JavaPlugin() {
+class ParcelsPlugin : JavaPlugin(), CoroutineScope, PluginScheduler {
     lateinit var optionsFile: File; private set
     lateinit var options: Options; private set
     lateinit var parcelProvider: ParcelProvider; private set
@@ -38,7 +42,8 @@ class ParcelsPlugin : JavaPlugin() {
     private var listeners: ParcelListeners? = null
     private var cmdDispatcher: ICommandDispatcher? = null
 
-    val functionHelper: FunctionHelper = FunctionHelper(this)
+    override val coroutineContext: CoroutineContext = MainThreadDispatcher(this)
+    override val plugin: Plugin get() = this
     val worktimeLimiter: WorktimeLimiter by lazy { TickWorktimeLimiter(this, options.tickWorktime) }
 
     override fun onEnable() {
@@ -135,9 +140,14 @@ class ParcelsPlugin : JavaPlugin() {
         if (listeners == null) {
             listeners = ParcelListeners(parcelProvider, entityTracker, storage)
             registrator.registerListeners(listeners!!)
+
+            val worldEditPlugin = server.pluginManager.getPlugin("WorldEdit")
+            if (worldEditPlugin != null) {
+                WorldEditListener.register(this, worldEditPlugin)
+            }
         }
 
-        functionHelper.scheduleRepeating(100, 5, entityTracker::tick)
+        scheduleRepeating(100, 5, entityTracker::tick)
     }
 
 }

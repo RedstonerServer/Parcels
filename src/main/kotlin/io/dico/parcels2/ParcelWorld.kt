@@ -3,8 +3,7 @@ package io.dico.parcels2
 import io.dico.parcels2.options.RuntimeWorldOptions
 import io.dico.parcels2.storage.Storage
 import io.dico.parcels2.util.Vec2i
-import io.dico.parcels2.util.floor
-import org.bukkit.Chunk
+import io.dico.parcels2.util.ext.floor
 import org.bukkit.Location
 import org.bukkit.World
 import org.bukkit.block.Block
@@ -69,6 +68,8 @@ interface ParcelContainer {
     fun getParcelById(x: Int, z: Int): Parcel?
 
     fun getParcelById(id: Vec2i): Parcel? = getParcelById(id.x, id.z)
+
+    fun getParcelById(id: ParcelId): Parcel? = getParcelById(id.x, id.z)
 
     fun nextEmptyParcel(): Parcel?
 

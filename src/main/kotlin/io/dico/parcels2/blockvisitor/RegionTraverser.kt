@@ -2,13 +2,11 @@ package io.dico.parcels2.blockvisitor
 
 import io.dico.parcels2.util.Region
 import io.dico.parcels2.util.Vec3i
-import kotlin.coroutines.experimental.SequenceBuilder
-import kotlin.coroutines.experimental.buildIterator
 
 abstract class RegionTraverser {
-    fun traverseRegion(region: Region): Iterable<Vec3i> = Iterable { buildIterator { build(region) } }
+    fun traverseRegion(region: Region): Iterable<Vec3i> = Iterable { iterator<Vec3i> { build(region) } }
 
-    protected abstract suspend fun SequenceBuilder<Vec3i>.build(region: Region)
+    protected abstract suspend fun SequenceScope<Vec3i>.build(region: Region)
 
     companion object {
         val upward = create { traverseUpward(it) }
@@ -16,13 +14,13 @@ abstract class RegionTraverser {
         val forClearing get() = downward
         val forFilling get() = upward
 
-        inline fun create(crossinline builder: suspend SequenceBuilder<Vec3i>.(Region) -> Unit) = object : RegionTraverser() {
-            override suspend fun SequenceBuilder<Vec3i>.build(region: Region) {
+        inline fun create(crossinline builder: suspend SequenceScope<Vec3i>.(Region) -> Unit) = object : RegionTraverser() {
+            override suspend fun SequenceScope<Vec3i>.build(region: Region) {
                 builder(region)
             }
         }
 
-        private suspend fun SequenceBuilder<Vec3i>.traverseDownward(region: Region) {
+        private suspend fun SequenceScope<Vec3i>.traverseDownward(region: Region) {
             val origin = region.origin
             val size = region.size
             repeat(size.y) { y ->
@@ -34,7 +32,7 @@ abstract class RegionTraverser {
             }
         }
 
-        private suspend fun SequenceBuilder<Vec3i>.traverseUpward(region: Region) {
+        private suspend fun SequenceScope<Vec3i>.traverseUpward(region: Region) {
             val origin = region.origin
             val size = region.size
             repeat(size.y) { y ->

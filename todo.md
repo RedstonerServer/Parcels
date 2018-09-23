@@ -3,18 +3,18 @@
 Commands
 -
 Basically all admin commands.
-* setowner
-* dispose
-* reset
+* ~~setowner~~
+* ~~dispose~~
+* ~~reset~~
 * swap
 * New admin commands that I can't think of right now.
 
 Also
-* setbiome
+* ~~setbiome~~
 * random
 
 Modify home command:
-* Make `:` not be required if prior component cannot be parsed to an int
+* ~~Make `:` not be required if prior component cannot be parsed to an int~~
 * Listen for command events that use plotme-style argument, and transform the command
 
 ~~Add permissions to commands (replace or fix `IContextFilter` from command lib
@@ -61,7 +61,7 @@ Prevent block spreading subject to conditions.
 Scan through blocks that were added since original Parcels implementation,
 that might introduce things that need to be checked or listened for.
 
-WorldEdit Listener.
+~~WorldEdit Listener.~~
 
 Limit number of beacons in a parcel and/or avoid potion effects being applied outside the parcel.
 
@@ -77,6 +77,6 @@ Use an atomic GET OR INSERT query so that parallel execution doesn't cause probl
 
 Implement a container that doesn't require loading all parcel data on startup (Complex).
 
-Update player profiles in the database on join to account for name changes.
+~~Update player profiles in the database on join to account for name changes.~~
 
 

@@ -8,7 +8,7 @@ import io.dico.parcels2.ParcelProvider
 import io.dico.parcels2.ParcelWorld
 import io.dico.parcels2.statusKey
 import io.dico.parcels2.storage.Storage
-import io.dico.parcels2.util.*
+import io.dico.parcels2.util.ext.*
 import org.bukkit.Material.*
 import org.bukkit.World
 import org.bukkit.block.Biome

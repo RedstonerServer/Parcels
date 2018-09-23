@@ -1,8 +1,11 @@
 package io.dico.parcels2.defaultimpl
 
 import io.dico.parcels2.*
-import kotlinx.coroutines.experimental.Unconfined
-import kotlinx.coroutines.experimental.launch
+import io.dico.parcels2.util.schedule
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.CoroutineStart.*
+import kotlinx.coroutines.Unconfined
+import kotlinx.coroutines.launch
 import org.bukkit.Bukkit
 import org.bukkit.WorldCreator
 import org.joda.time.DateTime
@@ -42,7 +45,7 @@ class ParcelProviderImpl(val plugin: ParcelsPlugin) : ParcelProvider {
 
     private fun loadWorlds0() {
         if (Bukkit.getWorlds().isEmpty()) {
-            plugin.functionHelper.schedule(::loadWorlds0)
+            plugin.schedule(::loadWorlds0)
             plugin.logger.warning("Scheduling to load worlds in the next tick, \nbecause no bukkit worlds are loaded yet")
             return
         }
@@ -58,7 +61,7 @@ class ParcelProviderImpl(val plugin: ParcelsPlugin) : ParcelProvider {
                 else WorldCreator(worldName).generator(generator).createWorld().also { logger.info("Creating world $worldName") }
 
             parcelWorld = ParcelWorldImpl(bukkitWorld, generator, worldOptions.runtime, plugin.storage,
-                plugin.globalAddedData, ::DefaultParcelContainer, plugin.worktimeLimiter)
+                plugin.globalAddedData, ::DefaultParcelContainer, plugin, plugin.worktimeLimiter)
 
             if (!worldExists) {
                 val time = DateTime.now()
@@ -77,7 +80,7 @@ class ParcelProviderImpl(val plugin: ParcelsPlugin) : ParcelProvider {
     }
 
     private fun loadStoredData() {
-        plugin.functionHelper.launchLazilyOnMainThread {
+        plugin.launch {
             val migration = plugin.options.migration
             if (migration.enabled) {
                 migration.instance?.newInstance()?.apply {
@@ -102,7 +105,7 @@ class ParcelProviderImpl(val plugin: ParcelsPlugin) : ParcelProvider {
 
             logger.info("Loading data completed")
             _dataIsLoaded = true
-        }.start()
+        }
     }
 
     /*

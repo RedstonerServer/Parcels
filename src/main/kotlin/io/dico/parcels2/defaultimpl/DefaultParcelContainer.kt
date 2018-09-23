@@ -2,9 +2,8 @@ package io.dico.parcels2.defaultimpl
 
 import io.dico.parcels2.Parcel
 import io.dico.parcels2.ParcelContainer
+import io.dico.parcels2.ParcelId
 import io.dico.parcels2.ParcelWorld
-import kotlin.coroutines.experimental.buildIterator
-import kotlin.coroutines.experimental.buildSequence
 
 class DefaultParcelContainer(val world: ParcelWorld) : ParcelContainer {
     private var parcels: Array<Array<Parcel>>
@@ -38,12 +37,20 @@ class DefaultParcelContainer(val world: ParcelWorld) : ParcelContainer {
         return parcels.getOrNull(x + world.options.axisLimit)?.getOrNull(z + world.options.axisLimit)
     }
 
+    override fun getParcelById(id: ParcelId): Parcel? {
+        if (!world.id.equals(id.worldId)) throw IllegalArgumentException()
+        return when (id) {
+            is Parcel -> id
+            else -> getParcelById(id.x, id.z)
+        }
+    }
+
     override fun nextEmptyParcel(): Parcel? {
         return walkInCircle().find { it.owner == null }
     }
 
     private fun walkInCircle(): Iterable<Parcel> = Iterable {
-        buildIterator {
+        iterator {
             val center = world.options.axisLimit
             for (radius in 0..center) {
                 var x = center - radius;
@@ -56,7 +63,7 @@ class DefaultParcelContainer(val world: ParcelWorld) : ParcelContainer {
         }
     }
 
-    fun allParcels(): Sequence<Parcel> = buildSequence {
+    fun allParcels(): Sequence<Parcel> = sequence {
         for (array in parcels) {
             yieldAll(array.iterator())
         }

@@ -4,15 +4,15 @@ import io.dico.dicore.command.CommandException
 import io.dico.dicore.command.EMessageType
 import io.dico.dicore.command.ExecutionContext
 import io.dico.dicore.command.ICommandReceiver
-import kotlinx.coroutines.experimental.CoroutineStart.UNDISPATCHED
-import kotlinx.coroutines.experimental.Deferred
-import kotlinx.coroutines.experimental.asCoroutineDispatcher
-import kotlinx.coroutines.experimental.async
+import kotlinx.coroutines.CoroutineStart.UNDISPATCHED
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.async
 import java.lang.reflect.Method
-import java.util.*
 import java.util.concurrent.CancellationException
-import java.util.concurrent.Executor
-import kotlin.coroutines.experimental.intrinsics.suspendCoroutineOrReturn
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.intrinsics.intercepted
+import kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn
 import kotlin.reflect.jvm.kotlinFunction
 
 fun isSuspendFunction(method: Method): Boolean {
@@ -20,16 +20,21 @@ fun isSuspendFunction(method: Method): Boolean {
     return func.isSuspend
 }
 
-fun callAsCoroutine(command: ReflectiveCommand,
-                    factory: ICommandReceiver.Factory,
-                    context: ExecutionContext,
-                    args: Array<Any?>): String? {
-    val dispatcher = Executor { task -> factory.plugin.server.scheduler.runTask(factory.plugin, task) }.asCoroutineDispatcher()
+fun callAsCoroutine(
+    command: ReflectiveCommand,
+    factory: ICommandReceiver.Factory,
+    context: ExecutionContext,
+    args: Array<Any?>
+): String? {
 
     // UNDISPATCHED causes the handler to run until the first suspension point on the current thread,
     // meaning command handlers that don't have suspension points will run completely synchronously.
     // Tasks that take time to compute should suspend the coroutine and resume on another thread.
-    val job = async(context = dispatcher, start = UNDISPATCHED) { command.method.invokeSuspend(command.instance, args) }
+    val job = GlobalScope.async(context = factory.coroutineContext as CoroutineContext, start = UNDISPATCHED) {
+        suspendCoroutineUninterceptedOrReturn<Any?> { cont ->
+            command.method.invoke(command.instance, *args, cont.intercepted())
+        }
+    }
 
     if (job.isCompleted) {
         return job.getResult()
@@ -46,12 +51,6 @@ fun callAsCoroutine(command: ReflectiveCommand,
     }
 
     return null
-}
-
-private suspend fun Method.invokeSuspend(instance: Any?, args: Array<Any?>): Any? {
-    return suspendCoroutineOrReturn { cont ->
-        invoke(instance, *args, cont)
-    }
 }
 
 @Throws(CommandException::class)

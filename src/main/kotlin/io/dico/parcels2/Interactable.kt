@@ -1,6 +1,6 @@
 package io.dico.parcels2
 
-import io.dico.parcels2.util.findWoodKindPrefixedMaterials
+import io.dico.parcels2.util.ext.findWoodKindPrefixedMaterials
 import org.bukkit.Material
 import java.util.EnumMap
 
@@ -28,7 +28,8 @@ private constructor(val id: Int,
             arrayOf(
                 Interactables(id++, "button", true,
                     Material.STONE_BUTTON,
-                    *findWoodKindPrefixedMaterials("BUTTON")),
+                    *findWoodKindPrefixedMaterials("BUTTON")
+                ),
 
                 Interactables(id++, "lever", true,
                     Material.LEVER),

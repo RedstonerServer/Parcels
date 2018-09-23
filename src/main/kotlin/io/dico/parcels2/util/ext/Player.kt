@@ -1,8 +1,7 @@
-package io.dico.parcels2.util
+package io.dico.parcels2.util.ext
 
 import io.dico.dicore.Formatting
 import io.dico.parcels2.ParcelsPlugin
-import io.dico.parcels2.PlayerProfile
 import io.dico.parcels2.logger
 import org.bukkit.OfflinePlayer
 import org.bukkit.entity.Player

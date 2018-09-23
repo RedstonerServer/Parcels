@@ -7,8 +7,10 @@ import io.dico.dicore.command.parameter.type.ParameterType
 import io.dico.parcels2.*
 import io.dico.parcels2.storage.Storage
 import io.dico.parcels2.util.Vec2i
-import io.dico.parcels2.util.floor
-import kotlinx.coroutines.experimental.Deferred
+import io.dico.parcels2.util.ext.floor
+import kotlinx.coroutines.CoroutineStart.*
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 
@@ -16,7 +18,7 @@ sealed class ParcelTarget(val world: ParcelWorld, val parsedKind: Int, val isDef
 
     abstract suspend fun getParcelSuspend(storage: Storage): Parcel?
 
-    fun ParcelsPlugin.getParcelDeferred(): Deferred<Parcel?> = functionHelper.deferUndispatchedOnMainThread { getParcelSuspend(storage) }
+    fun ParcelsPlugin.getParcelDeferred(): Deferred<Parcel?> = async(start = UNDISPATCHED) { getParcelSuspend(storage) }
 
     class ByID(world: ParcelWorld, val id: Vec2i?, parsedKind: Int, isDefault: Boolean) : ParcelTarget(world, parsedKind, isDefault) {
         override suspend fun getParcelSuspend(storage: Storage): Parcel? = getParcel()
@@ -57,13 +59,7 @@ sealed class ParcelTarget(val world: ParcelWorld, val parsedKind: Int, val isDef
         }
     }
 
-    annotation class Kind(val kind: Int)
-
-    companion object Config : ParameterConfig<Kind, Int>(Kind::class.java) {
-        override fun toParameterInfo(annotation: Kind): Int {
-            return annotation.kind
-        }
-
+    companion object {
         const val ID = 1 // ID
         const val OWNER_REAL = 2 // an owner backed by a UUID
         const val OWNER_FAKE = 4 // an owner not backed by a UUID
@@ -78,7 +74,14 @@ sealed class ParcelTarget(val world: ParcelWorld, val parsedKind: Int, val isDef
         // instead of parcel that the player is in
     }
 
-    class PType(val parcelProvider: ParcelProvider) : ParameterType<ParcelTarget, Int>(ParcelTarget::class.java, ParcelTarget.Config) {
+    annotation class Kind(val kind: Int)
+    private object Config : ParameterConfig<Kind, Int>(Kind::class.java) {
+        override fun toParameterInfo(annotation: Kind): Int {
+            return annotation.kind
+        }
+    }
+
+    class PType(val parcelProvider: ParcelProvider) : ParameterType<ParcelTarget, Int>(ParcelTarget::class.java, Config) {
 
         override fun parse(parameter: Parameter<ParcelTarget, Int>, sender: CommandSender, buffer: ArgumentBuffer): ParcelTarget {
             var input = buffer.next()
@@ -117,15 +120,18 @@ sealed class ParcelTarget(val world: ParcelWorld, val parsedKind: Int, val isDef
         private fun getHomeIndex(parameter: Parameter<*, *>, kind: Int, sender: CommandSender, input: String): Pair<PlayerProfile, Int> {
             val splitIdx = input.indexOf(':')
             val ownerString: String
-            val indexString: String
+            val index: Int?
 
             if (splitIdx == -1) {
                 // just the index.
-                ownerString = ""
-                indexString = input
+                index = input.toIntOrNull()
+                ownerString = if (index == null) input else ""
             } else {
                 ownerString = input.substring(0, splitIdx)
-                indexString = input.substring(splitIdx + 1)
+
+                val indexString = input.substring(splitIdx + 1)
+                index = indexString.toIntOrNull()
+                    ?: invalidInput(parameter, "The home index must be an integer, $indexString is not an integer")
             }
 
             val owner = if (ownerString.isEmpty())
@@ -133,10 +139,7 @@ sealed class ParcelTarget(val world: ParcelWorld, val parsedKind: Int, val isDef
             else
                 PlayerProfile.byName(ownerString, allowReal = kind and OWNER_REAL != 0, allowFake = kind and OWNER_FAKE != 0)
 
-            val index = if (indexString.isEmpty()) 0 else indexString.toIntOrNull()
-                ?: invalidInput(parameter, "The home index must be an integer, $indexString is not an integer")
-
-            return owner to index
+            return owner to (index ?: 0)
         }
 
         private fun requirePlayer(sender: CommandSender, parameter: Parameter<*, *>, objName: String): Player {

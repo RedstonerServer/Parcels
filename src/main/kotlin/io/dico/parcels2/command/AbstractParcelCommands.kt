@@ -1,25 +1,24 @@
 package io.dico.parcels2.command
 
 import io.dico.dicore.command.CommandException
+import io.dico.dicore.command.EMessageType
 import io.dico.dicore.command.ExecutionContext
 import io.dico.dicore.command.ICommandReceiver
-import io.dico.parcels2.PlayerProfile
 import io.dico.parcels2.ParcelWorld
 import io.dico.parcels2.ParcelsPlugin
-import io.dico.parcels2.util.hasAdminManage
-import io.dico.parcels2.util.parcelLimit
+import io.dico.parcels2.PlayerProfile
+import io.dico.parcels2.util.ext.hasAdminManage
+import io.dico.parcels2.util.ext.parcelLimit
 import org.bukkit.entity.Player
 import org.bukkit.plugin.Plugin
 import java.lang.reflect.Method
 
 abstract class AbstractParcelCommands(val plugin: ParcelsPlugin) : ICommandReceiver.Factory {
-
     override fun getPlugin(): Plugin = plugin
+
     override fun getReceiver(context: ExecutionContext, target: Method, cmdName: String): ICommandReceiver {
         return getParcelCommandReceiver(plugin.parcelProvider, context, target, cmdName)
     }
-
-    protected inline val worlds get() = plugin.parcelProvider
 
     protected fun error(message: String): Nothing {
         throw CommandException(message)
@@ -40,5 +39,21 @@ abstract class AbstractParcelCommands(val plugin: ParcelsPlugin) : ICommandRecei
         }
     }
 
+    protected fun areYouSureMessage(context: ExecutionContext) = "Are you sure? You cannot undo this action!\n" +
+        "Run \"/${context.route.joinToString(" ")} -sure\" if you want to go through with this."
+
+    protected fun ParcelScope.clearWithProgressUpdates(context: ExecutionContext, action: String) {
+        world.blockManager.clearParcel(parcel.id)
+            .onProgressUpdate(1000, 1000) { progress, elapsedTime ->
+                val alt = context.getFormat(EMessageType.NUMBER)
+                val main = context.getFormat(EMessageType.INFORMATIVE)
+                context.sendMessage(
+                    EMessageType.INFORMATIVE, false, "$action progress: $alt%.02f$main%%, $alt%.2f${main}s elapsed"
+                        .format(progress * 100, elapsedTime / 1000.0)
+                )
+            }
+    }
+
+    override fun getCoroutineContext() = plugin.coroutineContext
 }
 

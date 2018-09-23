@@ -3,7 +3,7 @@
 package io.dico.parcels2.storage.exposed
 
 import io.dico.parcels2.*
-import kotlinx.coroutines.experimental.channels.SendChannel
+import kotlinx.coroutines.channels.SendChannel
 import org.jetbrains.exposed.sql.*
 import java.util.UUID
 

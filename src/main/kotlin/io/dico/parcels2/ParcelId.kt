@@ -22,6 +22,8 @@ interface ParcelWorldId {
     }
 }
 
+fun ParcelWorldId.toStringExt() = "ParcelWorld($name)"
+
 /**
  * Used by storage backing options to encompass the location of a parcel
  * Does NOT support equality operator.
@@ -31,6 +33,7 @@ interface ParcelId {
     val x: Int
     val z: Int
     val pos: Vec2i get() = Vec2i(x, z)
+    val idString get() = "$x,$z"
     fun equals(id: ParcelId): Boolean = x == id.x && z == id.z && worldId.equals(id.worldId)
 
     companion object {
@@ -41,9 +44,15 @@ interface ParcelId {
     }
 }
 
+fun ParcelId.toStringExt() = "Parcel(${worldId.name},$idString)"
+
 private class ParcelWorldIdImpl(override val name: String,
-                                override val uid: UUID?) : ParcelWorldId
+                                override val uid: UUID?) : ParcelWorldId {
+    override fun toString() = toStringExt()
+}
 
 private class ParcelIdImpl(override val worldId: ParcelWorldId,
                            override val x: Int,
-                           override val z: Int) : ParcelId
+                           override val z: Int) : ParcelId {
+    override fun toString() = toStringExt()
+}

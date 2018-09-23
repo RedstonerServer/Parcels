@@ -2,8 +2,8 @@ package io.dico.parcels2.listener
 
 import io.dico.parcels2.Parcel
 import io.dico.parcels2.ParcelProvider
-import io.dico.parcels2.util.editLoop
-import io.dico.parcels2.util.isPresentAnd
+import io.dico.parcels2.util.ext.editLoop
+import io.dico.parcels2.util.ext.isPresentAnd
 import org.bukkit.entity.Entity
 
 class ParcelEntityTracker(val parcelProvider: ParcelProvider) {

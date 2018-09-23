@@ -3,12 +3,13 @@
 package io.dico.parcels2
 
 import io.dico.parcels2.storage.Storage
-import io.dico.parcels2.util.getPlayerNameOrDefault
-import io.dico.parcels2.util.isValid
-import io.dico.parcels2.util.uuid
-import kotlinx.coroutines.experimental.Deferred
-import kotlinx.coroutines.experimental.Unconfined
-import kotlinx.coroutines.experimental.async
+import io.dico.parcels2.util.PLAYER_NAME_PLACEHOLDER
+import io.dico.parcels2.util.getPlayerName
+import io.dico.parcels2.util.ext.isValid
+import io.dico.parcels2.util.ext.uuid
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Unconfined
+import kotlinx.coroutines.async
 import org.bukkit.Bukkit
 import org.bukkit.OfflinePlayer
 import java.util.UUID
@@ -18,7 +19,7 @@ interface PlayerProfile {
     val name: String?
     val nameOrBukkitName: String?
     val notNullName: String
-    val isStar: Boolean get() = false
+    val isStar: Boolean get() = this is Star
     val exists: Boolean get() = this is RealImpl
 
     fun matches(player: OfflinePlayer, allowNameMatch: Boolean = false): Boolean
@@ -78,9 +79,9 @@ interface PlayerProfile {
         override val uuid: UUID
         override val nameOrBukkitName: String?
             // If a player is online, their name is prioritized to get name changes right immediately
-            get() = Bukkit.getPlayer(uuid)?.name ?: name ?: Bukkit.getOfflinePlayer(uuid).takeIf { it.isValid }?.name
+            get() = Bukkit.getPlayer(uuid)?.name ?: name ?: getPlayerName(uuid)
         override val notNullName: String
-            get() = name ?: getPlayerNameOrDefault(uuid)
+            get() = nameOrBukkitName ?: PLAYER_NAME_PLACEHOLDER
 
         val player: OfflinePlayer? get() = Bukkit.getOfflinePlayer(uuid).takeIf { it.isValid }
         val playerUnchecked: OfflinePlayer get() = Bukkit.getOfflinePlayer(uuid)
@@ -115,8 +116,8 @@ interface PlayerProfile {
 
     object Star : BaseImpl(), Real {
         override val name: String = "*"
+        // hopefully nobody will have this random UUID :)
         override val uuid: UUID = UUID.fromString("7d09c4c6-117d-4f36-9778-c4d24618cee1")
-        override val isStar: Boolean get() = true
 
         override fun matches(player: OfflinePlayer, allowNameMatch: Boolean): Boolean {
             return true
@@ -148,7 +149,7 @@ interface PlayerProfile {
         }
 
         suspend fun tryResolveSuspendedly(storage: Storage): Real? {
-            return storage.getPlayerUuidForName(name).await()?.let { RealImpl(it, name) }
+            return storage.getPlayerUuidForName(name).await()?.let { resolve(it) }
         }
 
         fun resolve(uuid: UUID): Real {

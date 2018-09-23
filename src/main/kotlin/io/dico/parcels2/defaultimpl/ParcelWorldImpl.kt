@@ -6,6 +6,7 @@ import io.dico.parcels2.*
 import io.dico.parcels2.blockvisitor.WorktimeLimiter
 import io.dico.parcels2.options.RuntimeWorldOptions
 import io.dico.parcels2.storage.Storage
+import kotlinx.coroutines.CoroutineScope
 import org.bukkit.World
 import org.joda.time.DateTime
 import java.util.UUID
@@ -16,6 +17,7 @@ class ParcelWorldImpl(override val world: World,
                       override val storage: Storage,
                       override val globalAddedData: GlobalAddedDataManager,
                       containerFactory: ParcelContainerFactory,
+                      coroutineScope: CoroutineScope,
                       worktimeLimiter: WorktimeLimiter)
     : ParcelWorld,
       ParcelWorldId,
@@ -37,7 +39,7 @@ class ParcelWorldImpl(override val world: World,
     override val blockManager: ParcelBlockManager
 
     init {
-        val pair = generator.makeParcelLocatorAndBlockManager(id, container, worktimeLimiter)
+        val pair = generator.makeParcelLocatorAndBlockManager(id, container, coroutineScope, worktimeLimiter)
         locator = pair.first
         blockManager = pair.second
 
@@ -84,5 +86,5 @@ class ParcelWorldImpl(override val world: World,
         return container.nextEmptyParcel()
     }
 
-
+    override fun toString() = toStringExt()
 }

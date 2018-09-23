@@ -1,4 +1,4 @@
-package io.dico.parcels2.util
+package io.dico.parcels2.util.ext
 
 import io.dico.parcels2.logger
 import java.io.File

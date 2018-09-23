@@ -3,7 +3,7 @@
 package io.dico.parcels2.defaultimpl
 
 import io.dico.parcels2.*
-import io.dico.parcels2.util.alsoIfTrue
+import io.dico.parcels2.util.ext.alsoIfTrue
 import java.util.Collections
 
 class GlobalAddedDataManagerImpl(val plugin: ParcelsPlugin) : GlobalAddedDataManager {

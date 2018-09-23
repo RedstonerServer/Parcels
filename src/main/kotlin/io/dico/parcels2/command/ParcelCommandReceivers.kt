@@ -7,8 +7,8 @@ import io.dico.dicore.command.Validate
 import io.dico.parcels2.Parcel
 import io.dico.parcels2.ParcelProvider
 import io.dico.parcels2.ParcelWorld
-import io.dico.parcels2.util.hasAdminManage
-import io.dico.parcels2.util.uuid
+import io.dico.parcels2.util.ext.hasAdminManage
+import io.dico.parcels2.util.ext.uuid
 import org.bukkit.entity.Player
 import java.lang.reflect.Method
 import kotlin.reflect.full.extensionReceiverParameter

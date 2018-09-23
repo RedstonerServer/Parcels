@@ -4,7 +4,7 @@ import io.dico.dicore.command.Validate
 import io.dico.dicore.command.annotation.Cmd
 import io.dico.dicore.command.annotation.Desc
 import io.dico.parcels2.ParcelsPlugin
-import io.dico.parcels2.util.hasAdminManage
+import io.dico.parcels2.util.ext.hasAdminManage
 import org.bukkit.OfflinePlayer
 import org.bukkit.entity.Player
 

@@ -3,11 +3,11 @@ package io.dico.parcels2.defaultimpl
 import io.dico.dicore.Formatting
 import io.dico.parcels2.*
 import io.dico.parcels2.util.Vec2i
-import io.dico.parcels2.util.alsoIfTrue
+import io.dico.parcels2.util.ext.alsoIfTrue
 import org.bukkit.Material
 import org.bukkit.OfflinePlayer
 import org.joda.time.DateTime
-import kotlin.reflect.KProperty
+import java.util.concurrent.atomic.AtomicInteger
 
 class ParcelImpl(override val world: ParcelWorld,
                  override val x: Int,
@@ -15,8 +15,8 @@ class ParcelImpl(override val world: ParcelWorld,
     override val id: ParcelId = this
     override val pos get() = Vec2i(x, z)
     override var data: ParcelDataHolder = ParcelDataHolder(); private set
-    override val infoString by ParcelInfoStringComputer
-    override var hasBlockVisitors: Boolean = false; private set
+    override val infoString get() = ParcelInfoStringComputer.getInfoString(this)
+    override val hasBlockVisitors get() = blockVisitors.get() > 0
     override val worldId: ParcelWorldId get() = world.id
 
     override fun copyDataIgnoringDatabase(data: ParcelData) {
@@ -115,6 +115,18 @@ class ParcelImpl(override val world: ParcelWorld,
             // TODO update storage
         }
 
+    private var blockVisitors = AtomicInteger(0)
+
+    override suspend fun withBlockVisitorPermit(block: suspend () -> Unit) {
+        try {
+            blockVisitors.getAndIncrement()
+            block()
+        } finally {
+            blockVisitors.getAndDecrement()
+        }
+    }
+
+    override fun toString() = toStringExt()
 }
 
 private object ParcelInfoStringComputer {
@@ -159,7 +171,7 @@ private object ParcelInfoStringComputer {
         }
     }
 
-    operator fun getValue(parcel: Parcel, property: KProperty<*>): String = buildString {
+    fun getInfoString(parcel: Parcel): String = buildString {
         appendField("ID") {
             append(parcel.x)
             append(',')

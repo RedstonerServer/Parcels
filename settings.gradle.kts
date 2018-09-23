@@ -1,3 +1,9 @@
+pluginManagement.repositories {
+    maven("http://dl.bintray.com/kotlin/kotlin-eap")
+    mavenCentral()
+    maven("https://plugins.gradle.org/m2/")
+}
+
 rootProject.name = "parcels2"
 
 include("dicore3:core")

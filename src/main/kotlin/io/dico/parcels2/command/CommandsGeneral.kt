@@ -1,16 +1,18 @@
 package io.dico.parcels2.command
 
-import io.dico.dicore.command.EMessageType
 import io.dico.dicore.command.ExecutionContext
+import io.dico.dicore.command.Validate
 import io.dico.dicore.command.annotation.Cmd
 import io.dico.dicore.command.annotation.Desc
 import io.dico.dicore.command.annotation.Flag
 import io.dico.dicore.command.annotation.RequireParameters
 import io.dico.parcels2.ParcelsPlugin
 import io.dico.parcels2.PlayerProfile
-import io.dico.parcels2.util.hasAdminManage
-import io.dico.parcels2.util.hasParcelHomeOthers
-import io.dico.parcels2.util.uuid
+import io.dico.parcels2.command.ParcelTarget.Kind
+import io.dico.parcels2.util.ext.hasAdminManage
+import io.dico.parcels2.util.ext.hasParcelHomeOthers
+import io.dico.parcels2.util.ext.uuid
+import org.bukkit.block.Biome
 import org.bukkit.entity.Player
 
 class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
@@ -43,17 +45,20 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
         "more than one parcel",
         shortVersion = "teleports you to parcels")
     @RequireParameters(0)
-    suspend fun cmdHome(player: Player, @ParcelTarget.Kind(ParcelTarget.OWNER_REAL) target: ParcelTarget): Any? {
+    suspend fun cmdHome(player: Player,
+                        @Kind(ParcelTarget.OWNER_REAL) target: ParcelTarget): Any? {
         return cmdGoto(player, target)
     }
 
     @Cmd("tp", aliases = ["teleport"])
-    suspend fun cmdTp(player: Player, @ParcelTarget.Kind(ParcelTarget.ID) target: ParcelTarget): Any? {
+    suspend fun cmdTp(player: Player,
+                      @Kind(ParcelTarget.ID) target: ParcelTarget): Any? {
         return cmdGoto(player, target)
     }
 
     @Cmd("goto")
-    suspend fun cmdGoto(player: Player, @ParcelTarget.Kind(ParcelTarget.ANY) target: ParcelTarget): Any? {
+    suspend fun cmdGoto(player: Player,
+                        @Kind(ParcelTarget.ANY) target: ParcelTarget): Any? {
         if (target is ParcelTarget.ByOwner) {
             target.resolveOwner(plugin.storage)
             if (!target.owner.matches(player) && !player.hasParcelHomeOthers) {
@@ -64,11 +69,12 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
         val match = target.getParcelSuspend(plugin.storage)
             ?: error("The specified parcel could not be matched")
         player.teleport(match.homeLocation)
-        return ""
+        return null
     }
 
     @Cmd("goto_fake")
-    suspend fun cmdGotoFake(player: Player, @ParcelTarget.Kind(ParcelTarget.OWNER_FAKE) target: ParcelTarget): Any? {
+    suspend fun cmdGotoFake(player: Player,
+                            @Kind(ParcelTarget.OWNER_FAKE) target: ParcelTarget): Any? {
         return cmdGoto(player, target)
     }
 
@@ -97,23 +103,18 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
     @Cmd("clear")
     @ParcelRequire(owner = true)
     fun ParcelScope.cmdClear(context: ExecutionContext, @Flag sure: Boolean): Any? {
-        if (!sure) return "Are you sure? You cannot undo this action!\n" +
-            "Run \"/${context.rawInput} -sure\" if you want to go through with this."
+        if (!sure) return areYouSureMessage(context)
 
-        world.blockManager.clearParcel(parcel.id)
-            .onProgressUpdate(1000, 1000) { progress, elapsedTime ->
-                val alt = context.getFormat(EMessageType.NUMBER)
-                val main = context.getFormat(EMessageType.INFORMATIVE)
-                context.sendMessage(EMessageType.INFORMATIVE, false, "Clear progress: $alt%.02f$main%%, $alt%.2f${main}s elapsed"
-                    .format(progress * 100, elapsedTime / 1000.0))
-            }
-
+        clearWithProgressUpdates(context, "Clear")
         return null
     }
 
-    @Cmd("swap")
-    fun ParcelScope.cmdSwap(context: ExecutionContext, @Flag sure: Boolean): Any? {
-        TODO()
+    @Cmd("setbiome")
+    @ParcelRequire(owner = true)
+    fun ParcelScope.cmdSetbiome(context: ExecutionContext, biome: Biome): Any? {
+        Validate.isTrue(!parcel.hasBlockVisitors, "A process is already running in this parcel")
+        world.blockManager.setBiome(parcel.id, biome)
+        return "Biome has been set to $biome"
     }
 
 }
