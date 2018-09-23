@@ -11,6 +11,6 @@ This project is WIP.
 
 ## Build
 
-```
-gradle releaseJar
-```
+1. Add `worldedit-bukkit-7.0.0-beta-01.jar` to `/debug/plugins` directory
+2. Run `gradle releaseJar`
+3. Kotlin stdlib classpath is placed in `/debug/lib` directory and artifact can be found in `/debug/plugins` directory
