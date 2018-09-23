@@ -103,7 +103,7 @@ interface WorkerScope : Timed {
     fun setProgress(progress: Double)
 }
 
-private interface WorkerContinuation : Worker, WorkerScope {
+interface WorkerInternal : Worker, WorkerScope {
     /**
      * Start or resumes the execution of this worker
      * and returns true if the worker completed
@@ -126,18 +126,17 @@ class TickWorktimeLimiter(private val plugin: ParcelsPlugin, var options: TickWo
     // The currently registered bukkit scheduler task
     private var bukkitTask: BukkitTask? = null
     // The workers.
-    private val _workers = LinkedList<WorkerContinuation>()
+    private val _workers = LinkedList<WorkerInternal>()
     override val workers: List<Worker> = _workers
 
     override fun submit(task: TimeLimitedTask): Worker {
-        val worker: WorkerContinuation = WorkerImpl(plugin, task)
+        val worker: WorkerInternal = WorkerImpl(plugin, task)
 
         if (bukkitTask == null) {
             val completed = worker.resume(options.workTime.toLong())
             if (completed) return worker
             bukkitTask = plugin.scheduleRepeating(0, options.tickInterval) { tickJobs() }
         }
-
         _workers.addFirst(worker)
         return worker
     }
@@ -183,7 +182,7 @@ class TickWorktimeLimiter(private val plugin: ParcelsPlugin, var options: TickWo
 private class WorkerImpl(
     val scope: CoroutineScope,
     val task: TimeLimitedTask
-) : WorkerContinuation, CoroutineScope by scope {
+) : WorkerInternal, CoroutineScope by scope {
     override var job: Job? = null; private set
 
     override val elapsedTime

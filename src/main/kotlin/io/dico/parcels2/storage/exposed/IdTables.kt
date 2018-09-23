@@ -12,7 +12,7 @@ import org.jetbrains.exposed.sql.statements.UpdateBuilder
 import org.joda.time.DateTime
 import java.util.UUID
 
-sealed class IdTransactionsTable<TableT : IdTransactionsTable<TableT, QueryObj>, QueryObj>(tableName: String, columnName: String)
+abstract class IdTransactionsTable<TableT : IdTransactionsTable<TableT, QueryObj>, QueryObj>(tableName: String, columnName: String)
     : Table(tableName) {
     val id = integer(columnName).autoIncrement().primaryKey()
 
