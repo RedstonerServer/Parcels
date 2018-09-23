@@ -11,6 +11,7 @@ import org.bukkit.entity.Player
 import kotlin.reflect.KMutableProperty
 
 class CommandsParcelOptions(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
+    /* TODO options
     @Cmd("inputs")
     @Desc("Sets whether players who are not allowed to",
         "build here can use levers, buttons,",
@@ -28,7 +29,7 @@ class CommandsParcelOptions(plugin: ParcelsPlugin) : AbstractParcelCommands(plug
     @RequireParameters(0)
     fun ParcelScope.cmdInventory(player: Player, enabled: Boolean?): Any? {
         return runOptionCommand(player, Parcel::allowInteractInventory, enabled, "interaction with inventories")
-    }
+    }*/
 
     private inline val Boolean.enabledWord get() = if (this) "enabled" else "disabled"
     private fun ParcelScope.runOptionCommand(player: Player,

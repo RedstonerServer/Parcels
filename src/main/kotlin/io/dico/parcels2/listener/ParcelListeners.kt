@@ -3,10 +3,7 @@ package io.dico.parcels2.listener
 import gnu.trove.TLongCollection
 import io.dico.dicore.ListenerMarker
 import io.dico.dicore.RegistratorListener
-import io.dico.parcels2.Parcel
-import io.dico.parcels2.ParcelProvider
-import io.dico.parcels2.ParcelWorld
-import io.dico.parcels2.statusKey
+import io.dico.parcels2.*
 import io.dico.parcels2.storage.Storage
 import io.dico.parcels2.util.ext.*
 import org.bukkit.Material.*
@@ -31,11 +28,14 @@ import org.bukkit.event.weather.WeatherChangeEvent
 import org.bukkit.event.world.ChunkLoadEvent
 import org.bukkit.event.world.StructureGrowEvent
 import org.bukkit.inventory.InventoryHolder
+import java.util.EnumSet
 
 @Suppress("NOTHING_TO_INLINE")
-class ParcelListeners(val parcelProvider: ParcelProvider,
-                      val entityTracker: ParcelEntityTracker,
-                      val storage: Storage) {
+class ParcelListeners(
+    val parcelProvider: ParcelProvider,
+    val entityTracker: ParcelEntityTracker,
+    val storage: Storage
+) {
     private inline fun Parcel?.canBuildN(user: Player) = isPresentAnd { canBuild(user) } || user.hasBuildAnywhere
 
     /**
@@ -170,6 +170,7 @@ class ParcelListeners(val parcelProvider: ParcelProvider,
         if (ppa.isNullOr { hasBlockVisitors }) event.isCancelled = true
     }
 
+    private val bedTypes = EnumSet.copyOf(getMaterialsWithWoodTypePrefix("BED").toList())
     /*
      * Prevents players from placing liquids, using flint and steel, changing redstone components,
      * using inputs (unless allowed by the plot),
@@ -191,49 +192,33 @@ class ParcelListeners(val parcelProvider: ParcelProvider,
 
         when (event.action) {
             Action.RIGHT_CLICK_BLOCK -> run {
-                when (clickedBlock.type) {
-                    REPEATER,
-                    COMPARATOR -> run {
-                        if (!parcel.canBuildN(user)) {
-                            event.isCancelled = true; return@l
-                        }
-                    }
-                    LEVER,
-                    STONE_BUTTON,
-                    ANVIL,
-                    TRAPPED_CHEST,
-                    OAK_BUTTON, BIRCH_BUTTON, SPRUCE_BUTTON, JUNGLE_BUTTON, ACACIA_BUTTON, DARK_OAK_BUTTON,
-                    OAK_FENCE_GATE, BIRCH_FENCE_GATE, SPRUCE_FENCE_GATE, JUNGLE_FENCE_GATE, ACACIA_FENCE_GATE, DARK_OAK_FENCE_GATE,
-                    OAK_DOOR, BIRCH_DOOR, SPRUCE_DOOR, JUNGLE_DOOR, ACACIA_DOOR, DARK_OAK_DOOR,
-                    OAK_TRAPDOOR, BIRCH_TRAPDOOR, SPRUCE_TRAPDOOR, JUNGLE_TRAPDOOR, ACACIA_TRAPDOOR, DARK_OAK_TRAPDOOR
-                    -> run {
-                        if (!user.hasBuildAnywhere && !parcel.isNullOr { canBuild(user) || allowInteractInputs }) {
-                            user.sendParcelMessage(nopermit = true, message = "You cannot use inputs in this parcel")
-                            event.isCancelled = true; return@l
-                        }
-                    }
+                val type = clickedBlock.type
+                val interactable = parcel.effectiveInteractableConfig.isInteractable(type) || parcel.isPresentAnd { canBuild(user) }
+                if (!interactable) {
+                    val interactableClassName = Interactables[type]!!.name
+                    user.sendParcelMessage(nopermit = true, message = "You cannot interact with $interactableClassName in this parcel")
+                    event.isCancelled = true
+                    return@l
+                }
 
-                    WHITE_BED, ORANGE_BED, MAGENTA_BED, LIGHT_BLUE_BED, YELLOW_BED, LIME_BED, PINK_BED, GRAY_BED, LIGHT_GRAY_BED, CYAN_BED, PURPLE_BED, BLUE_BED, BROWN_BED, GREEN_BED, RED_BED, BLACK_BED
-                    -> run {
-                        if (world.options.disableExplosions) {
-                            val bed = clickedBlock.blockData as Bed
-                            val head = if (bed == Bed.Part.FOOT) clickedBlock.getRelative(bed.facing) else clickedBlock
-                            when (head.biome) {
-                                Biome.NETHER, Biome.THE_END -> run {
-                                    user.sendParcelMessage(nopermit = true, message = "You cannot use this bed because it would explode")
-                                    event.isCancelled = true; return@l
-                                }
+                if (bedTypes.contains(type)) {
+                    val bed = clickedBlock.blockData as Bed
+                    val head = if (bed == Bed.Part.FOOT) clickedBlock.getRelative(bed.facing) else clickedBlock
+                    when (head.biome) {
+                        Biome.NETHER, Biome.THE_END -> {
+                            if (world.options.disableExplosions || parcel.isNullOr { !canBuild(user) }) {
+                                user.sendParcelMessage(nopermit = true, message = "You cannot use this bed because it would explode")
+                                event.isCancelled = true; return@l
                             }
-
                         }
-
                     }
                 }
+
                 onPlayerInteractEvent_RightClick(event, world, parcel)
             }
 
             Action.RIGHT_CLICK_AIR -> onPlayerInteractEvent_RightClick(event, world, parcel)
-            Action.PHYSICAL -> if (!user.hasBuildAnywhere && !parcel.isPresentAnd { canBuild(user) || allowInteractInputs }) {
+            Action.PHYSICAL -> if (!user.hasBuildAnywhere && !parcel.isPresentAnd { canBuild(user) || interactableConfig("pressure_plates") }) {
                 user.sendParcelMessage(nopermit = true, message = "You cannot use inputs in this parcel")
                 event.isCancelled = true; return@l
             }
@@ -322,7 +307,7 @@ class ParcelListeners(val parcelProvider: ParcelProvider,
     @field:ListenerMarker(priority = NORMAL)
     val onPlayerDropItemEvent = RegistratorListener<PlayerDropItemEvent> l@{ event ->
         val (wo, ppa) = getWoAndPPa(event.itemDrop.location.block) ?: return@l
-        if (!ppa.canBuildN(event.player) && !ppa.isPresentAnd { allowInteractInventory }) event.isCancelled = true
+        if (!ppa.canBuildN(event.player) && !ppa.isPresentAnd { interactableConfig("containers") }) event.isCancelled = true
     }
 
     /*
@@ -343,7 +328,7 @@ class ParcelListeners(val parcelProvider: ParcelProvider,
         val user = event.whoClicked as? Player ?: return@l
         if ((event.inventory ?: return@l).holder === user) return@l // inventory null: hotbar
         val (wo, ppa) = getWoAndPPa(event.inventory.location.block) ?: return@l
-        if (ppa.isNullOr { !canBuild(user) && !allowInteractInventory }) {
+        if (ppa.isNullOr { !canBuild(user) && !interactableConfig("containers") }) {
             event.isCancelled = true
         }
     }
@@ -385,10 +370,10 @@ class ParcelListeners(val parcelProvider: ParcelProvider,
 
         val cancel: Boolean = when (event.newState.type) {
 
-        // prevent ice generation from Frost Walkers enchantment
+            // prevent ice generation from Frost Walkers enchantment
             FROSTED_ICE -> player != null && !ppa.canBuild(player)
 
-        // prevent snow generation from weather
+            // prevent snow generation from weather
             SNOW -> !hasEntity && wo.options.preventWeatherBlockChanges
 
             else -> false

@@ -58,10 +58,12 @@ interface Backing {
 
     fun setLocalPlayerStatus(parcel: ParcelId, player: PlayerProfile, status: AddedStatus)
 
+    fun setParcelOptionsInteractBitmask(parcel: ParcelId, bitmask: IntArray?)
+/*
     fun setParcelAllowsInteractInventory(parcel: ParcelId, value: Boolean)
 
     fun setParcelAllowsInteractInputs(parcel: ParcelId, value: Boolean)
-
+*/
 
     fun transmitAllGlobalAddedData(channel: SendChannel<AddedDataPair<PlayerProfile>>)
 

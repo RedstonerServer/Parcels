@@ -1,6 +1,11 @@
 package io.dico.parcels2
 
+import io.dico.parcels2.AddedStatus.*
 import org.bukkit.OfflinePlayer
+
+enum class AddedStatus {
+    DEFAULT, ALLOWED, BANNED;
+}
 
 typealias StatusKey = PlayerProfile.Real
 typealias MutableAddedDataMap = MutableMap<StatusKey, AddedStatus>
@@ -11,20 +16,20 @@ fun MutableAddedDataMap(): MutableAddedDataMap = hashMapOf()
 
 interface AddedData {
     val addedMap: AddedDataMap
-    var addedStatusOfStar: AddedStatus
+    var statusOfStar: AddedStatus
 
-    fun getAddedStatus(key: StatusKey): AddedStatus
-    fun setAddedStatus(key: StatusKey, status: AddedStatus): Boolean
+    fun getStatus(key: StatusKey): AddedStatus
+    fun setStatus(key: StatusKey, status: AddedStatus): Boolean
 
-    fun compareAndSetAddedStatus(key: StatusKey, expect: AddedStatus, status: AddedStatus): Boolean =
-        getAddedStatus(key) == expect && setAddedStatus(key, status)
+    fun casStatus(key: StatusKey, expect: AddedStatus, status: AddedStatus): Boolean =
+        getStatus(key) == expect && setStatus(key, status)
 
-    fun isAllowed(key: StatusKey) = getAddedStatus(key) == AddedStatus.ALLOWED
-    fun allow(key: StatusKey) = setAddedStatus(key, AddedStatus.ALLOWED)
-    fun disallow(key: StatusKey) = compareAndSetAddedStatus(key, AddedStatus.ALLOWED, AddedStatus.DEFAULT)
-    fun isBanned(key: StatusKey) = getAddedStatus(key) == AddedStatus.BANNED
-    fun ban(key: StatusKey) = setAddedStatus(key, AddedStatus.BANNED)
-    fun unban(key: StatusKey) = compareAndSetAddedStatus(key, AddedStatus.BANNED, AddedStatus.DEFAULT)
+    fun isAllowed(key: StatusKey) = getStatus(key) == ALLOWED
+    fun allow(key: StatusKey) = setStatus(key, ALLOWED)
+    fun disallow(key: StatusKey) = casStatus(key, ALLOWED, DEFAULT)
+    fun isBanned(key: StatusKey) = getStatus(key) == BANNED
+    fun ban(key: StatusKey) = setStatus(key, BANNED)
+    fun unban(key: StatusKey) = casStatus(key, BANNED, DEFAULT)
 
     fun isAllowed(player: OfflinePlayer) = isAllowed(player.statusKey)
     fun allow(player: OfflinePlayer) = allow(player.statusKey)
@@ -34,27 +39,18 @@ interface AddedData {
     fun unban(player: OfflinePlayer) = unban(player.statusKey)
 }
 
-inline val OfflinePlayer.statusKey get() = PlayerProfile.nameless(this)
+inline val OfflinePlayer.statusKey: StatusKey
+    get() = PlayerProfile.nameless(this)
 
 open class AddedDataHolder(override var addedMap: MutableAddedDataMap = MutableAddedDataMap()) : AddedData {
-    override var addedStatusOfStar: AddedStatus = AddedStatus.DEFAULT
+    override var statusOfStar: AddedStatus = DEFAULT
 
-    override fun getAddedStatus(key: StatusKey): AddedStatus = addedMap.getOrDefault(key, addedStatusOfStar)
+    override fun getStatus(key: StatusKey): AddedStatus = addedMap.getOrDefault(key, statusOfStar)
 
-    override fun setAddedStatus(key: StatusKey, status: AddedStatus): Boolean {
-        return if (status.isDefault) addedMap.remove(key) != null
+    override fun setStatus(key: StatusKey, status: AddedStatus): Boolean {
+        return if (status == DEFAULT) addedMap.remove(key) != null
         else addedMap.put(key, status) != status
     }
-}
-
-enum class AddedStatus {
-    DEFAULT,
-    ALLOWED,
-    BANNED;
-
-    inline val isDefault get() = this == DEFAULT
-    inline val isAllowed get() = this == ALLOWED
-    inline val isBanned get() = this == BANNED
 }
 
 interface GlobalAddedData : AddedData {

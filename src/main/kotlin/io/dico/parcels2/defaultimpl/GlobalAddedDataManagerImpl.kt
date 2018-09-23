@@ -20,12 +20,12 @@ class GlobalAddedDataManagerImpl(val plugin: ParcelsPlugin) : GlobalAddedDataMan
         private inline var data get() = addedMap; set(value) = run { addedMap = value }
         private inline val isEmpty get() = data === emptyData
 
-        override fun setAddedStatus(key: StatusKey, status: AddedStatus): Boolean {
+        override fun setStatus(key: StatusKey, status: AddedStatus): Boolean {
             if (isEmpty) {
                 if (status == AddedStatus.DEFAULT) return false
                 data = mutableMapOf()
             }
-            return super.setAddedStatus(key, status).alsoIfTrue {
+            return super.setStatus(key, status).alsoIfTrue {
                 plugin.storage.setGlobalAddedStatus(owner, key, status)
             }
         }

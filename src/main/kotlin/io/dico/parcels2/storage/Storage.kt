@@ -50,9 +50,7 @@ interface Storage {
 
     fun setParcelPlayerStatus(parcel: ParcelId, player: PlayerProfile, status: AddedStatus): Job
 
-    fun setParcelAllowsInteractInventory(parcel: ParcelId, value: Boolean): Job
-
-    fun setParcelAllowsInteractInputs(parcel: ParcelId, value: Boolean): Job
+    fun setParcelOptionsInteractBitmask(parcel: ParcelId, bitmask: IntArray): Job
 
 
     fun transmitAllGlobalAddedData(): ReceiveChannel<AddedDataPair<PlayerProfile>>
@@ -100,9 +98,7 @@ class BackedStorage internal constructor(val b: Backing) : Storage {
 
     override fun setParcelPlayerStatus(parcel: ParcelId, player: PlayerProfile, status: AddedStatus) = b.launchJob { b.setLocalPlayerStatus(parcel, player, status) }
 
-    override fun setParcelAllowsInteractInventory(parcel: ParcelId, value: Boolean) = b.launchJob { b.setParcelAllowsInteractInventory(parcel, value) }
-
-    override fun setParcelAllowsInteractInputs(parcel: ParcelId, value: Boolean) = b.launchJob { b.setParcelAllowsInteractInputs(parcel, value) }
+    override fun setParcelOptionsInteractBitmask(parcel: ParcelId, bitmask: IntArray) = b.launchJob { b.setParcelOptionsInteractBitmask(parcel, bitmask) }
 
 
     override fun transmitAllGlobalAddedData(): ReceiveChannel<AddedDataPair<PlayerProfile>> = b.openChannel { b.transmitAllGlobalAddedData(it) }

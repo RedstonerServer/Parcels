@@ -79,7 +79,7 @@ private fun getMaterialPrefixed(prefix: String, name: String): Material {
     return Material.getMaterial("${prefix}_$name") ?: throw IllegalArgumentException("Material ${prefix}_$name doesn't exist")
 }
 
-fun findWoodKindPrefixedMaterials(name: String) = arrayOf(
+fun getMaterialsWithWoodTypePrefix(name: String) = arrayOf(
     getMaterialPrefixed("OAK", name),
     getMaterialPrefixed("BIRCH", name),
     getMaterialPrefixed("SPRUCE", name),
@@ -88,7 +88,7 @@ fun findWoodKindPrefixedMaterials(name: String) = arrayOf(
     getMaterialPrefixed("DARK_OAK", name)
 )
 
-fun findColorPrefixedMaterials(name: String) = arrayOf(
+fun getMaterialsWithWoolColorPrefix(name: String) = arrayOf(
     getMaterialPrefixed("WHITE", name),
     getMaterialPrefixed("ORANGE", name),
     getMaterialPrefixed("MAGENTA", name),

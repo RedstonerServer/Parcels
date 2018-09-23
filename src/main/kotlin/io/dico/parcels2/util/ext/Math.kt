@@ -30,3 +30,6 @@ fun IntRange.clamp(min: Int, max: Int): IntRange {
     }
     return this
 }
+
+// the name coerceAtMost is bad
+fun Int.clampMax(max: Int) = coerceAtMost(max)

@@ -5,8 +5,8 @@ package io.dico.parcels2.storage.exposed
 import io.dico.parcels2.ParcelId
 import io.dico.parcels2.ParcelWorldId
 import io.dico.parcels2.PlayerProfile
-import io.dico.parcels2.util.toByteArray
-import io.dico.parcels2.util.toUUID
+import io.dico.parcels2.storage.toByteArray
+import io.dico.parcels2.storage.toUUID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.statements.UpdateBuilder
 import org.joda.time.DateTime

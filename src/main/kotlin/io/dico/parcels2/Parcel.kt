@@ -45,9 +45,6 @@ interface ParcelData : AddedData {
 
     fun canBuild(player: OfflinePlayer, checkAdmin: Boolean = true, checkGlobal: Boolean = true): Boolean
 
-    var allowInteractInputs: Boolean
-    var allowInteractInventory: Boolean
-
     fun isOwner(uuid: UUID): Boolean {
         return owner?.uuid == uuid
     }
@@ -66,8 +63,6 @@ class ParcelDataHolder(addedMap: MutableAddedDataMap = mutableMapOf())
         || owner.let { it != null && it.matches(player, allowNameMatch = false) }
         || (checkAdmin && player is Player && player.hasBuildAnywhere)
 
-    override var allowInteractInputs = true
-    override var allowInteractInventory = true
     override var interactableConfig: InteractableConfiguration = BitmaskInteractableConfiguration()
 }
 

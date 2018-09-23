@@ -11,10 +11,4 @@ fun getPlayerName(uuid: UUID): String? {
     return Bukkit.getOfflinePlayer(uuid)?.takeIf { it.isValid }?.name
 }
 
-fun UUID.toByteArray(): ByteArray =
-    ByteBuffer.allocate(16).apply {
-        putLong(mostSignificantBits)
-        putLong(leastSignificantBits)
-    }.array()
 
-fun ByteArray.toUUID(): UUID = ByteBuffer.wrap(this).run { UUID(long, long) }

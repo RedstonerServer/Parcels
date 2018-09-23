@@ -5,12 +5,9 @@ package io.dico.parcels2.storage.exposed
 import com.zaxxer.hikari.HikariDataSource
 import io.dico.parcels2.*
 import io.dico.parcels2.PlayerProfile.Star.name
-import io.dico.parcels2.storage.AddedDataPair
-import io.dico.parcels2.storage.Backing
-import io.dico.parcels2.storage.DataPair
+import io.dico.parcels2.storage.*
+import io.dico.parcels2.util.ext.clampMax
 import io.dico.parcels2.util.ext.synchronized
-import io.dico.parcels2.util.toByteArray
-import io.dico.parcels2.util.toUUID
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ArrayChannel
 import kotlinx.coroutines.channels.LinkedListChannel
@@ -196,8 +193,9 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource, val poolSi
             AddedLocalT.setPlayerStatus(parcel, profile, status)
         }
 
-        setParcelAllowsInteractInputs(parcel, data.allowInteractInputs)
-        setParcelAllowsInteractInventory(parcel, data.allowInteractInventory)
+        val bitmaskArray = (data.interactableConfig as? BitmaskInteractableConfiguration ?: return).bitmaskArray
+        val isAllZero = bitmaskArray.fold(false) { cur, elem -> cur || elem != 0 }
+        setParcelOptionsInteractBitmask(parcel, if (isAllZero) null else bitmaskArray)
     }
 
     override fun setParcelOwner(parcel: ParcelId, owner: PlayerProfile?) {
@@ -227,19 +225,19 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource, val poolSi
         AddedLocalT.setPlayerStatus(parcel, player.toRealProfile(), status)
     }
 
-    override fun setParcelAllowsInteractInventory(parcel: ParcelId, value: Boolean) {
-        val id = ParcelsT.getOrInitId(parcel)
-        ParcelOptionsT.upsert(ParcelOptionsT.parcel_id) {
-            it[parcel_id] = id
-            it[interact_inventory] = value
+    override fun setParcelOptionsInteractBitmask(parcel: ParcelId, bitmask: IntArray?) {
+        if (bitmask == null) {
+            val id = ParcelsT.getId(parcel) ?: return
+            ParcelOptionsT.deleteWhere { ParcelOptionsT.parcel_id eq id }
+            return
         }
-    }
 
-    override fun setParcelAllowsInteractInputs(parcel: ParcelId, value: Boolean) {
+        if (bitmask.size != 1) throw IllegalArgumentException()
+        val array = bitmask.toByteArray()
         val id = ParcelsT.getOrInitId(parcel)
         ParcelOptionsT.upsert(ParcelOptionsT.parcel_id) {
             it[parcel_id] = id
-            it[interact_inputs] = value
+            it[interact_bitmask] = array
         }
     }
 
@@ -263,8 +261,9 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource, val poolSi
 
         val id = row[ParcelsT.id]
         ParcelOptionsT.select { ParcelOptionsT.parcel_id eq id }.firstOrNull()?.let { optrow ->
-            allowInteractInputs = optrow[ParcelOptionsT.interact_inputs]
-            allowInteractInventory = optrow[ParcelOptionsT.interact_inventory]
+            val source = optrow[ParcelOptionsT.interact_bitmask].toIntArray()
+            val target = (interactableConfig as? BitmaskInteractableConfiguration ?: return@let).bitmaskArray
+            System.arraycopy(source, 0, target, 0, source.size.clampMax(target.size))
         }
 
         addedMap = AddedLocalT.readAddedData(id)

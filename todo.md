@@ -79,4 +79,6 @@ Implement a container that doesn't require loading all parcel data on startup (C
 
 ~~Update player profiles in the database on join to account for name changes.~~
 
+Store player status on parcel (allowed, default banned) as a number to allow for future additions to this set of possibilities
+
 

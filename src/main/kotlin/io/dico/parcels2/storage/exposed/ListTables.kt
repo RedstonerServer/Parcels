@@ -3,6 +3,8 @@
 package io.dico.parcels2.storage.exposed
 
 import io.dico.parcels2.*
+import io.dico.parcels2.AddedStatus.ALLOWED
+import io.dico.parcels2.AddedStatus.DEFAULT
 import kotlinx.coroutines.channels.SendChannel
 import org.jetbrains.exposed.sql.*
 import java.util.UUID
@@ -12,8 +14,7 @@ object AddedGlobalT : AddedTable<PlayerProfile>("parcels_added_global", Profiles
 
 object ParcelOptionsT : Table("parcel_options") {
     val parcel_id = integer("parcel_id").primaryKey().references(ParcelsT.id, ReferenceOption.CASCADE)
-    val interact_inventory = bool("interact_inventory").default(true)
-    val interact_inputs = bool("interact_inputs").default(true)
+    val interact_bitmask = binary("interact_bitmask", 4).default(ByteArray(4) { 0 }) // all zero by default
 }
 
 typealias AddedStatusSendChannel<AttachT> = SendChannel<Pair<AttachT, MutableAddedDataMap>>
@@ -25,7 +26,7 @@ sealed class AddedTable<AttachT>(name: String, val idTable: IdTransactionsTable<
     val index_pair = uniqueIndexR("index_pair", attach_id, profile_id)
 
     fun setPlayerStatus(attachedOn: AttachT, player: PlayerProfile.Real, status: AddedStatus) {
-        if (status.isDefault) {
+        if (status == DEFAULT) {
             val player_id = ProfilesT.getId(player) ?: return
             idTable.getId(attachedOn)?.let { holder ->
                 deleteWhere { (attach_id eq holder) and (profile_id eq player_id) }
@@ -38,7 +39,7 @@ sealed class AddedTable<AttachT>(name: String, val idTable: IdTransactionsTable<
         upsert(conflictIndex = index_pair) {
             it[attach_id] = holder
             it[profile_id] = player_id
-            it[allowed_flag] = status.isAllowed
+            it[allowed_flag] = status == ALLOWED
         }
     }
 
@@ -97,6 +98,6 @@ sealed class AddedTable<AttachT>(name: String, val idTable: IdTransactionsTable<
         }
     }
 
-    private inline fun Boolean?.asAddedStatus() = if (this == null) AddedStatus.DEFAULT else if (this) AddedStatus.ALLOWED else AddedStatus.BANNED
+    private inline fun Boolean?.asAddedStatus() = if (this == null) AddedStatus.DEFAULT else if (this) ALLOWED else AddedStatus.BANNED
 
 }

@@ -9,9 +9,11 @@ import org.bukkit.OfflinePlayer
 import org.joda.time.DateTime
 import java.util.concurrent.atomic.AtomicInteger
 
-class ParcelImpl(override val world: ParcelWorld,
-                 override val x: Int,
-                 override val z: Int) : Parcel, ParcelId {
+class ParcelImpl(
+    override val world: ParcelWorld,
+    override val x: Int,
+    override val z: Int
+) : Parcel, ParcelId {
     override val id: ParcelId = this
     override val pos get() = Vec2i(x, z)
     override var data: ParcelDataHolder = ParcelDataHolder(); private set
@@ -34,7 +36,7 @@ class ParcelImpl(override val world: ParcelWorld,
     }
 
     override val addedMap: AddedDataMap get() = data.addedMap
-    override fun getAddedStatus(key: StatusKey) = data.getAddedStatus(key)
+    override fun getStatus(key: StatusKey) = data.getStatus(key)
     override fun isBanned(key: StatusKey) = data.isBanned(key)
     override fun isAllowed(key: StatusKey) = data.isAllowed(key)
     override fun canBuild(player: OfflinePlayer, checkAdmin: Boolean, checkGlobal: Boolean): Boolean {
@@ -42,9 +44,9 @@ class ParcelImpl(override val world: ParcelWorld,
             || checkGlobal && world.globalAddedData[owner ?: return false].isAllowed(player)
     }
 
-    override var addedStatusOfStar: AddedStatus
-        get() = data.addedStatusOfStar
-        set(value) = run { setAddedStatus(PlayerProfile.Star, value) }
+    override var statusOfStar: AddedStatus
+        get() = data.statusOfStar
+        set(value) = run { setStatus(PlayerProfile.Star, value) }
 
     val globalAddedMap: AddedDataMap? get() = owner?.let { world.globalAddedData[it].addedMap }
 
@@ -69,27 +71,11 @@ class ParcelImpl(override val world: ParcelWorld,
             }
         }
 
-    override fun setAddedStatus(key: StatusKey, status: AddedStatus): Boolean {
-        return data.setAddedStatus(key, status).alsoIfTrue {
+    override fun setStatus(key: StatusKey, status: AddedStatus): Boolean {
+        return data.setStatus(key, status).alsoIfTrue {
             world.storage.setParcelPlayerStatus(this, key, status)
         }
     }
-
-    override var allowInteractInputs: Boolean
-        get() = data.allowInteractInputs
-        set(value) {
-            if (data.allowInteractInputs == value) return
-            world.storage.setParcelAllowsInteractInputs(this, value)
-            data.allowInteractInputs = value
-        }
-
-    override var allowInteractInventory: Boolean
-        get() = data.allowInteractInventory
-        set(value) {
-            if (data.allowInteractInventory == value) return
-            world.storage.setParcelAllowsInteractInventory(this, value)
-            data.allowInteractInventory = value
-        }
 
     private var _interactableConfig: InteractableConfiguration? = null
     override var interactableConfig: InteractableConfiguration
@@ -99,13 +85,15 @@ class ParcelImpl(override val world: ParcelWorld,
                     override fun isInteractable(material: Material): Boolean = data.interactableConfig.isInteractable(material)
                     override fun isInteractable(clazz: Interactables): Boolean = data.interactableConfig.isInteractable(clazz)
 
-                    override fun setInteractable(clazz: Interactables, interactable: Boolean): Boolean = data.interactableConfig.setInteractable(clazz, interactable).alsoIfTrue {
-                        // TODO update storage
-                    }
+                    override fun setInteractable(clazz: Interactables, interactable: Boolean): Boolean =
+                        data.interactableConfig.setInteractable(clazz, interactable).alsoIfTrue {
+                            // TODO update storage
+                        }
 
-                    override fun clear(): Boolean = data.interactableConfig.clear().alsoIfTrue {
-                        // TODO update storage
-                    }
+                    override fun clear(): Boolean =
+                        data.interactableConfig.clear().alsoIfTrue {
+                            // TODO update storage
+                        }
                 }
             }
             return _interactableConfig!!
@@ -165,9 +153,11 @@ private object ParcelInfoStringComputer {
             append(infoStringColor1)
             append(')')
         }) {
-            stringList.joinTo(this,
+            stringList.joinTo(
+                this,
                 separator = infoStringColor1.toString() + ", " + infoStringColor2,
-                limit = 150)
+                limit = 150
+            )
         }
     }
 
@@ -198,6 +188,7 @@ private object ParcelInfoStringComputer {
         append('\n')
         appendAddedList(local, global, AddedStatus.BANNED, "Banned")
 
+        /* TODO options
         if (!parcel.allowInteractInputs || !parcel.allowInteractInventory) {
             appendField("Options") {
                 append("(")
@@ -206,7 +197,7 @@ private object ParcelInfoStringComputer {
                 appendField("inventory") { append(parcel.allowInteractInventory) }
                 append(")")
             }
-        }
+        }*/
 
     }
 }

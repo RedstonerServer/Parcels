@@ -9,7 +9,7 @@ import io.dico.parcels2.storage.Storage
 import io.dico.parcels2.storage.exposed.abs
 import io.dico.parcels2.storage.exposed.greater
 import io.dico.parcels2.storage.migration.Migration
-import io.dico.parcels2.util.toUUID
+import io.dico.parcels2.storage.toUUID
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.newFixedThreadPoolContext
