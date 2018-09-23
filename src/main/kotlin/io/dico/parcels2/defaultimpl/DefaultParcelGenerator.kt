@@ -227,7 +227,7 @@ class DefaultParcelGenerator(
             return world.getParcelById(parcelId)
         }
 
-        private fun submitBlockVisitor(parcelId: ParcelId, task: TimeLimitedTask): Worker {
+        override fun submitBlockVisitor(parcelId: ParcelId, task: TimeLimitedTask): Worker {
             val parcel = getParcel(parcelId) ?: return worktimeLimiter.submit(task)
             if (parcel.hasBlockVisitors) throw IllegalArgumentException("This parcel already has a block visitor")
 

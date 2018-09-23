@@ -1,9 +1,6 @@
 package io.dico.parcels2
 
-import io.dico.parcels2.blockvisitor.RegionTraverser
-import io.dico.parcels2.blockvisitor.Worker
-import io.dico.parcels2.blockvisitor.WorkerScope
-import io.dico.parcels2.blockvisitor.WorktimeLimiter
+import io.dico.parcels2.blockvisitor.*
 import io.dico.parcels2.util.Region
 import io.dico.parcels2.util.Vec2i
 import io.dico.parcels2.util.get
@@ -62,6 +59,8 @@ interface ParcelBlockManager {
 
     fun clearParcel(parcel: ParcelId): Worker
 
+    fun submitBlockVisitor(parcelId: ParcelId, task: TimeLimitedTask): Worker
+
     /**
      * Used to update owner blocks in the corner of the parcel
      */
@@ -70,7 +69,7 @@ interface ParcelBlockManager {
 
 inline fun ParcelBlockManager.doBlockOperation(parcel: ParcelId,
                                                traverser: RegionTraverser,
-                                               crossinline operation: suspend WorkerScope.(Block) -> Unit) = worktimeLimiter.submit {
+                                               crossinline operation: suspend WorkerScope.(Block) -> Unit) = submitBlockVisitor(parcel) {
     val region = getRegion(parcel)
     val blockCount = region.blockCount.toDouble()
     val blocks = traverser.traverseRegion(region)

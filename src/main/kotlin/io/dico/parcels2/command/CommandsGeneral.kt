@@ -18,9 +18,11 @@ import org.bukkit.entity.Player
 class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
 
     @Cmd("auto")
-    @Desc("Finds the unclaimed parcel nearest to origin,",
+    @Desc(
+        "Finds the unclaimed parcel nearest to origin,",
         "and gives it to you",
-        shortVersion = "sets you up with a fresh, unclaimed parcel")
+        shortVersion = "sets you up with a fresh, unclaimed parcel"
+    )
     suspend fun WorldScope.cmdAuto(player: Player): Any? {
         checkConnected("be claimed")
         checkParcelLimit(player, world)
@@ -33,32 +35,42 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
     }
 
     @Cmd("info", aliases = ["i"])
-    @Desc("Displays general information",
+    @Desc(
+        "Displays general information",
         "about the parcel you're on",
-        shortVersion = "displays information about this parcel")
+        shortVersion = "displays information about this parcel"
+    )
     fun ParcelScope.cmdInfo(player: Player) = parcel.infoString
 
     @Cmd("home", aliases = ["h"])
-    @Desc("Teleports you to your parcels,",
+    @Desc(
+        "Teleports you to your parcels,",
         "unless another player was specified.",
         "You can specify an index number if you have",
         "more than one parcel",
-        shortVersion = "teleports you to parcels")
+        shortVersion = "teleports you to parcels"
+    )
     @RequireParameters(0)
-    suspend fun cmdHome(player: Player,
-                        @Kind(ParcelTarget.OWNER_REAL) target: ParcelTarget): Any? {
+    suspend fun cmdHome(
+        player: Player,
+        @Kind(ParcelTarget.OWNER_REAL) target: ParcelTarget
+    ): Any? {
         return cmdGoto(player, target)
     }
 
     @Cmd("tp", aliases = ["teleport"])
-    suspend fun cmdTp(player: Player,
-                      @Kind(ParcelTarget.ID) target: ParcelTarget): Any? {
+    suspend fun cmdTp(
+        player: Player,
+        @Kind(ParcelTarget.ID) target: ParcelTarget
+    ): Any? {
         return cmdGoto(player, target)
     }
 
     @Cmd("goto")
-    suspend fun cmdGoto(player: Player,
-                        @Kind(ParcelTarget.ANY) target: ParcelTarget): Any? {
+    suspend fun cmdGoto(
+        player: Player,
+        @Kind(ParcelTarget.ANY) target: ParcelTarget
+    ): Any? {
         if (target is ParcelTarget.ByOwner) {
             target.resolveOwner(plugin.storage)
             if (!target.owner.matches(player) && !player.hasParcelHomeOthers) {
@@ -73,14 +85,18 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
     }
 
     @Cmd("goto_fake")
-    suspend fun cmdGotoFake(player: Player,
-                            @Kind(ParcelTarget.OWNER_FAKE) target: ParcelTarget): Any? {
+    suspend fun cmdGotoFake(
+        player: Player,
+        @Kind(ParcelTarget.OWNER_FAKE) target: ParcelTarget
+    ): Any? {
         return cmdGoto(player, target)
     }
 
     @Cmd("claim")
-    @Desc("If this parcel is unowned, makes you the owner",
-        shortVersion = "claims this parcel")
+    @Desc(
+        "If this parcel is unowned, makes you the owner",
+        shortVersion = "claims this parcel"
+    )
     suspend fun ParcelScope.cmdClaim(player: Player): Any? {
         checkConnected("be claimed")
         parcel.owner.takeIf { !player.hasAdminManage }?.let {
