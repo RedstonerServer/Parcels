@@ -7,6 +7,7 @@ import io.dico.dicore.command.parameter.type.ParameterType
 import io.dico.parcels2.Parcel
 import io.dico.parcels2.ParcelProvider
 import io.dico.parcels2.ParcelWorld
+import io.dico.parcels2.PlayerProfile
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 
@@ -41,6 +42,15 @@ class ParcelParameterType(val parcelProvider: ParcelProvider) : ParameterType<Pa
 
         return world.getParcelById(x, z)
             ?: invalidInput(parameter, "parcel id is out of range")
+    }
+
+}
+
+class ProfileParameterType : ParameterType<PlayerProfile, Void>(PlayerProfile::class.java) {
+
+    override fun parse(parameter: Parameter<PlayerProfile, Void>, sender: CommandSender, buffer: ArgumentBuffer): PlayerProfile {
+        val input = buffer.next()
+        return PlayerProfile.byName(input, allowReal = true, allowFake = true)
     }
 
 }

@@ -170,7 +170,7 @@ class ParcelListeners(
         if (ppa.isNullOr { hasBlockVisitors }) event.isCancelled = true
     }
 
-    private val bedTypes = EnumSet.copyOf(getMaterialsWithWoodTypePrefix("BED").toList())
+    private val bedTypes = EnumSet.copyOf(getMaterialsWithWoolColorPrefix("BED").toList())
     /*
      * Prevents players from placing liquids, using flint and steel, changing redstone components,
      * using inputs (unless allowed by the plot),

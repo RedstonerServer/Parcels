@@ -223,7 +223,7 @@ public class ReflectiveRegistration {
 
         String[] parameterNames = lookupParameterNames(method, parameters, start);
         for (int i = start, n = parameters.length; i < n; i++) {
-            if (parameters[i].getType().getName().equals("kotlin.coroutines.experimental.Continuation")) {
+            if (parameters[i].getType().getName().equals("kotlin.coroutines.Continuation")) {
                 List<String> temp = new ArrayList<>(Arrays.asList(parameterNames));
                 temp.remove(i - start);
                 parameterNames = temp.toArray(new String[0]);

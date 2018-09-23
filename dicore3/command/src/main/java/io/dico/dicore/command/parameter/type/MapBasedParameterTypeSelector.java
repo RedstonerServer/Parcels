@@ -23,6 +23,11 @@ public class MapBasedParameterTypeSelector implements IParameterTypeSelector {
         if (useDefault && out == null) {
             out = defaultSelector.selectExact(key);
         }
+        if (out == null && key.getReturnType().isEnum()) {
+            //noinspection unchecked
+            out = new EnumParameterType(key.getReturnType());
+            addType(false, out);
+        }
         return cast(out);
     }
 
