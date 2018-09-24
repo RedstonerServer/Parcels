@@ -118,6 +118,9 @@ class ParcelImpl(
     override fun toString() = toStringExt()
 }
 
+private operator fun Formatting.plus(other: Formatting) = toString() + other
+private operator fun Formatting.plus(other: String) = toString() + other
+
 private object ParcelInfoStringComputer {
     val infoStringColor1 = Formatting.GREEN
     val infoStringColor2 = Formatting.AQUA
@@ -140,26 +143,59 @@ private object ParcelInfoStringComputer {
         append(' ')
     }
 
-    private fun StringBuilder.appendAddedList(local: PrivilegeMap, global: PrivilegeMap, status: Privilege, fieldName: String) {
-        val globalSet = global.filterValues { it == status }.keys
-        val localList = local.filterValues { it == status }.keys.filter { it !in globalSet }
-        val stringList = globalSet.map(PrivilegeKey::notNullName).map { "(G)$it" } + localList.map(PrivilegeKey::notNullName)
-        if (stringList.isEmpty()) return
+    private fun StringBuilder.appendAddedList(local: PrivilegeMap, global: PrivilegeMap, privilege: Privilege, fieldName: String) {
+        // local takes precedence over global
+
+        val localFiltered = local.filterValues { it.isDistanceGrEq(privilege) }
+        // global keys are dropped here when merged with the local ones
+        val all = localFiltered + global.filterValues { it.isDistanceGrEq(privilege) }
+        if (all.isEmpty()) return
 
         appendField({
             append(fieldName)
             append('(')
             append(infoStringColor2)
-            append(stringList.size)
+            append(all.size)
             append(infoStringColor1)
             append(')')
         }) {
-            stringList.joinTo(
-                this,
-                separator = infoStringColor1.toString() + ", " + infoStringColor2,
-                limit = 150
-            )
+            val separator = "$infoStringColor1, $infoStringColor2"
+
+            // first [localCount] entries are local
+            val localCount = localFiltered.size
+            val iterator = all.iterator()
+
+            if (localCount != 0) {
+                appendPrivilegeEntry(false, iterator.next().toPair())
+                repeat(localCount - 1) {
+                    append(separator)
+                    appendPrivilegeEntry(false, iterator.next().toPair())
+                }
+
+            } else if (iterator.hasNext()) {
+                // ensure there is never a leading or trailing separator
+                appendPrivilegeEntry(true, iterator.next().toPair())
+            }
+
+            iterator.forEach { next ->
+                append(separator)
+                appendPrivilegeEntry(true, next.toPair())
+            }
         }
+    }
+
+    private fun StringBuilder.appendPrivilegeEntry(global: Boolean, pair: Pair<PrivilegeKey, Privilege>) {
+        val (key, priv) = pair
+
+        // prefix. Maybe T should be M for mod or something. T means they have CAN_MANAGE privilege.
+        append(when {
+            global && priv == Privilege.CAN_MANAGE -> "(GT)"
+            global -> "(G)"
+            priv == Privilege.CAN_MANAGE -> "(T)"
+            else -> ""
+        })
+
+        append(key.notNullName)
     }
 
     fun getInfoString(parcel: Parcel): String = buildString {
@@ -185,7 +221,7 @@ private object ParcelInfoStringComputer {
 
         val global = owner?.let { parcel.world.globalPrivileges[owner].map } ?: emptyMap()
         val local = parcel.map
-        appendAddedList(local, global, Privilege.CAN_BUILD, "Allowed")
+        appendAddedList(local, global, Privilege.CAN_BUILD, "Allowed") // includes CAN_MANAGE privilege
         append('\n')
         appendAddedList(local, global, Privilege.BANNED, "Banned")
 

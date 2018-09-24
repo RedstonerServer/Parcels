@@ -15,6 +15,13 @@ enum class Privilege(
     OWNER(-1, transient = true),
     ADMIN(-1, transient = true);
 
+    fun isDistanceGrEq(other: Privilege): Boolean =
+        when { // used for example when disallowBuild is called and CAN_MANAGE is the privilege.
+            other > DEFAULT -> this >= other
+            other == DEFAULT -> this == other
+            else -> this <= other
+        }
+
     fun requireNonTransient(): Privilege {
         if (transient) {
             throw IllegalArgumentException("Transient privilege $this is invalid")
@@ -29,13 +36,7 @@ enum class Privilege(
     */
 
     companion object {
-        fun getByNumber(number: Int) = safeGetByNumber(number)
-            ?: throw IllegalArgumentException(
-                if (number == -1) "Transient privileges are not stored"
-                else "Privilege with number $number doesn't exist"
-            )
-
-        fun safeGetByNumber(id: Int) =
+        fun getByNumber(id: Int) =
             when (id) {
                 1 -> BANNED
                 2 -> DEFAULT
@@ -62,18 +63,10 @@ interface Privileges {
 
     fun privilege(key: PrivilegeKey): Privilege
     fun privilege(player: OfflinePlayer) = privilege(player.privilegeKey)
-
     fun setPrivilege(key: PrivilegeKey, privilege: Privilege): Boolean
     fun setPrivilege(player: OfflinePlayer, privilege: Privilege) = setPrivilege(player.privilegeKey, privilege)
-
     fun changePrivilege(key: PrivilegeKey, expect: Privilege, update: Privilege): Boolean =
-        (when { // if CAN_BUILD is expected, CAN_MANAGE is valid.
-            expect > DEFAULT -> privilege(key) >= expect
-            expect == DEFAULT -> privilege(key) == expect
-            else -> privilege(key) <= expect
-        })
-            && setPrivilege(key, update)
-
+        privilege(key).isDistanceGrEq(expect) && setPrivilege(key, update)
 
     fun hasPrivilegeToManage(key: PrivilegeKey) = privilege(key) >= CAN_MANAGE
     fun allowManage(key: PrivilegeKey) = setPrivilege(key, CAN_MANAGE)
@@ -88,8 +81,8 @@ interface Privileges {
     fun unban(key: PrivilegeKey) = changePrivilege(key, BANNED, DEFAULT)
 
     /* OfflinePlayer overloads */
-    fun hasPrivilegeToManage(player: OfflinePlayer) = hasPrivilegeToManage(player.privilegeKey)
 
+    fun hasPrivilegeToManage(player: OfflinePlayer) = hasPrivilegeToManage(player.privilegeKey)
     fun allowManage(player: OfflinePlayer) = allowManage(player.privilegeKey)
     fun disallowManage(player: OfflinePlayer) = disallowManage(player.privilegeKey)
 
@@ -102,8 +95,8 @@ interface Privileges {
     fun unban(player: OfflinePlayer) = unban(player.privilegeKey)
 }
 
-inline val OfflinePlayer.privilegeKey: PrivilegeKey
-    get() = PlayerProfile.nameless(this)
+val OfflinePlayer.privilegeKey: PrivilegeKey
+    inline get() = PlayerProfile.nameless(this)
 
 open class PrivilegesHolder(override var map: MutablePrivilegeMap = MutablePrivilegeMap()) : Privileges {
     override var privilegeOfStar: Privilege = DEFAULT
@@ -131,4 +124,5 @@ interface GlobalPrivileges : Privileges {
 
 interface GlobalPrivilegesManager {
     operator fun get(owner: PlayerProfile): GlobalPrivileges
+    operator fun get(owner: OfflinePlayer): GlobalPrivileges = get(owner.privilegeKey)
 }

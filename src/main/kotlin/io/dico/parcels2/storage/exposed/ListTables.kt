@@ -48,7 +48,7 @@ sealed class PrivilegesTable<AttachT>(name: String, val idTable: IdTransactionsT
         val result = MutablePrivilegeMap()
         for (row in list) {
             val profile = ProfilesT.getRealItem(row[profile_id]) ?: continue
-            result[profile] = Privilege.safeGetByNumber(row[privilege]) ?: continue
+            result[profile] = Privilege.getByNumber(row[privilege]) ?: continue
         }
         return result
     }
@@ -90,7 +90,7 @@ sealed class PrivilegesTable<AttachT>(name: String, val idTable: IdTransactionsT
                 }
 
                 val profile = ProfilesT.getRealItem(row[profile_id]) ?: continue
-                val privilege = Privilege.safeGetByNumber(row[privilege]) ?: continue
+                val privilege = Privilege.getByNumber(row[privilege]) ?: continue
                 map!![profile] = privilege
             }
 

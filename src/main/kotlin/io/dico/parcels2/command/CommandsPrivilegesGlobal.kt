@@ -11,9 +11,8 @@ import org.bukkit.OfflinePlayer
 import org.bukkit.entity.Player
 
 class CommandsPrivilegesGlobal(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
-    private inline val data get() = plugin.globalPrivileges
-    @Suppress("NOTHING_TO_INLINE")
-    private inline operator fun GlobalPrivilegesManager.get(player: OfflinePlayer): GlobalPrivileges = this[PlayerProfile(player)]
+    private val data
+        inline get() = plugin.globalPrivileges
 
     @Cmd("entrust")
     @Desc(
