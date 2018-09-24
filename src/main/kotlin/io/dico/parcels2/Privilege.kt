@@ -74,6 +74,12 @@ interface PrivilegesMinimal {
 interface Privileges : PrivilegesMinimal {
     val keyOfOwner: PlayerProfile.Real?
 
+    fun privilege(player: OfflinePlayer): Privilege {
+        val key = player.privilegeKey
+        return if (key == keyOfOwner) OWNER
+        else getStoredPrivilege(key)
+    }
+
     fun privilege(player: OfflinePlayer, adminPerm: String): Privilege =
         if (player is Player && player.hasPermission(adminPerm)) ADMIN
         else {

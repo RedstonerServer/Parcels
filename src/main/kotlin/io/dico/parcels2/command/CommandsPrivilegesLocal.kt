@@ -5,6 +5,7 @@ import io.dico.dicore.command.annotation.Cmd
 import io.dico.dicore.command.annotation.Desc
 import io.dico.parcels2.ParcelsPlugin
 import io.dico.parcels2.Privilege
+import io.dico.parcels2.PrivilegeChangeResult.*
 import io.dico.parcels2.util.ext.hasPermAdminManage
 import org.bukkit.OfflinePlayer
 import org.bukkit.entity.Player
@@ -19,9 +20,12 @@ class CommandsPrivilegesLocal(plugin: ParcelsPlugin) : AbstractParcelCommands(pl
     @RequireParcelPrivilege(Privilege.OWNER)
     fun ParcelScope.cmdEntrust(sender: Player, player: OfflinePlayer): Any? {
         Validate.isTrue(parcel.owner != null || sender.hasPermAdminManage, "This parcel is unowned")
-        Validate.isTrue(!parcel.owner!!.matches(player), "The target already owns the parcel")
-        Validate.isTrue(parcel.allowManage(player), "${player.name} is already allowed to manage this parcel")
-        return "${player.name} is now allowed to manage this parcel"
+
+        return when (parcel.allowManage(player)) {
+            FAIL_OWNER -> err("The target already owns the parcel")
+            FAIL -> err("${player.name} is already allowed to manage this parcel")
+            SUCCESS -> "${player.name} is now allowed to manage this parcel"
+        }
     }
 
     @Cmd("distrust")
@@ -32,8 +36,13 @@ class CommandsPrivilegesLocal(plugin: ParcelsPlugin) : AbstractParcelCommands(pl
     )
     @RequireParcelPrivilege(Privilege.OWNER)
     fun ParcelScope.cmdDistrust(sender: Player, player: OfflinePlayer): Any? {
-        Validate.isTrue(parcel.disallowManage(player), "${player.name} is not currently allowed to manage this parcel")
-        return "${player.name} is not allowed to manage this parcel anymore"
+        Validate.isTrue(parcel.owner != null || sender.hasPermAdminManage, "This parcel is unowned")
+
+        return when (parcel.disallowManage(player)) {
+            FAIL_OWNER -> err("The target owns the parcel and can't be distrusted")
+            FAIL -> err("${player.name} is not currently allowed to manage this parcel")
+            SUCCESS -> "${player.name} is not allowed to manage this parcel anymore"
+        }
     }
 
     @Cmd("allow", aliases = ["add", "permit"])
@@ -44,10 +53,13 @@ class CommandsPrivilegesLocal(plugin: ParcelsPlugin) : AbstractParcelCommands(pl
     @RequireParcelPrivilege(Privilege.CAN_MANAGE)
     fun ParcelScope.cmdAllow(sender: Player, player: OfflinePlayer): Any? {
         Validate.isTrue(parcel.owner != null || sender.hasPermAdminManage, "This parcel is unowned")
-        Validate.isTrue(!parcel.owner!!.matches(player), "The target already owns the parcel")
         Validate.isTrue(parcel.privilege(sender) > parcel.privilege(player), "You may not change the privilege of ${player.name}")
-        Validate.isTrue(parcel.allowBuild(player), "${player.name} is already allowed to build on this parcel")
-        return "${player.name} is now allowed to build on this parcel"
+
+        return when (parcel.allowBuild(player)) {
+            FAIL_OWNER -> err("The target already owns the parcel")
+            FAIL -> err("${player.name} is already allowed to build on this parcel")
+            SUCCESS -> "${player.name} is now allowed to build on this parcel"
+        }
     }
 
     @Cmd("disallow", aliases = ["remove", "forbid"])
@@ -58,9 +70,14 @@ class CommandsPrivilegesLocal(plugin: ParcelsPlugin) : AbstractParcelCommands(pl
     )
     @RequireParcelPrivilege(Privilege.CAN_MANAGE)
     fun ParcelScope.cmdDisallow(sender: Player, player: OfflinePlayer): Any? {
+        Validate.isTrue(parcel.owner != null || sender.hasPermAdminManage, "This parcel is unowned")
         Validate.isTrue(parcel.privilege(sender) > parcel.privilege(player), "You may not change the privilege of ${player.name}")
-        Validate.isTrue(parcel.disallowBuild(player), "${player.name} is not currently allowed to build on this parcel")
-        return "${player.name} is not allowed to build on this parcel anymore"
+
+        return when (parcel.disallowBuild(player)) {
+            FAIL_OWNER -> err("The target owns the parcel")
+            FAIL -> err("${player.name} is not currently allowed to build on this parcel")
+            SUCCESS -> "${player.name} is not allowed to build on this parcel anymore"
+        }
     }
 
     @Cmd("ban", aliases = ["deny"])
@@ -72,10 +89,13 @@ class CommandsPrivilegesLocal(plugin: ParcelsPlugin) : AbstractParcelCommands(pl
     @RequireParcelPrivilege(Privilege.CAN_MANAGE)
     fun ParcelScope.cmdBan(sender: Player, player: OfflinePlayer): Any? {
         Validate.isTrue(parcel.owner != null || sender.hasPermAdminManage, "This parcel is unowned")
-        Validate.isTrue(!parcel.owner!!.matches(player), "The owner cannot be banned from the parcel")
         Validate.isTrue(parcel.privilege(sender) > parcel.privilege(player), "You may not change the privilege of ${player.name}")
-        Validate.isTrue(parcel.ban(player), "${player.name} is already banned from this parcel")
-        return "${player.name} is now banned from this parcel"
+
+        return when (parcel.disallowBuild(player)) {
+            FAIL_OWNER -> err("The target owns the parcel")
+            FAIL -> err("${player.name} is already banned from this parcel")
+            SUCCESS -> "${player.name} is now banned from this parcel"
+        }
     }
 
     @Cmd("unban", aliases = ["undeny"])
@@ -86,9 +106,14 @@ class CommandsPrivilegesLocal(plugin: ParcelsPlugin) : AbstractParcelCommands(pl
     )
     @RequireParcelPrivilege(Privilege.CAN_MANAGE)
     fun ParcelScope.cmdUnban(sender: Player, player: OfflinePlayer): Any? {
+        Validate.isTrue(parcel.owner != null || sender.hasPermAdminManage, "This parcel is unowned")
         Validate.isTrue(parcel.privilege(sender) > parcel.privilege(player), "You may not change the privilege of ${player.name}")
-        Validate.isTrue(parcel.unban(player), "${player.name} is not currently banned from this parcel")
-        return "${player.name} is not banned from this parcel anymore"
+
+        return when (parcel.disallowBuild(player)) {
+            FAIL_OWNER -> err("The target owns the parcel")
+            FAIL -> err("${player.name} is not currently banned from this parcel")
+            SUCCESS -> "${player.name} is not banned from this parcel anymore"
+        }
     }
 
 }

@@ -4,6 +4,7 @@ import io.dico.dicore.command.*
 import io.dico.parcels2.ParcelWorld
 import io.dico.parcels2.ParcelsPlugin
 import io.dico.parcels2.PlayerProfile
+import io.dico.parcels2.PrivilegeChangeResult
 import io.dico.parcels2.util.ext.hasPermAdminManage
 import io.dico.parcels2.util.ext.parcelLimit
 import org.bukkit.entity.Player
@@ -52,6 +53,10 @@ abstract class AbstractParcelCommands(val plugin: ParcelsPlugin) : ICommandRecei
             }
     }
 
+    protected fun err(message: String): Nothing = throw CommandException(message)
+
     override fun getCoroutineContext() = plugin.coroutineContext
+
+
 }
 
