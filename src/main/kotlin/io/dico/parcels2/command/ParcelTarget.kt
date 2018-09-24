@@ -8,7 +8,7 @@ import io.dico.parcels2.*
 import io.dico.parcels2.storage.Storage
 import io.dico.parcels2.util.Vec2i
 import io.dico.parcels2.util.ext.floor
-import kotlinx.coroutines.CoroutineStart.*
+import kotlinx.coroutines.CoroutineStart.UNDISPATCHED
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import org.bukkit.command.CommandSender
@@ -26,12 +26,14 @@ sealed class ParcelTarget(val world: ParcelWorld, val parsedKind: Int, val isDef
         val isPath: Boolean get() = id == null
     }
 
-    class ByOwner(world: ParcelWorld,
-                  owner: PlayerProfile,
-                  val index: Int,
-                  parsedKind: Int,
-                  isDefault: Boolean,
-                  val onResolveFailure: (() -> Unit)? = null) : ParcelTarget(world, parsedKind, isDefault) {
+    class ByOwner(
+        world: ParcelWorld,
+        owner: PlayerProfile,
+        val index: Int,
+        parsedKind: Int,
+        isDefault: Boolean,
+        val onResolveFailure: (() -> Unit)? = null
+    ) : ParcelTarget(world, parsedKind, isDefault) {
         init {
             if (index < 0) throw IllegalArgumentException("Invalid parcel home index: $index")
         }

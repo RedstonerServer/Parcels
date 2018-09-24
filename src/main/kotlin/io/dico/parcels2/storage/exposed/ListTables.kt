@@ -3,30 +3,30 @@
 package io.dico.parcels2.storage.exposed
 
 import io.dico.parcels2.*
-import io.dico.parcels2.AddedStatus.ALLOWED
-import io.dico.parcels2.AddedStatus.DEFAULT
+import io.dico.parcels2.Privilege.DEFAULT
 import kotlinx.coroutines.channels.SendChannel
 import org.jetbrains.exposed.sql.*
-import java.util.UUID
 
-object AddedLocalT : AddedTable<ParcelId>("parcels_added_local", ParcelsT)
-object AddedGlobalT : AddedTable<PlayerProfile>("parcels_added_global", ProfilesT)
+object PrivilegesLocalT : PrivilegesTable<ParcelId>("parcels_added_local", ParcelsT)
+object PrivilegesGlobalT : PrivilegesTable<PlayerProfile>("parcels_added_global", ProfilesT)
 
 object ParcelOptionsT : Table("parcel_options") {
     val parcel_id = integer("parcel_id").primaryKey().references(ParcelsT.id, ReferenceOption.CASCADE)
-    val interact_bitmask = binary("interact_bitmask", 4).default(ByteArray(4) { 0 }) // all zero by default
+    val interact_bitmask = binary("interact_bitmask", 4)
 }
 
-typealias AddedStatusSendChannel<AttachT> = SendChannel<Pair<AttachT, MutableAddedDataMap>>
+typealias PrivilegesSendChannel<AttachT> = SendChannel<Pair<AttachT, MutablePrivilegeMap>>
 
-sealed class AddedTable<AttachT>(name: String, val idTable: IdTransactionsTable<*, AttachT>) : Table(name) {
+sealed class PrivilegesTable<AttachT>(name: String, val idTable: IdTransactionsTable<*, AttachT>) : Table(name) {
     val attach_id = integer("attach_id").references(idTable.id, ReferenceOption.CASCADE)
     val profile_id = integer("profile_id").references(ProfilesT.id, ReferenceOption.CASCADE)
-    val allowed_flag = bool("allowed_flag")
+    val privilege = integer("privilege")
     val index_pair = uniqueIndexR("index_pair", attach_id, profile_id)
 
-    fun setPlayerStatus(attachedOn: AttachT, player: PlayerProfile.Real, status: AddedStatus) {
-        if (status == DEFAULT) {
+    fun setPrivilege(attachedOn: AttachT, player: PlayerProfile.Real, privilege: Privilege) {
+        privilege.requireNonTransient()
+
+        if (privilege == DEFAULT) {
             val player_id = ProfilesT.getId(player) ?: return
             idTable.getId(attachedOn)?.let { holder ->
                 deleteWhere { (attach_id eq holder) and (profile_id eq player_id) }
@@ -39,28 +39,28 @@ sealed class AddedTable<AttachT>(name: String, val idTable: IdTransactionsTable<
         upsert(conflictIndex = index_pair) {
             it[attach_id] = holder
             it[profile_id] = player_id
-            it[allowed_flag] = status == ALLOWED
+            it[this.privilege] = privilege.number
         }
     }
 
-    fun readAddedData(id: Int): MutableAddedDataMap {
-        val list = slice(profile_id, allowed_flag).select { attach_id eq id }
-        val result = MutableAddedDataMap()
+    fun readPrivileges(id: Int): MutablePrivilegeMap {
+        val list = slice(profile_id, privilege).select { attach_id eq id }
+        val result = MutablePrivilegeMap()
         for (row in list) {
             val profile = ProfilesT.getRealItem(row[profile_id]) ?: continue
-            result[profile] = row[allowed_flag].asAddedStatus()
+            result[profile] = Privilege.safeGetByNumber(row[privilege]) ?: continue
         }
         return result
     }
 
-    fun sendAllAddedData(channel: AddedStatusSendChannel<AttachT>) {
+    fun sendAllAddedData(channel: PrivilegesSendChannel<AttachT>) {
         val iterator = selectAll().orderBy(attach_id).iterator()
 
         if (iterator.hasNext()) {
             val firstRow = iterator.next()
             var id: Int = firstRow[attach_id]
             var attach: AttachT? = null
-            var map: MutableAddedDataMap? = null
+            var map: MutablePrivilegeMap? = null
 
             fun initAttachAndMap() {
                 attach = idTable.getItem(id)
@@ -90,14 +90,12 @@ sealed class AddedTable<AttachT>(name: String, val idTable: IdTransactionsTable<
                 }
 
                 val profile = ProfilesT.getRealItem(row[profile_id]) ?: continue
-                val status = row[allowed_flag].asAddedStatus()
-                map!![profile] = status
+                val privilege = Privilege.safeGetByNumber(row[privilege]) ?: continue
+                map!![profile] = privilege
             }
 
             sendIfPresent()
         }
     }
-
-    private inline fun Boolean?.asAddedStatus() = if (this == null) AddedStatus.DEFAULT else if (this) ALLOWED else AddedStatus.BANNED
 
 }

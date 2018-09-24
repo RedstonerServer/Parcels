@@ -36,7 +36,7 @@ class ParcelListeners(
     val entityTracker: ParcelEntityTracker,
     val storage: Storage
 ) {
-    private inline fun Parcel?.canBuildN(user: Player) = isPresentAnd { canBuild(user) } || user.hasBuildAnywhere
+    private inline fun Parcel?.canBuildN(user: Player) = isPresentAnd { canBuild(user) } || user.hasPermBuildAnywhere
 
     /**
      * Get the world and parcel that the block resides in
@@ -55,9 +55,9 @@ class ParcelListeners(
     @field:ListenerMarker(priority = NORMAL)
     val onPlayerMoveEvent = RegistratorListener<PlayerMoveEvent> l@{ event ->
         val user = event.player
-        if (user.hasBanBypass) return@l
+        if (user.hasPermBanBypass) return@l
         val parcel = parcelProvider.getParcelAt(event.to) ?: return@l
-        if (parcel.isBanned(user.statusKey)) {
+        if (parcel.isBanned(user.privilegeKey)) {
             parcelProvider.getParcelAt(event.from)?.also {
                 user.teleport(it.homeLocation)
                 user.sendParcelMessage(nopermit = true, message = "You are banned from this parcel")
@@ -72,7 +72,7 @@ class ParcelListeners(
     @field:ListenerMarker(priority = NORMAL)
     val onBlockBreakEvent = RegistratorListener<BlockBreakEvent> l@{ event ->
         val (wo, ppa) = getWoAndPPa(event.block) ?: return@l
-        if (!event.player.hasBuildAnywhere && ppa.isNullOr { !canBuild(event.player) }) {
+        if (!event.player.hasPermBuildAnywhere && ppa.isNullOr { !canBuild(event.player) }) {
             event.isCancelled = true; return@l
         }
 
@@ -91,7 +91,7 @@ class ParcelListeners(
     @field:ListenerMarker(priority = NORMAL)
     val onBlockPlaceEvent = RegistratorListener<BlockPlaceEvent> l@{ event ->
         val (wo, ppa) = getWoAndPPa(event.block) ?: return@l
-        if (!event.player.hasBuildAnywhere && ppa.isNullOr { !canBuild(event.player) }) {
+        if (!event.player.hasPermBuildAnywhere && ppa.isNullOr { !canBuild(event.player) }) {
             event.isCancelled = true
         }
     }
@@ -185,7 +185,7 @@ class ParcelListeners(
         val clickedBlock = event.clickedBlock
         val parcel = clickedBlock?.let { world.getParcelAt(it) }
 
-        if (!user.hasBuildAnywhere && parcel.isPresentAnd { isBanned(user.statusKey) }) {
+        if (!user.hasPermBuildAnywhere && parcel.isPresentAnd { isBanned(user.privilegeKey) }) {
             user.sendParcelMessage(nopermit = true, message = "You cannot interact with parcels you're banned from")
             event.isCancelled = true; return@l
         }
@@ -218,7 +218,7 @@ class ParcelListeners(
             }
 
             Action.RIGHT_CLICK_AIR -> onPlayerInteractEvent_RightClick(event, world, parcel)
-            Action.PHYSICAL -> if (!user.hasBuildAnywhere && !parcel.isPresentAnd { canBuild(user) || interactableConfig("pressure_plates") }) {
+            Action.PHYSICAL -> if (!user.hasPermBuildAnywhere && !parcel.isPresentAnd { canBuild(user) || interactableConfig("pressure_plates") }) {
                 user.sendParcelMessage(nopermit = true, message = "You cannot use inputs in this parcel")
                 event.isCancelled = true; return@l
             }
@@ -484,7 +484,7 @@ class ParcelListeners(
             event.isCancelled = true; return@l
         }
 
-        if (!event.player.hasBuildAnywhere && !ppa.canBuild(event.player)) {
+        if (!event.player.hasPermBuildAnywhere && !ppa.canBuild(event.player)) {
             event.isCancelled = true; return@l
         }
 
@@ -560,7 +560,7 @@ class ParcelListeners(
     @field:ListenerMarker(priority = NORMAL)
     val onPlayerChangedWorldEvent = RegistratorListener<PlayerChangedWorldEvent> l@{ event ->
         val world = parcelProvider.getWorld(event.player.world) ?: return@l
-        if (world.options.gameMode != null && !event.player.hasGamemodeBypass) {
+        if (world.options.gameMode != null && !event.player.hasPermGamemodeBypass) {
             event.player.gameMode = world.options.gameMode
         }
     }

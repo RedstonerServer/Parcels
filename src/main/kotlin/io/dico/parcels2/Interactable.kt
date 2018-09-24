@@ -2,7 +2,6 @@ package io.dico.parcels2
 
 import io.dico.parcels2.util.ext.getMaterialsWithWoodTypePrefix
 import org.bukkit.Material
-import java.lang.IllegalArgumentException
 import java.util.EnumMap
 
 class Interactables
@@ -113,13 +112,14 @@ val pathInteractableConfig: InteractableConfiguration = run {
 
 interface InteractableConfiguration {
     val interactableClasses: List<Interactables> get() = Interactables.classesById.filter { isInteractable(it) }
+
     fun isInteractable(material: Material): Boolean
     fun isInteractable(clazz: Interactables): Boolean
     fun setInteractable(clazz: Interactables, interactable: Boolean): Boolean
     fun clear(): Boolean
-    fun copyFrom(other: InteractableConfiguration) {
-        Interactables.classesById.forEach { setInteractable(it, other.isInteractable(it)) }
-    }
+
+    fun copyFrom(other: InteractableConfiguration) =
+        Interactables.classesById.fold(false) { cur, elem -> setInteractable(elem, other.isInteractable(elem) || cur) }
 
     operator fun invoke(material: Material) = isInteractable(material)
     operator fun invoke(className: String) = isInteractable(Interactables[className])

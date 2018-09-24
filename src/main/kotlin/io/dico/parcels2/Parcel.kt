@@ -1,7 +1,7 @@
 package io.dico.parcels2
 
 import io.dico.parcels2.util.Vec2i
-import io.dico.parcels2.util.ext.hasBuildAnywhere
+import io.dico.parcels2.util.ext.hasPermBuildAnywhere
 import org.bukkit.Location
 import org.bukkit.OfflinePlayer
 import org.bukkit.entity.Player
@@ -37,7 +37,7 @@ interface Parcel : ParcelData {
     val homeLocation: Location get() = world.blockManager.getHomeLocation(id)
 }
 
-interface ParcelData : AddedData {
+interface ParcelData : Privileges {
     var owner: PlayerProfile?
     val lastClaimTime: DateTime?
     var ownerSignOutdated: Boolean
@@ -54,14 +54,15 @@ interface ParcelData : AddedData {
     }
 }
 
-class ParcelDataHolder(addedMap: MutableAddedDataMap = mutableMapOf())
-    : ParcelData, AddedDataHolder(addedMap) {
+class ParcelDataHolder(addedMap: MutablePrivilegeMap = mutableMapOf())
+    : ParcelData, PrivilegesHolder(addedMap) {
     override var owner: PlayerProfile? = null
     override var lastClaimTime: DateTime? = null
     override var ownerSignOutdated = false
-    override fun canBuild(player: OfflinePlayer, checkAdmin: Boolean, checkGlobal: Boolean) = isAllowed(player.statusKey)
+    override fun canBuild(player: OfflinePlayer, checkAdmin: Boolean, checkGlobal: Boolean) =
+        hasPrivilegeToBuild(player)
         || owner.let { it != null && it.matches(player, allowNameMatch = false) }
-        || (checkAdmin && player is Player && player.hasBuildAnywhere)
+        || (checkAdmin && player is Player && player.hasPermBuildAnywhere)
 
     override var interactableConfig: InteractableConfiguration = BitmaskInteractableConfiguration()
 }

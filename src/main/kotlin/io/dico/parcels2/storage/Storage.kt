@@ -3,6 +3,7 @@
 package io.dico.parcels2.storage
 
 import io.dico.parcels2.*
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.ReceiveChannel
@@ -10,9 +11,10 @@ import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.launch
 import org.joda.time.DateTime
 import java.util.UUID
+import kotlin.coroutines.CoroutineContext
 
 typealias DataPair = Pair<ParcelId, ParcelData?>
-typealias AddedDataPair<TAttach> = Pair<TAttach, MutableAddedDataMap>
+typealias AddedDataPair<TAttach> = Pair<TAttach, MutablePrivilegeMap>
 
 interface Storage {
     val name: String
@@ -48,28 +50,29 @@ interface Storage {
 
     fun setParcelOwnerSignOutdated(parcel: ParcelId, outdated: Boolean): Job
 
-    fun setParcelPlayerStatus(parcel: ParcelId, player: PlayerProfile, status: AddedStatus): Job
+    fun setLocalPrivilege(parcel: ParcelId, player: PlayerProfile, privilege: Privilege): Job
 
-    fun setParcelOptionsInteractBitmask(parcel: ParcelId, bitmask: IntArray): Job
+    fun setParcelOptionsInteractConfig(parcel: ParcelId, config: InteractableConfiguration): Job
 
 
     fun transmitAllGlobalAddedData(): ReceiveChannel<AddedDataPair<PlayerProfile>>
 
-    fun readGlobalAddedData(owner: PlayerProfile): Deferred<MutableAddedDataMap?>
+    fun readGlobalPrivileges(owner: PlayerProfile): Deferred<MutablePrivilegeMap?>
 
-    fun setGlobalAddedStatus(owner: PlayerProfile, player: PlayerProfile, status: AddedStatus): Job
+    fun setGlobalPrivilege(owner: PlayerProfile, player: PlayerProfile, status: Privilege): Job
 
 
     fun getChannelToUpdateParcelData(): SendChannel<Pair<ParcelId, ParcelData>>
 }
 
-class BackedStorage internal constructor(val b: Backing) : Storage {
+class BackedStorage internal constructor(val b: Backing) : Storage, CoroutineScope {
     override val name get() = b.name
     override val isConnected get() = b.isConnected
+    override val coroutineContext: CoroutineContext get() = b.coroutineContext
 
-    override fun init() = launch(b.dispatcher) { b.init() }
+    override fun init() = launch { b.init() }
 
-    override fun shutdown() = launch(b.dispatcher) { b.shutdown() }
+    override fun shutdown() = launch { b.shutdown() }
 
 
     override fun getWorldCreationTime(worldId: ParcelWorldId): Deferred<DateTime?> = b.launchFuture { b.getWorldCreationTime(worldId) }
@@ -96,16 +99,16 @@ class BackedStorage internal constructor(val b: Backing) : Storage {
 
     override fun setParcelOwnerSignOutdated(parcel: ParcelId, outdated: Boolean): Job = b.launchJob { b.setParcelOwnerSignOutdated(parcel, outdated) }
 
-    override fun setParcelPlayerStatus(parcel: ParcelId, player: PlayerProfile, status: AddedStatus) = b.launchJob { b.setLocalPlayerStatus(parcel, player, status) }
+    override fun setLocalPrivilege(parcel: ParcelId, player: PlayerProfile, privilege: Privilege) = b.launchJob { b.setLocalPrivilege(parcel, player, privilege) }
 
-    override fun setParcelOptionsInteractBitmask(parcel: ParcelId, bitmask: IntArray) = b.launchJob { b.setParcelOptionsInteractBitmask(parcel, bitmask) }
+    override fun setParcelOptionsInteractConfig(parcel: ParcelId, config: InteractableConfiguration) = b.launchJob { b.setParcelOptionsInteractConfig(parcel, config) }
 
 
     override fun transmitAllGlobalAddedData(): ReceiveChannel<AddedDataPair<PlayerProfile>> = b.openChannel { b.transmitAllGlobalAddedData(it) }
 
-    override fun readGlobalAddedData(owner: PlayerProfile): Deferred<MutableAddedDataMap?> = b.launchFuture { b.readGlobalAddedData(owner) }
+    override fun readGlobalPrivileges(owner: PlayerProfile): Deferred<MutablePrivilegeMap?> = b.launchFuture { b.readGlobalPrivileges(owner) }
 
-    override fun setGlobalAddedStatus(owner: PlayerProfile, player: PlayerProfile, status: AddedStatus) = b.launchJob { b.setGlobalPlayerStatus(owner, player, status) }
+    override fun setGlobalPrivilege(owner: PlayerProfile, player: PlayerProfile, status: Privilege) = b.launchJob { b.setGlobalPrivilege(owner, player, status) }
 
     override fun getChannelToUpdateParcelData(): SendChannel<Pair<ParcelId, ParcelData>> = b.openChannelForWriting { b.setParcelData(it.first, it.second) }
 }

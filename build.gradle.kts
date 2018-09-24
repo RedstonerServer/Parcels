@@ -87,10 +87,11 @@ dependencies {
 tasks {
     removeIf { it is ShadowJar }
 
-    val compileKotlin by getting(KotlinCompile::class) {
+    tasks.withType<KotlinCompile> {
         kotlinOptions {
             javaParameters = true
             suppressWarnings = true
+            jvmTarget = "1.8"
             //freeCompilerArgs = listOf("-XXLanguage:+InlineClasses", "-Xuse-experimental=kotlin.Experimental")
         }
     }

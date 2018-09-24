@@ -5,11 +5,12 @@ import io.dico.dicore.command.annotation.Cmd
 import io.dico.dicore.command.annotation.Flag
 import io.dico.parcels2.ParcelsPlugin
 import io.dico.parcels2.PlayerProfile
+import io.dico.parcels2.Privilege
 
 class CommandsAdmin(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
 
     @Cmd("setowner")
-    @ParcelRequire(admin = true)
+    @RequireParcelPrivilege(Privilege.ADMIN)
     fun ParcelScope.cmdSetowner(target: PlayerProfile): Any? {
         parcel.owner = target
 
@@ -18,14 +19,14 @@ class CommandsAdmin(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
     }
 
     @Cmd("dispose")
-    @ParcelRequire(admin = true)
+    @RequireParcelPrivilege(Privilege.ADMIN)
     fun ParcelScope.cmdDispose(): Any? {
         parcel.dispose()
         return "Data of (${parcel.id.idString}) has been disposed"
     }
 
     @Cmd("reset")
-    @ParcelRequire(admin = true)
+    @RequireParcelPrivilege(Privilege.ADMIN)
     fun ParcelScope.cmdReset(context: ExecutionContext, @Flag sure: Boolean): Any? {
         if (!sure) return areYouSureMessage(context)
         parcel.dispose()
@@ -34,9 +35,10 @@ class CommandsAdmin(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
     }
 
     @Cmd("swap")
+    @RequireParcelPrivilege(Privilege.ADMIN)
     fun ParcelScope.cmdSwap(context: ExecutionContext, @Flag sure: Boolean): Any? {
         if (!sure) return areYouSureMessage(context)
-        TODO()
+        TODO("implement swap")
     }
 
 

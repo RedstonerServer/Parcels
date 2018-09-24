@@ -66,11 +66,11 @@ class PlotmeMigration(val options: PlotmeMigrationOptions) : Migration {
             return ParcelId(world, row[table.px], row[table.pz])
         }
 
-        fun PlotmePlotPlayerMap.transmitPlotmeAddedTable(kind: AddedStatus) {
+        fun PlotmePlotPlayerMap.transmitPlotmeAddedTable(kind: Privilege) {
             selectAll().forEach { row ->
                 val parcel = getParcelId(this, row) ?: return@forEach
                 val profile = StatusKey.safe(row[player_uuid]?.toUUID(), row[player_name]) ?: return@forEach
-                target.setParcelPlayerStatus(parcel, profile, kind)
+                target.setLocalPrivilege(parcel, profile, kind)
             }
         }
 
@@ -89,12 +89,12 @@ class PlotmeMigration(val options: PlotmeMigrationOptions) : Migration {
 
         mlogger.info("Transmitting data from plotmeallowed table")
         transaction {
-            PlotmeAllowedT.transmitPlotmeAddedTable(AddedStatus.ALLOWED)
+            PlotmeAllowedT.transmitPlotmeAddedTable(Privilege.CAN_BUILD)
         }
 
         mlogger.info("Transmitting data from plotmedenied table")
         transaction {
-            PlotmeDeniedT.transmitPlotmeAddedTable(AddedStatus.BANNED)
+            PlotmeDeniedT.transmitPlotmeAddedTable(Privilege.BANNED)
         }
 
         mlogger.warn("Data has been **transmitted**.")

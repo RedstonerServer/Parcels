@@ -6,7 +6,7 @@ import io.dico.dicore.command.ICommandDispatcher
 import io.dico.parcels2.blockvisitor.TickWorktimeLimiter
 import io.dico.parcels2.blockvisitor.WorktimeLimiter
 import io.dico.parcels2.command.getParcelCommands
-import io.dico.parcels2.defaultimpl.GlobalAddedDataManagerImpl
+import io.dico.parcels2.defaultimpl.GlobalPrivilegesManagerImpl
 import io.dico.parcels2.defaultimpl.ParcelProviderImpl
 import io.dico.parcels2.listener.ParcelEntityTracker
 import io.dico.parcels2.listener.ParcelListeners
@@ -35,7 +35,7 @@ class ParcelsPlugin : JavaPlugin(), CoroutineScope, PluginScheduler {
     lateinit var options: Options; private set
     lateinit var parcelProvider: ParcelProvider; private set
     lateinit var storage: Storage; private set
-    lateinit var globalAddedData: GlobalAddedDataManager; private set
+    lateinit var globalPrivileges: GlobalPrivilegesManager; private set
 
     val registrator = Registrator(this)
     lateinit var entityTracker: ParcelEntityTracker; private set
@@ -83,7 +83,7 @@ class ParcelsPlugin : JavaPlugin(), CoroutineScope, PluginScheduler {
                 return false
             }
 
-            globalAddedData = GlobalAddedDataManagerImpl(this)
+            globalPrivileges = GlobalPrivilegesManagerImpl(this)
             entityTracker = ParcelEntityTracker(parcelProvider)
         } catch (ex: Exception) {
             plogger.error("Error loading options", ex)

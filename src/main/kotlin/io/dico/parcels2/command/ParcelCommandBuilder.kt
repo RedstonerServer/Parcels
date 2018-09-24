@@ -4,6 +4,7 @@ import io.dico.dicore.command.CommandBuilder
 import io.dico.dicore.command.ICommandAddress
 import io.dico.dicore.command.ICommandDispatcher
 import io.dico.dicore.command.registration.reflect.ReflectiveRegistration
+import io.dico.parcels2.Interactables
 import io.dico.parcels2.ParcelsPlugin
 import io.dico.parcels2.logger
 import java.util.LinkedList
@@ -20,15 +21,25 @@ fun getParcelCommands(plugin: ParcelsPlugin): ICommandDispatcher =
         group("parcel", "plot", "plots", "p") {
             addRequiredPermission("parcels.command")
             registerCommands(CommandsGeneral(plugin))
-            registerCommands(CommandsAddedStatusLocal(plugin))
+            registerCommands(CommandsPrivilegesLocal(plugin))
 
             group("option", "opt", "o") {
-                CommandsParcelOptions.setGroupDescription(this)
-                registerCommands(CommandsParcelOptions(plugin))
+                setGroupDescription(
+                    "changes interaction options for this parcel",
+                    "Sets whether players who are not allowed to",
+                    "build here can interact with certain things."
+                )
+
+                group("interact", "i") {
+                    val command = ParcelOptionsInteractCommand(plugin.parcelProvider)
+                    Interactables.classesById.forEach {
+                        addSubCommand(it.name, command)
+                    }
+                }
             }
 
             group("global", "g") {
-                registerCommands(CommandsAddedStatusGlobal(plugin))
+                registerCommands(CommandsPrivilegesGlobal(plugin))
             }
 
             group("admin", "a") {

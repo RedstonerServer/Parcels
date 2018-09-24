@@ -23,17 +23,16 @@ import javax.sql.DataSource
 
 class ExposedDatabaseException(message: String? = null) : Exception(message)
 
-class ExposedBacking(private val dataSourceFactory: () -> DataSource, val poolSize: Int) : Backing {
+class ExposedBacking(private val dataSourceFactory: () -> DataSource, val poolSize: Int) : Backing, CoroutineScope {
     override val name get() = "Exposed"
-    override val dispatcher: ThreadPoolDispatcher = newFixedThreadPoolContext(poolSize, "Parcels StorageThread")
-
+    override val coroutineContext = Job() + newFixedThreadPoolContext(poolSize, "Parcels StorageThread")
     private var dataSource: DataSource? = null
     private var database: Database? = null
     private var isShutdown: Boolean = false
     override val isConnected get() = database != null
 
-    override fun launchJob(job: Backing.() -> Unit): Job = launch(dispatcher) { transaction { job() } }
-    override fun <T> launchFuture(future: Backing.() -> T): Deferred<T> = async(dispatcher) { transaction { future() } }
+    override fun launchJob(job: Backing.() -> Unit): Job = launch { transaction { job() } }
+    override fun <T> launchFuture(future: Backing.() -> T): Deferred<T> = async { transaction { future() } }
 
     override fun <T> openChannel(future: Backing.(SendChannel<T>) -> Unit): ReceiveChannel<T> {
         val channel = LinkedListChannel<T>()
@@ -44,8 +43,8 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource, val poolSi
     override fun <T> openChannelForWriting(action: Backing.(T) -> Unit): SendChannel<T> {
         val channel = ArrayChannel<T>(poolSize * 2)
 
-        repeat(poolSize) {
-            launch(dispatcher) {
+        repeat(poolSize.clampMax(3)) {
+            launch {
                 try {
                     while (true) {
                         action(channel.receive())
@@ -75,7 +74,7 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource, val poolSi
             dataSource = dataSourceFactory()
             database = Database.connect(dataSource!!)
             transaction(database!!) {
-                create(WorldsT, ProfilesT, ParcelsT, ParcelOptionsT, AddedLocalT, AddedGlobalT)
+                create(WorldsT, ProfilesT, ParcelsT, ParcelOptionsT, PrivilegesLocalT, PrivilegesGlobalT)
             }
         }
     }
@@ -83,11 +82,12 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource, val poolSi
     override fun shutdown() {
         synchronized {
             if (isShutdown) throw IllegalStateException()
+            isShutdown = true
+            coroutineContext[Job]!!.cancel(CancellationException("ExposedBacking shutdown"))
             dataSource?.let {
                 (it as? HikariDataSource)?.close()
             }
             database = null
-            isShutdown = true
         }
     }
 
@@ -173,7 +173,7 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource, val poolSi
 
                     // Below should cascade automatically
                     /*
-                    AddedLocalT.deleteIgnoreWhere { AddedLocalT.parcel_id eq id }
+                    PrivilegesLocalT.deleteIgnoreWhere { PrivilegesLocalT.parcel_id eq id }
                     ParcelOptionsT.deleteIgnoreWhere(limit = 1) { ParcelOptionsT.parcel_id eq id }
                     */
                 }
@@ -184,18 +184,16 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource, val poolSi
 
         transaction {
             val id = ParcelsT.getOrInitId(parcel)
-            AddedLocalT.deleteIgnoreWhere { AddedLocalT.attach_id eq id }
+            PrivilegesLocalT.deleteIgnoreWhere { PrivilegesLocalT.attach_id eq id }
         }
 
         setParcelOwner(parcel, data.owner)
 
-        for ((profile, status) in data.addedMap) {
-            AddedLocalT.setPlayerStatus(parcel, profile, status)
+        for ((profile, privilege) in data.map) {
+            PrivilegesLocalT.setPrivilege(parcel, profile, privilege)
         }
 
-        val bitmaskArray = (data.interactableConfig as? BitmaskInteractableConfiguration ?: return).bitmaskArray
-        val isAllZero = bitmaskArray.fold(false) { cur, elem -> cur || elem != 0 }
-        setParcelOptionsInteractBitmask(parcel, if (isAllZero) null else bitmaskArray)
+        setParcelOptionsInteractConfig(parcel, data.interactableConfig)
     }
 
     override fun setParcelOwner(parcel: ParcelId, owner: PlayerProfile?) {
@@ -221,19 +219,22 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource, val poolSi
         }
     }
 
-    override fun setLocalPlayerStatus(parcel: ParcelId, player: PlayerProfile, status: AddedStatus) {
-        AddedLocalT.setPlayerStatus(parcel, player.toRealProfile(), status)
+    override fun setLocalPrivilege(parcel: ParcelId, player: PlayerProfile, privilege: Privilege) {
+        PrivilegesLocalT.setPrivilege(parcel, player.toRealProfile(), privilege)
     }
 
-    override fun setParcelOptionsInteractBitmask(parcel: ParcelId, bitmask: IntArray?) {
-        if (bitmask == null) {
+    override fun setParcelOptionsInteractConfig(parcel: ParcelId, config: InteractableConfiguration) {
+        val bitmaskArray = (config as? BitmaskInteractableConfiguration ?: return).bitmaskArray
+        val isAllZero = !bitmaskArray.fold(false) { cur, elem -> cur || elem != 0 }
+
+        if (isAllZero) {
             val id = ParcelsT.getId(parcel) ?: return
             ParcelOptionsT.deleteWhere { ParcelOptionsT.parcel_id eq id }
             return
         }
 
-        if (bitmask.size != 1) throw IllegalArgumentException()
-        val array = bitmask.toByteArray()
+        if (bitmaskArray.size != 1) throw IllegalArgumentException()
+        val array = bitmaskArray.toByteArray()
         val id = ParcelsT.getOrInitId(parcel)
         ParcelOptionsT.upsert(ParcelOptionsT.parcel_id) {
             it[parcel_id] = id
@@ -242,16 +243,16 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource, val poolSi
     }
 
     override fun transmitAllGlobalAddedData(channel: SendChannel<AddedDataPair<PlayerProfile>>) {
-        AddedGlobalT.sendAllAddedData(channel)
+        PrivilegesGlobalT.sendAllAddedData(channel)
         channel.close()
     }
 
-    override fun readGlobalAddedData(owner: PlayerProfile): MutableAddedDataMap {
-        return AddedGlobalT.readAddedData(ProfilesT.getId(owner.toOwnerProfile()) ?: return hashMapOf())
+    override fun readGlobalPrivileges(owner: PlayerProfile): MutablePrivilegeMap {
+        return PrivilegesGlobalT.readPrivileges(ProfilesT.getId(owner.toOwnerProfile()) ?: return hashMapOf())
     }
 
-    override fun setGlobalPlayerStatus(owner: PlayerProfile, player: PlayerProfile, status: AddedStatus) {
-        AddedGlobalT.setPlayerStatus(owner, player.toRealProfile(), status)
+    override fun setGlobalPrivilege(owner: PlayerProfile, player: PlayerProfile, privilege: Privilege) {
+        PrivilegesGlobalT.setPrivilege(owner, player.toRealProfile(), privilege)
     }
 
     private fun rowToParcelData(row: ResultRow) = ParcelDataHolder().apply {
@@ -266,7 +267,7 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource, val poolSi
             System.arraycopy(source, 0, target, 0, source.size.clampMax(target.size))
         }
 
-        addedMap = AddedLocalT.readAddedData(id)
+        map = PrivilegesLocalT.readPrivileges(id)
     }
 
 }

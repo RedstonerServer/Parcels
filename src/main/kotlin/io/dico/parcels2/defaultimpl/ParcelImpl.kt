@@ -35,20 +35,20 @@ class ParcelImpl(
         world.storage.setParcelData(this, null)
     }
 
-    override val addedMap: AddedDataMap get() = data.addedMap
-    override fun getStatus(key: StatusKey) = data.getStatus(key)
-    override fun isBanned(key: StatusKey) = data.isBanned(key)
-    override fun isAllowed(key: StatusKey) = data.isAllowed(key)
+    override val map: PrivilegeMap get() = data.map
+    override fun privilege(key: PrivilegeKey) = data.privilege(key)
+    override fun isBanned(key: PrivilegeKey) = data.isBanned(key)
+    override fun hasPrivilegeToBuild(key: PrivilegeKey) = data.hasPrivilegeToBuild(key)
     override fun canBuild(player: OfflinePlayer, checkAdmin: Boolean, checkGlobal: Boolean): Boolean {
         return (data.canBuild(player, checkAdmin, false))
-            || checkGlobal && world.globalAddedData[owner ?: return false].isAllowed(player)
+            || checkGlobal && world.globalPrivileges[owner ?: return false].hasPrivilegeToBuild(player)
     }
 
-    override var statusOfStar: AddedStatus
-        get() = data.statusOfStar
-        set(value) = run { setStatus(PlayerProfile.Star, value) }
+    override var privilegeOfStar: Privilege
+        get() = data.privilegeOfStar
+        set(value) = run { setPrivilege(PlayerProfile.Star, value) }
 
-    val globalAddedMap: AddedDataMap? get() = owner?.let { world.globalAddedData[it].addedMap }
+    val globalAddedMap: PrivilegeMap? get() = owner?.let { world.globalPrivileges[it].map }
 
     override val lastClaimTime: DateTime? get() = data.lastClaimTime
 
@@ -71,10 +71,14 @@ class ParcelImpl(
             }
         }
 
-    override fun setStatus(key: StatusKey, status: AddedStatus): Boolean {
-        return data.setStatus(key, status).alsoIfTrue {
-            world.storage.setParcelPlayerStatus(this, key, status)
+    override fun setPrivilege(key: PrivilegeKey, privilege: Privilege): Boolean {
+        return data.setPrivilege(key, privilege).alsoIfTrue {
+            world.storage.setLocalPrivilege(this, key, privilege)
         }
+    }
+
+    private fun updateInteractableConfigStorage() {
+        world.storage.setParcelOptionsInteractConfig(this, data.interactableConfig)
     }
 
     private var _interactableConfig: InteractableConfiguration? = null
@@ -86,21 +90,18 @@ class ParcelImpl(
                     override fun isInteractable(clazz: Interactables): Boolean = data.interactableConfig.isInteractable(clazz)
 
                     override fun setInteractable(clazz: Interactables, interactable: Boolean): Boolean =
-                        data.interactableConfig.setInteractable(clazz, interactable).alsoIfTrue {
-                            // TODO update storage
-                        }
+                        data.interactableConfig.setInteractable(clazz, interactable).alsoIfTrue { updateInteractableConfigStorage() }
 
                     override fun clear(): Boolean =
-                        data.interactableConfig.clear().alsoIfTrue {
-                            // TODO update storage
-                        }
+                        data.interactableConfig.clear().alsoIfTrue { updateInteractableConfigStorage() }
                 }
             }
             return _interactableConfig!!
         }
         set(value) {
-            data.interactableConfig.copyFrom(value)
-            // TODO update storage
+            if (data.interactableConfig.copyFrom(value)) {
+                updateInteractableConfigStorage()
+            }
         }
 
     private var blockVisitors = AtomicInteger(0)
@@ -139,10 +140,10 @@ private object ParcelInfoStringComputer {
         append(' ')
     }
 
-    private fun StringBuilder.appendAddedList(local: AddedDataMap, global: AddedDataMap, status: AddedStatus, fieldName: String) {
+    private fun StringBuilder.appendAddedList(local: PrivilegeMap, global: PrivilegeMap, status: Privilege, fieldName: String) {
         val globalSet = global.filterValues { it == status }.keys
         val localList = local.filterValues { it == status }.keys.filter { it !in globalSet }
-        val stringList = globalSet.map(StatusKey::notNullName).map { "(G)$it" } + localList.map(StatusKey::notNullName)
+        val stringList = globalSet.map(PrivilegeKey::notNullName).map { "(G)$it" } + localList.map(PrivilegeKey::notNullName)
         if (stringList.isEmpty()) return
 
         appendField({
@@ -182,11 +183,11 @@ private object ParcelInfoStringComputer {
 
         append('\n')
 
-        val global = owner?.let { parcel.world.globalAddedData[owner].addedMap } ?: emptyMap()
-        val local = parcel.addedMap
-        appendAddedList(local, global, AddedStatus.ALLOWED, "Allowed")
+        val global = owner?.let { parcel.world.globalPrivileges[owner].map } ?: emptyMap()
+        val local = parcel.map
+        appendAddedList(local, global, Privilege.CAN_BUILD, "Allowed")
         append('\n')
-        appendAddedList(local, global, AddedStatus.BANNED, "Banned")
+        appendAddedList(local, global, Privilege.BANNED, "Banned")
 
         /* TODO options
         if (!parcel.allowInteractInputs || !parcel.allowInteractInventory) {

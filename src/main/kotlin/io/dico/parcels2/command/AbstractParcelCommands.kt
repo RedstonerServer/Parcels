@@ -4,7 +4,7 @@ import io.dico.dicore.command.*
 import io.dico.parcels2.ParcelWorld
 import io.dico.parcels2.ParcelsPlugin
 import io.dico.parcels2.PlayerProfile
-import io.dico.parcels2.util.ext.hasAdminManage
+import io.dico.parcels2.util.ext.hasPermAdminManage
 import io.dico.parcels2.util.ext.parcelLimit
 import org.bukkit.entity.Player
 import org.bukkit.plugin.Plugin
@@ -26,7 +26,7 @@ abstract class AbstractParcelCommands(val plugin: ParcelsPlugin) : ICommandRecei
     }
 
     protected suspend fun checkParcelLimit(player: Player, world: ParcelWorld) {
-        if (player.hasAdminManage) return
+        if (player.hasPermAdminManage) return
         val numOwnedParcels = plugin.storage.getOwnedParcels(PlayerProfile(player)).await()
             .filter { it.worldId.equals(world.id) }.size
 

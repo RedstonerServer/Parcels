@@ -85,7 +85,7 @@ interface ParcelWorld : ParcelLocator, ParcelContainer {
     val container: ParcelContainer
     val locator: ParcelLocator
     val blockManager: ParcelBlockManager
-    val globalAddedData: GlobalAddedDataManager
+    val globalPrivileges: GlobalPrivilegesManager
 
     val creationTime: DateTime?
 

@@ -9,8 +9,8 @@ import io.dico.dicore.command.annotation.RequireParameters
 import io.dico.parcels2.ParcelsPlugin
 import io.dico.parcels2.PlayerProfile
 import io.dico.parcels2.command.ParcelTarget.Kind
-import io.dico.parcels2.util.ext.hasAdminManage
 import io.dico.parcels2.util.ext.hasParcelHomeOthers
+import io.dico.parcels2.util.ext.hasPermAdminManage
 import io.dico.parcels2.util.ext.uuid
 import org.bukkit.block.Biome
 import org.bukkit.entity.Player
@@ -99,7 +99,7 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
     )
     suspend fun ParcelScope.cmdClaim(player: Player): Any? {
         checkConnected("be claimed")
-        parcel.owner.takeIf { !player.hasAdminManage }?.let {
+        parcel.owner.takeIf { !player.hasPermAdminManage }?.let {
             error(if (it.matches(player)) "You already own this parcel" else "This parcel is not available")
         }
 
@@ -110,14 +110,14 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
 
     @Cmd("unclaim")
     @Desc("Unclaims this parcel")
-    @ParcelRequire(owner = true)
+    @RequireParcelPrivilege(Privilege.OWNER)
     fun ParcelScope.cmdUnclaim(player: Player): Any? {
         parcel.dispose()
         return "Your parcel has been disposed"
     }
 
     @Cmd("clear")
-    @ParcelRequire(owner = true)
+    @RequireParcelPrivilege(Privilege.OWNER)
     fun ParcelScope.cmdClear(context: ExecutionContext, @Flag sure: Boolean): Any? {
         if (!sure) return areYouSureMessage(context)
 
@@ -126,7 +126,7 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
     }
 
     @Cmd("setbiome")
-    @ParcelRequire(owner = true)
+    @RequireParcelPrivilege(Privilege.OWNER)
     fun ParcelScope.cmdSetbiome(context: ExecutionContext, biome: Biome): Any? {
         Validate.isTrue(!parcel.hasBlockVisitors, "A process is already running in this parcel")
         world.blockManager.setBiome(parcel.id, biome)

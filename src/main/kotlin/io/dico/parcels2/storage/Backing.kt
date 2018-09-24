@@ -1,13 +1,13 @@
 package io.dico.parcels2.storage
 
 import io.dico.parcels2.*
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.SendChannel
 import org.joda.time.DateTime
 import java.util.UUID
+import kotlin.coroutines.CoroutineContext
 
 interface Backing {
 
@@ -15,7 +15,7 @@ interface Backing {
 
     val isConnected: Boolean
 
-    val dispatcher: CoroutineDispatcher
+    val coroutineContext: CoroutineContext
 
     fun launchJob(job: Backing.() -> Unit): Job
 
@@ -56,9 +56,9 @@ interface Backing {
 
     fun setParcelOwnerSignOutdated(parcel: ParcelId, outdated: Boolean)
 
-    fun setLocalPlayerStatus(parcel: ParcelId, player: PlayerProfile, status: AddedStatus)
+    fun setLocalPrivilege(parcel: ParcelId, player: PlayerProfile, status: Privilege)
 
-    fun setParcelOptionsInteractBitmask(parcel: ParcelId, bitmask: IntArray?)
+    fun setParcelOptionsInteractConfig(parcel: ParcelId, config: InteractableConfiguration)
 /*
     fun setParcelAllowsInteractInventory(parcel: ParcelId, value: Boolean)
 
@@ -67,7 +67,7 @@ interface Backing {
 
     fun transmitAllGlobalAddedData(channel: SendChannel<AddedDataPair<PlayerProfile>>)
 
-    fun readGlobalAddedData(owner: PlayerProfile): MutableAddedDataMap
+    fun readGlobalPrivileges(owner: PlayerProfile): MutablePrivilegeMap
 
-    fun setGlobalPlayerStatus(owner: PlayerProfile, player: PlayerProfile, status: AddedStatus)
+    fun setGlobalPrivilege(owner: PlayerProfile, player: PlayerProfile, status: Privilege)
 }

@@ -5,6 +5,7 @@ import io.dico.dicore.command.EMessageType
 import io.dico.dicore.command.ExecutionContext
 import io.dico.dicore.command.annotation.Cmd
 import io.dico.parcels2.ParcelsPlugin
+import io.dico.parcels2.Privilege
 import io.dico.parcels2.blockvisitor.RegionTraverser
 import io.dico.parcels2.doBlockOperation
 import org.bukkit.Bukkit
@@ -30,7 +31,7 @@ class CommandsDebug(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
     }
 
     @Cmd("make_mess")
-    @ParcelRequire(owner = true)
+    @RequireParcelPrivilege(Privilege.OWNER)
     fun ParcelScope.cmdMakeMess(context: ExecutionContext) {
         val server = plugin.server
         val blockDatas = arrayOf(
@@ -47,8 +48,10 @@ class CommandsDebug(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
         world.blockManager.doBlockOperation(parcel.id, traverser = RegionTraverser.upward) { block ->
             block.blockData = blockDatas[random.nextInt(7)]
         }.onProgressUpdate(1000, 1000) { progress, elapsedTime ->
-            context.sendMessage(EMessageType.INFORMATIVE, "Mess progress: %.02f%%, %.2fs elapsed"
-                .format(progress * 100, elapsedTime / 1000.0))
+            context.sendMessage(
+                EMessageType.INFORMATIVE, "Mess progress: %.02f%%, %.2fs elapsed"
+                    .format(progress * 100, elapsedTime / 1000.0)
+            )
         }
     }
 

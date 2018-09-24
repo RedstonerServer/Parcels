@@ -26,7 +26,7 @@ abstract class IdTransactionsTable<TableT : IdTransactionsTable<TableT, QueryObj
 
     internal inline fun getOrInitId(getId: () -> Int?, noinline body: TableT.(UpdateBuilder<*>) -> Unit, objName: () -> String): Int {
         return getId() ?: table.insertIgnore(body)[id] ?: getId()
-        ?: throw ExposedDatabaseException("This should not happen - failed to insert ${objName()} and get its id")
+        ?: throw ExposedDatabaseException("This should not happen - failed to insert ${objName()} and get its number")
     }
 
     abstract fun getId(obj: QueryObj): Int?
