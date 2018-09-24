@@ -69,7 +69,7 @@ class PlotmeMigration(val options: PlotmeMigrationOptions) : Migration {
         fun PlotmePlotPlayerMap.transmitPlotmeAddedTable(kind: Privilege) {
             selectAll().forEach { row ->
                 val parcel = getParcelId(this, row) ?: return@forEach
-                val profile = StatusKey.safe(row[player_uuid]?.toUUID(), row[player_name]) ?: return@forEach
+                val profile = PrivilegeKey.safe(row[player_uuid]?.toUUID(), row[player_name]) ?: return@forEach
                 target.setLocalPrivilege(parcel, profile, kind)
             }
         }

@@ -59,7 +59,7 @@ interface Storage {
 
     fun readGlobalPrivileges(owner: PlayerProfile): Deferred<MutablePrivilegeMap?>
 
-    fun setGlobalPrivilege(owner: PlayerProfile, player: PlayerProfile, status: Privilege): Job
+    fun setGlobalPrivilege(owner: PlayerProfile, player: PlayerProfile, privilege: Privilege): Job
 
 
     fun getChannelToUpdateParcelData(): SendChannel<Pair<ParcelId, ParcelData>>
@@ -108,7 +108,7 @@ class BackedStorage internal constructor(val b: Backing) : Storage, CoroutineSco
 
     override fun readGlobalPrivileges(owner: PlayerProfile): Deferred<MutablePrivilegeMap?> = b.launchFuture { b.readGlobalPrivileges(owner) }
 
-    override fun setGlobalPrivilege(owner: PlayerProfile, player: PlayerProfile, status: Privilege) = b.launchJob { b.setGlobalPrivilege(owner, player, status) }
+    override fun setGlobalPrivilege(owner: PlayerProfile, player: PlayerProfile, privilege: Privilege) = b.launchJob { b.setGlobalPrivilege(owner, player, privilege) }
 
     override fun getChannelToUpdateParcelData(): SendChannel<Pair<ParcelId, ParcelData>> = b.openChannelForWriting { b.setParcelData(it.first, it.second) }
 }

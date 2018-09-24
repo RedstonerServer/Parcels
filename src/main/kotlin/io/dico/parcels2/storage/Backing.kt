@@ -56,18 +56,14 @@ interface Backing {
 
     fun setParcelOwnerSignOutdated(parcel: ParcelId, outdated: Boolean)
 
-    fun setLocalPrivilege(parcel: ParcelId, player: PlayerProfile, status: Privilege)
+    fun setLocalPrivilege(parcel: ParcelId, player: PlayerProfile, privilege: Privilege)
 
     fun setParcelOptionsInteractConfig(parcel: ParcelId, config: InteractableConfiguration)
-/*
-    fun setParcelAllowsInteractInventory(parcel: ParcelId, value: Boolean)
 
-    fun setParcelAllowsInteractInputs(parcel: ParcelId, value: Boolean)
-*/
 
     fun transmitAllGlobalAddedData(channel: SendChannel<AddedDataPair<PlayerProfile>>)
 
     fun readGlobalPrivileges(owner: PlayerProfile): MutablePrivilegeMap
 
-    fun setGlobalPrivilege(owner: PlayerProfile, player: PlayerProfile, status: Privilege)
+    fun setGlobalPrivilege(owner: PlayerProfile, player: PlayerProfile, privilege: Privilege)
 }

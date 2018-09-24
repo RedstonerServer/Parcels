@@ -185,7 +185,7 @@ interface PlayerProfile {
  * An existing player
  * A fake player (with only a name)
  * An existing player who must have its uuid resolved from the database (after checking against Bukkit OfflinePlayer)
- * STAR profile, which matches everyone. This profile is considered a REAL player, because it can have an added status.
+ * STAR profile, which matches everyone. This profile is considered a REAL player, because it can have a privilege.
  */
 class PlayerProfile2 private constructor(uuid: UUID?,
                                         val name: String?,
