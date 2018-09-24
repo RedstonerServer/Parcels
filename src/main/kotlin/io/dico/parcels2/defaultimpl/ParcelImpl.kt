@@ -88,6 +88,7 @@ class ParcelImpl(
                 _interactableConfig = object : InteractableConfiguration {
                     override fun isInteractable(material: Material): Boolean = data.interactableConfig.isInteractable(material)
                     override fun isInteractable(clazz: Interactables): Boolean = data.interactableConfig.isInteractable(clazz)
+                    override fun isDefault(): Boolean = data.interactableConfig.isDefault()
 
                     override fun setInteractable(clazz: Interactables, interactable: Boolean): Boolean =
                         data.interactableConfig.setInteractable(clazz, interactable).alsoIfTrue { updateInteractableConfigStorage() }
@@ -135,12 +136,18 @@ private object ParcelInfoStringComputer {
     }
 
     private inline fun StringBuilder.appendField(name: String, value: StringBuilder.() -> Unit) {
-        append(infoStringColor1)
-        append(name)
-        append(": ")
-        append(infoStringColor2)
-        value()
-        append(' ')
+        appendField({ append(name) }, value)
+    }
+
+    private inline fun StringBuilder.appendFieldWithCount(name: String, count: Int, value: StringBuilder.() -> Unit) {
+        appendField({
+            append(name)
+            append('(')
+            append(infoStringColor2)
+            append(count)
+            append(infoStringColor1)
+            append(')')
+        }, value)
     }
 
     private fun StringBuilder.appendAddedList(local: PrivilegeMap, global: PrivilegeMap, privilege: Privilege, fieldName: String) {
@@ -151,14 +158,7 @@ private object ParcelInfoStringComputer {
         val all = localFiltered + global.filterValues { it.isDistanceGrEq(privilege) }
         if (all.isEmpty()) return
 
-        appendField({
-            append(fieldName)
-            append('(')
-            append(infoStringColor2)
-            append(all.size)
-            append(infoStringColor1)
-            append(')')
-        }) {
+        appendFieldWithCount(fieldName, all.size) {
             val separator = "$infoStringColor1, $infoStringColor2"
 
             // first [localCount] entries are local
@@ -225,16 +225,12 @@ private object ParcelInfoStringComputer {
         append('\n')
         appendAddedList(local, global, Privilege.BANNED, "Banned")
 
-        /* TODO options
-        if (!parcel.allowInteractInputs || !parcel.allowInteractInventory) {
-            appendField("Options") {
-                append("(")
-                appendField("inputs") { append(parcel.allowInteractInputs) }
-                append(", ")
-                appendField("inventory") { append(parcel.allowInteractInventory) }
-                append(")")
+        if (!parcel.interactableConfig.isDefault()) {
+            val interactables = parcel.interactableConfig.interactableClasses
+            appendFieldWithCount("Interactables", interactables.size) {
+                interactables.asSequence().map { it.name }.joinTo(this)
             }
-        }*/
+        }
 
     }
 }

@@ -1,5 +1,6 @@
 package io.dico.parcels2
 
+import io.dico.parcels2.util.ext.ceilDiv
 import io.dico.parcels2.util.ext.getMaterialsWithWoodTypePrefix
 import org.bukkit.Material
 import java.util.EnumMap
@@ -115,9 +116,10 @@ interface InteractableConfiguration {
 
     fun isInteractable(material: Material): Boolean
     fun isInteractable(clazz: Interactables): Boolean
+    fun isDefault(): Boolean
+
     fun setInteractable(clazz: Interactables, interactable: Boolean): Boolean
     fun clear(): Boolean
-
     fun copyFrom(other: InteractableConfiguration) =
         Interactables.classesById.fold(false) { cur, elem -> setInteractable(elem, other.isInteractable(elem) || cur) }
 
@@ -128,7 +130,7 @@ interface InteractableConfiguration {
 fun InteractableConfiguration.isInteractable(clazz: Interactables?) = clazz != null && isInteractable(clazz)
 
 class BitmaskInteractableConfiguration : InteractableConfiguration {
-    val bitmaskArray = IntArray((Interactables.classesById.size + 31) / 32)
+    val bitmaskArray = IntArray(Interactables.classesById.size ceilDiv Int.SIZE_BITS)
 
     private fun isBitSet(classId: Int): Boolean {
         val idx = classId.ushr(5)
@@ -142,6 +144,13 @@ class BitmaskInteractableConfiguration : InteractableConfiguration {
 
     override fun isInteractable(clazz: Interactables): Boolean {
         return isBitSet(clazz.id) != clazz.interactableByDefault
+    }
+
+    override fun isDefault(): Boolean {
+        for (x in bitmaskArray) {
+            if (x != 0) return false
+        }
+        return true
     }
 
     override fun setInteractable(clazz: Interactables, interactable: Boolean): Boolean {
