@@ -45,6 +45,7 @@ class CommandsPrivilegesLocal(plugin: ParcelsPlugin) : AbstractParcelCommands(pl
     fun ParcelScope.cmdAllow(sender: Player, player: OfflinePlayer): Any? {
         Validate.isTrue(parcel.owner != null || sender.hasPermAdminManage, "This parcel is unowned")
         Validate.isTrue(!parcel.owner!!.matches(player), "The target already owns the parcel")
+        Validate.isTrue(parcel.privilege(sender) > parcel.privilege(player), "You may not change the privilege of ${player.name}")
         Validate.isTrue(parcel.allowBuild(player), "${player.name} is already allowed to build on this parcel")
         return "${player.name} is now allowed to build on this parcel"
     }
@@ -57,6 +58,7 @@ class CommandsPrivilegesLocal(plugin: ParcelsPlugin) : AbstractParcelCommands(pl
     )
     @RequireParcelPrivilege(Privilege.CAN_MANAGE)
     fun ParcelScope.cmdDisallow(sender: Player, player: OfflinePlayer): Any? {
+        Validate.isTrue(parcel.privilege(sender) > parcel.privilege(player), "You may not change the privilege of ${player.name}")
         Validate.isTrue(parcel.disallowBuild(player), "${player.name} is not currently allowed to build on this parcel")
         return "${player.name} is not allowed to build on this parcel anymore"
     }
@@ -71,6 +73,7 @@ class CommandsPrivilegesLocal(plugin: ParcelsPlugin) : AbstractParcelCommands(pl
     fun ParcelScope.cmdBan(sender: Player, player: OfflinePlayer): Any? {
         Validate.isTrue(parcel.owner != null || sender.hasPermAdminManage, "This parcel is unowned")
         Validate.isTrue(!parcel.owner!!.matches(player), "The owner cannot be banned from the parcel")
+        Validate.isTrue(parcel.privilege(sender) > parcel.privilege(player), "You may not change the privilege of ${player.name}")
         Validate.isTrue(parcel.ban(player), "${player.name} is already banned from this parcel")
         return "${player.name} is now banned from this parcel"
     }
@@ -83,6 +86,7 @@ class CommandsPrivilegesLocal(plugin: ParcelsPlugin) : AbstractParcelCommands(pl
     )
     @RequireParcelPrivilege(Privilege.CAN_MANAGE)
     fun ParcelScope.cmdUnban(sender: Player, player: OfflinePlayer): Any? {
+        Validate.isTrue(parcel.privilege(sender) > parcel.privilege(player), "You may not change the privilege of ${player.name}")
         Validate.isTrue(parcel.unban(player), "${player.name} is not currently banned from this parcel")
         return "${player.name} is not banned from this parcel anymore"
     }
