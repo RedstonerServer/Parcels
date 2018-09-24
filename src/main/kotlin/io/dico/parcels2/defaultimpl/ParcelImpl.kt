@@ -36,7 +36,7 @@ class ParcelImpl(
         world.storage.setParcelData(this, null)
     }
 
-    override val map: PrivilegeMap get() = data.map
+    override val privilegeMap: PrivilegeMap get() = data.privilegeMap
     override fun getStoredPrivilege(key: PrivilegeKey) = data.getStoredPrivilege(key)
 
     override fun setStoredPrivilege(key: PrivilegeKey, privilege: Privilege): Boolean {
@@ -50,10 +50,6 @@ class ParcelImpl(
         return if (privilege == DEFAULT) globalPrivileges?.privilege(player, adminPerm) ?: DEFAULT
         else privilege
     }
-
-    override var privilegeOfStar: Privilege
-        get() = data.privilegeOfStar.let { if (it == DEFAULT) globalPrivileges?.privilegeOfStar ?: DEFAULT else it }
-        set(value) = run { setStoredPrivilege(PlayerProfile.Star, value) }
 
     override val globalPrivileges: GlobalPrivileges?
         get() = keyOfOwner?.let { world.globalPrivileges[it] }
@@ -223,8 +219,8 @@ private object ParcelInfoStringComputer {
 
         append('\n')
 
-        val local = parcel.map
-        val global = parcel.globalPrivileges?.map ?: emptyMap()
+        val local = parcel.privilegeMap
+        val global = parcel.globalPrivileges?.privilegeMap ?: emptyMap()
         appendAddedList(local, global, CAN_BUILD, "Allowed") // includes CAN_MANAGE privilege
         append('\n')
         appendAddedList(local, global, BANNED, "Banned")

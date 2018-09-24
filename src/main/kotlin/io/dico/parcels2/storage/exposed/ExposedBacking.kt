@@ -189,7 +189,7 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource, val poolSi
 
         setParcelOwner(parcel, data.owner)
 
-        for ((profile, privilege) in data.map) {
+        for ((profile, privilege) in data.privilegeMap) {
             PrivilegesLocalT.setPrivilege(parcel, profile, privilege)
         }
 
@@ -267,7 +267,7 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource, val poolSi
             System.arraycopy(source, 0, target, 0, source.size.clampMax(target.size))
         }
 
-        map = PrivilegesLocalT.readPrivileges(id)
+        privilegeMap = PrivilegesLocalT.readPrivileges(id)
     }
 
 }

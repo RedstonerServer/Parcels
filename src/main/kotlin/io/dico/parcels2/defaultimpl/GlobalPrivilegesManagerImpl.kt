@@ -18,7 +18,7 @@ class GlobalPrivilegesManagerImpl(val plugin: ParcelsPlugin) : GlobalPrivilegesM
         data: MutablePrivilegeMap = emptyData
     ) : PrivilegesHolder(data), GlobalPrivileges {
 
-        private inline var data get() = map; set(value) = run { map = value }
+        private inline var data get() = privilegeMap; set(value) = run { privilegeMap = value }
         private inline val isEmpty get() = data === emptyData
 
         override fun setStoredPrivilege(key: PrivilegeKey, privilege: Privilege): Boolean {

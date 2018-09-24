@@ -64,8 +64,7 @@ typealias PrivilegeMap = Map<PrivilegeKey, Privilege>
 fun MutablePrivilegeMap(): MutablePrivilegeMap = hashMapOf()
 
 interface PrivilegesMinimal {
-    val map: PrivilegeMap
-    var privilegeOfStar: Privilege
+    val privilegeMap: PrivilegeMap
 
     fun getStoredPrivilege(key: PrivilegeKey): Privilege
     fun setStoredPrivilege(key: PrivilegeKey, privilege: Privilege): Boolean
@@ -120,13 +119,12 @@ enum class PrivilegeChangeResult {
 val OfflinePlayer.privilegeKey: PrivilegeKey
     inline get() = PlayerProfile.nameless(this)
 
-open class PrivilegesHolder(override var map: MutablePrivilegeMap = MutablePrivilegeMap()) : PrivilegesMinimal {
-    override var privilegeOfStar: Privilege = DEFAULT
-        set(value) = run { field = value.requireNonTransient() }
+open class PrivilegesHolder(override var privilegeMap: MutablePrivilegeMap = MutablePrivilegeMap()) : PrivilegesMinimal {
+    private var privilegeOfStar: Privilege = DEFAULT
 
     override fun getStoredPrivilege(key: PrivilegeKey) =
         if (key.isStar) privilegeOfStar
-        else map.getOrDefault(key, privilegeOfStar)
+        else privilegeMap.getOrDefault(key, privilegeOfStar)
 
     override fun setStoredPrivilege(key: PrivilegeKey, privilege: Privilege): Boolean {
         privilege.requireNonTransient()
@@ -137,8 +135,8 @@ open class PrivilegesHolder(override var map: MutablePrivilegeMap = MutablePrivi
             return true
         }
 
-        return if (privilege == DEFAULT) map.remove(key) != null
-        else map.put(key, privilege) != privilege
+        return if (privilege == DEFAULT) privilegeMap.remove(key) != null
+        else privilegeMap.put(key, privilege) != privilege
     }
 }
 
