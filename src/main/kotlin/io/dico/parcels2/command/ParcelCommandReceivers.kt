@@ -30,10 +30,7 @@ annotation class SuspensionTimeout(val millis: Int)
 
 open class WorldScope(val world: ParcelWorld) : ICommandReceiver
 open class ParcelScope(val parcel: Parcel) : WorldScope(parcel.world) {
-    fun checkCanManage(player: Player, action: String) = Validate.isTrue(
-        player.hasPermAdminManage || parcel.hasPrivilegeToManage(player),
-        "You must own this parcel to $action"
-    )
+    fun checkCanManage(player: Player, action: String) = Validate.isTrue(parcel.canManage(player), "You must own this parcel to $action")
 }
 
 fun getParcelCommandReceiver(parcelProvider: ParcelProvider, context: ExecutionContext, method: Method, cmdName: String): ICommandReceiver {
@@ -65,7 +62,7 @@ fun ParcelProvider.getParcelRequired(player: Player, privilege: Privilege? = nul
             OWNER ->
                 Validate.isTrue(parcel.isOwner(player.uuid), "You must own this parcel to use that command")
             CAN_MANAGE ->
-                Validate.isTrue(parcel.hasPrivilegeToManage(player), "You must have management privileges on this parcel to use that command")
+                Validate.isTrue(parcel.canManage(player), "You must have management privileges on this parcel to use that command")
         }
     }
 

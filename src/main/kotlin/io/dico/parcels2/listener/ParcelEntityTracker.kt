@@ -3,7 +3,6 @@ package io.dico.parcels2.listener
 import io.dico.parcels2.Parcel
 import io.dico.parcels2.ParcelProvider
 import io.dico.parcels2.util.ext.editLoop
-import io.dico.parcels2.util.ext.isPresentAnd
 import org.bukkit.entity.Entity
 
 class ParcelEntityTracker(val parcelProvider: ParcelProvider) {
@@ -29,11 +28,20 @@ class ParcelEntityTracker(val parcelProvider: ParcelProvider) {
             if (entity.isDead) {
                 remove(); return@editLoop
             }
-            if (parcel.isPresentAnd { hasBlockVisitors }) {
+
+            if (parcel != null && parcel.hasBlockVisitors) {
                 remove()
+
+                val newParcel = parcelProvider.getParcelAt(entity.location)
+                if (newParcel !== parcel && !(newParcel != null && newParcel.hasBlockVisitors)) {
+                    entity.remove()
+                }
+
+                return@editLoop
             }
+
             val newParcel = parcelProvider.getParcelAt(entity.location)
-            if (newParcel !== parcel && !newParcel.isPresentAnd { hasBlockVisitors }) {
+            if (newParcel !== parcel && !(newParcel != null && newParcel.hasBlockVisitors)) {
                 remove()
                 entity.remove()
             }
