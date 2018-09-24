@@ -7,6 +7,7 @@ import io.dico.dicore.command.IContextFilter
 import io.dico.dicore.command.parameter.type.ParameterTypes
 import io.dico.parcels2.Interactables
 import io.dico.parcels2.ParcelProvider
+import io.dico.parcels2.Privilege
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 
@@ -18,7 +19,7 @@ class ParcelOptionsInteractCommand(val parcelProvider: ParcelProvider) : Command
     }
 
     override fun execute(sender: CommandSender, context: ExecutionContext): String? {
-        val parcel = parcelProvider.getParcelRequired(sender as Player, owner = true)
+        val parcel = parcelProvider.getParcelRequired(sender as Player, Privilege.CAN_MANAGE)
         val interactableClassName = context.address.mainKey
         val allowed: Boolean = context.get("allowed")
         val change = parcel.interactableConfig.setInteractable(Interactables[interactableClassName], allowed)

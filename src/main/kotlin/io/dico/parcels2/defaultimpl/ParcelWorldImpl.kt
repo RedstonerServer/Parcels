@@ -15,7 +15,7 @@ class ParcelWorldImpl(override val world: World,
                       override val generator: ParcelGenerator,
                       override var options: RuntimeWorldOptions,
                       override val storage: Storage,
-                      val globalPrivileges: GlobalPrivilegesManager,
+                      override val globalPrivileges: GlobalPrivilegesManager,
                       containerFactory: ParcelContainerFactory,
                       coroutineScope: CoroutineScope,
                       worktimeLimiter: WorktimeLimiter)

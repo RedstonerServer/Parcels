@@ -13,9 +13,10 @@ class GlobalPrivilegesManagerImpl(val plugin: ParcelsPlugin) : GlobalPrivilegesM
         return map[owner] ?: GlobalPrivilegesImpl(owner).also { map[owner] = it }
     }
 
-    private inner class GlobalPrivilegesImpl(override val owner: PlayerProfile,
-                                             data: MutablePrivilegeMap = emptyData)
-        : PrivilegesHolder(data), GlobalPrivileges {
+    private inner class GlobalPrivilegesImpl(
+        override val owner: PlayerProfile,
+        data: MutablePrivilegeMap = emptyData
+    ) : PrivilegesHolder(data), GlobalPrivileges {
 
         private inline var data get() = map; set(value) = run { map = value }
         private inline val isEmpty get() = data === emptyData
@@ -25,7 +26,7 @@ class GlobalPrivilegesManagerImpl(val plugin: ParcelsPlugin) : GlobalPrivilegesM
                 if (privilege == Privilege.DEFAULT) return false
                 data = mutableMapOf()
             }
-            return super.set(key, privilege).alsoIfTrue {
+            return super<PrivilegesHolder>.setPrivilege(key, privilege).alsoIfTrue {
                 plugin.storage.setGlobalPrivilege(owner, key, privilege)
             }
         }
