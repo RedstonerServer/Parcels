@@ -1,7 +1,6 @@
 @file:Suppress("RemoveRedundantBackticks", "IMPLICIT_CAST_TO_ANY", "UNUSED_VARIABLE")
 
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-import org.jetbrains.kotlin.gradle.dsl.Coroutines.ENABLE
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformJvmPlugin
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import java.io.PrintWriter
@@ -31,7 +30,7 @@ allprojects {
     }
 
     dependencies {
-        val spigotVersion = "1.13-R0.1-SNAPSHOT"
+        val spigotVersion = "1.13.1-R0.1-SNAPSHOT"
         c.provided("org.bukkit:bukkit:$spigotVersion") { isTransitive = false }
         c.provided("org.spigotmc:spigot-api:$spigotVersion") { isTransitive = false }
 
@@ -46,7 +45,6 @@ allprojects {
 
 project(":dicore3:dicore3-command") {
     apply<KotlinPlatformJvmPlugin>()
-    kotlin.experimental.coroutines = ENABLE
 
     dependencies {
         c.kotlinStd(kotlin("stdlib-jdk8"))
@@ -70,6 +68,7 @@ dependencies {
 
     // not on sk89q maven repo yet
     compileClasspath(files("$rootDir/debug/plugins/worldedit-bukkit-7.0.0-beta-01.jar"))
+    compileClasspath(files("$rootDir/debug/lib/spigot-1.13.1.jar"))
 
     compile("org.jetbrains.exposed:exposed:0.10.5") { isTransitive = false }
     compile("joda-time:joda-time:2.10")

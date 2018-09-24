@@ -2,6 +2,7 @@ package io.dico.parcels2.defaultimpl
 
 import io.dico.dicore.Formatting
 import io.dico.parcels2.*
+import io.dico.parcels2.Privilege.*
 import io.dico.parcels2.util.Vec2i
 import io.dico.parcels2.util.ext.alsoIfTrue
 import org.bukkit.Material
@@ -36,19 +37,26 @@ class ParcelImpl(
     }
 
     override val map: PrivilegeMap get() = data.map
-    override fun privilege(key: PrivilegeKey) = data.privilege(key)
-    override fun isBanned(key: PrivilegeKey) = data.isBanned(key)
-    override fun hasPrivilegeToBuild(key: PrivilegeKey) = data.hasPrivilegeToBuild(key)
-    override fun canBuild(player: OfflinePlayer, checkAdmin: Boolean, checkGlobal: Boolean): Boolean {
-        return (data.canBuild(player, checkAdmin, false))
-            || checkGlobal && world.globalPrivileges[owner ?: return false].hasPrivilegeToBuild(player)
+    override fun getStoredPrivilege(key: PrivilegeKey) = data.getStoredPrivilege(key)
+
+    override fun setStoredPrivilege(key: PrivilegeKey, privilege: Privilege): Boolean {
+        return data.setStoredPrivilege(key, privilege).alsoIfTrue {
+            world.storage.setLocalPrivilege(this, key, privilege)
+        }
+    }
+
+    override fun privilege(player: OfflinePlayer, adminPerm: String): Privilege {
+        val privilege = super.privilege(player, adminPerm)
+        return if (privilege == DEFAULT) globalPrivileges?.privilege(player, adminPerm) ?: DEFAULT
+        else privilege
     }
 
     override var privilegeOfStar: Privilege
-        get() = data.privilegeOfStar
-        set(value) = run { setPrivilege(PlayerProfile.Star, value) }
+        get() = data.privilegeOfStar.let { if (it == DEFAULT) globalPrivileges?.privilegeOfStar ?: DEFAULT else it }
+        set(value) = run { setStoredPrivilege(PlayerProfile.Star, value) }
 
-    val globalAddedMap: PrivilegeMap? get() = owner?.let { world.globalPrivileges[it].map }
+    override val globalPrivileges: GlobalPrivileges?
+        get() = keyOfOwner?.let { world.globalPrivileges[it] }
 
     override val lastClaimTime: DateTime? get() = data.lastClaimTime
 
@@ -70,12 +78,6 @@ class ParcelImpl(
                 data.owner = value
             }
         }
-
-    override fun setPrivilege(key: PrivilegeKey, privilege: Privilege): Boolean {
-        return data.setPrivilege(key, privilege).alsoIfTrue {
-            world.storage.setLocalPrivilege(this, key, privilege)
-        }
-    }
 
     private fun updateInteractableConfigStorage() {
         world.storage.setParcelOptionsInteractConfig(this, data.interactableConfig)
@@ -188,12 +190,14 @@ private object ParcelInfoStringComputer {
         val (key, priv) = pair
 
         // prefix. Maybe T should be M for mod or something. T means they have CAN_MANAGE privilege.
-        append(when {
-            global && priv == Privilege.CAN_MANAGE -> "(GT)"
-            global -> "(G)"
-            priv == Privilege.CAN_MANAGE -> "(T)"
-            else -> ""
-        })
+        append(
+            when {
+                global && priv == CAN_MANAGE -> "(GT)"
+                global -> "(G)"
+                priv == CAN_MANAGE -> "(T)"
+                else -> ""
+            }
+        )
 
         append(key.notNullName)
     }
@@ -219,11 +223,11 @@ private object ParcelInfoStringComputer {
 
         append('\n')
 
-        val global = owner?.let { parcel.world.globalPrivileges[owner].map } ?: emptyMap()
         val local = parcel.map
-        appendAddedList(local, global, Privilege.CAN_BUILD, "Allowed") // includes CAN_MANAGE privilege
+        val global = parcel.globalPrivileges?.map ?: emptyMap()
+        appendAddedList(local, global, CAN_BUILD, "Allowed") // includes CAN_MANAGE privilege
         append('\n')
-        appendAddedList(local, global, Privilege.BANNED, "Banned")
+        appendAddedList(local, global, BANNED, "Banned")
 
         if (!parcel.interactableConfig.isDefault()) {
             val interactables = parcel.interactableConfig.interactableClasses

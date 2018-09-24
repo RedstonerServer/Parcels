@@ -43,7 +43,7 @@ class WorldEditListener(val parcels: ParcelsPlugin, val worldEdit: WorldEdit) {
 
         private fun canBuild(x: Int, z: Int): Boolean {
             world.getParcelAt(x, z)?.let { parcel ->
-                if (parcel.canBuild(player, checkAdmin = false)) {
+                if (parcel.canBuildFast(player)) {
                     return true
                 }
             }

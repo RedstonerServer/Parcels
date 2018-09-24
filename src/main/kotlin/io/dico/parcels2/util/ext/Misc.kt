@@ -20,8 +20,8 @@ inline fun Boolean.alsoIfFalse(block: () -> Unit): Boolean = also { if (!it) blo
 
 inline fun <R> Any.synchronized(block: () -> R): R = synchronized(this, block)
 
-inline fun <T> T?.isNullOr(condition: T.() -> Boolean): Boolean = this == null || condition()
-inline fun <T> T?.isPresentAnd(condition: T.() -> Boolean): Boolean = this != null && condition()
+//inline fun <T> T?.isNullOr(condition: T.() -> Boolean): Boolean = this == null || condition()
+//inline fun <T> T?.isPresentAnd(condition: T.() -> Boolean): Boolean = this != null && condition()
 inline fun <T> T?.ifNullRun(block: () -> Unit): T? {
     if (this == null) block()
     return this

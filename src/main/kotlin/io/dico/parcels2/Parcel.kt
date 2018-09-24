@@ -1,10 +1,7 @@
 package io.dico.parcels2
 
 import io.dico.parcels2.util.Vec2i
-import io.dico.parcels2.util.ext.hasPermBuildAnywhere
 import org.bukkit.Location
-import org.bukkit.OfflinePlayer
-import org.bukkit.entity.Player
 import org.joda.time.DateTime
 import java.util.UUID
 
@@ -16,7 +13,7 @@ import java.util.UUID
  * However, this implementation is intentionally not thread-safe.
  * Therefore, database query callbacks should schedule their updates using the bukkit scheduler.
  */
-interface Parcel : ParcelData {
+interface Parcel : ParcelData, Privileges {
     val id: ParcelId
     val world: ParcelWorld
     val pos: Vec2i
@@ -25,6 +22,10 @@ interface Parcel : ParcelData {
     val data: ParcelData
     val infoString: String
     val hasBlockVisitors: Boolean
+    val globalPrivileges: GlobalPrivileges?
+
+    override val keyOfOwner: PlayerProfile.Real?
+        get() = owner as? PlayerProfile.Real
 
     fun copyDataIgnoringDatabase(data: ParcelData)
 
@@ -37,13 +38,13 @@ interface Parcel : ParcelData {
     val homeLocation: Location get() = world.blockManager.getHomeLocation(id)
 }
 
-interface ParcelData : Privileges {
+interface ParcelData : PrivilegesMinimal {
     var owner: PlayerProfile?
     val lastClaimTime: DateTime?
     var ownerSignOutdated: Boolean
     var interactableConfig: InteractableConfiguration
 
-    fun canBuild(player: OfflinePlayer, checkAdmin: Boolean = true, checkGlobal: Boolean = true): Boolean
+    //fun canBuild(player: OfflinePlayer, checkAdmin: Boolean = true, checkGlobal: Boolean = true): Boolean
 
     fun isOwner(uuid: UUID): Boolean {
         return owner?.uuid == uuid
@@ -59,10 +60,11 @@ class ParcelDataHolder(addedMap: MutablePrivilegeMap = mutableMapOf())
     override var owner: PlayerProfile? = null
     override var lastClaimTime: DateTime? = null
     override var ownerSignOutdated = false
-    override fun canBuild(player: OfflinePlayer, checkAdmin: Boolean, checkGlobal: Boolean) =
-        hasPrivilegeToBuild(player)
-        || owner.let { it != null && it.matches(player, allowNameMatch = false) }
-        || (checkAdmin && player is Player && player.hasPermBuildAnywhere)
+
+    //override fun canBuild(player: OfflinePlayer, checkAdmin: Boolean, checkGlobal: Boolean) =
+    //    hasPrivilegeToBuild(player)
+    //    || owner.let { it != null && it.matches(player, allowNameMatch = false) }
+    //    || (checkAdmin && player is Player && player.hasPermBuildAnywhere)
 
     override var interactableConfig: InteractableConfiguration = BitmaskInteractableConfiguration()
 }

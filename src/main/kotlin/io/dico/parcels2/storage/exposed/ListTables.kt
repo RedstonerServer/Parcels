@@ -7,8 +7,8 @@ import io.dico.parcels2.Privilege.DEFAULT
 import kotlinx.coroutines.channels.SendChannel
 import org.jetbrains.exposed.sql.*
 
-object PrivilegesLocalT : PrivilegesTable<ParcelId>("parcels_added_local", ParcelsT)
-object PrivilegesGlobalT : PrivilegesTable<PlayerProfile>("parcels_added_global", ProfilesT)
+object PrivilegesLocalT : PrivilegesTable<ParcelId>("parcels_privilege_local", ParcelsT)
+object PrivilegesGlobalT : PrivilegesTable<PlayerProfile>("parcels_privilege_global", ProfilesT)
 
 object ParcelOptionsT : Table("parcel_options") {
     val parcel_id = integer("parcel_id").primaryKey().references(ParcelsT.id, ReferenceOption.CASCADE)

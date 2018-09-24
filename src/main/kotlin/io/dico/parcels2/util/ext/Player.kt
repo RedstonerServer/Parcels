@@ -13,10 +13,14 @@ inline val OfflinePlayer.uuid get() = uniqueId
 inline val OfflinePlayer.isValid
     get() = isOnline() || hasPlayedBefore()
 
-inline val Player.hasPermBanBypass get() = hasPermission("parcels.admin.bypass.ban")
+const val PERM_BAN_BYPASS = "parcels.admin.bypass.ban"
+const val PERM_BUILD_ANYWHERE = "parcels.admin.bypass.build"
+const val PERM_ADMIN_MANAGE = "parcels.admin.manage"
+
+inline val Player.hasPermBanBypass get() = hasPermission(PERM_BAN_BYPASS)
 inline val Player.hasPermGamemodeBypass get() = hasPermission("parcels.admin.bypass.gamemode")
-inline val Player.hasPermBuildAnywhere get() = hasPermission("parcels.admin.bypass.build")
-inline val Player.hasPermAdminManage get() = hasPermission("parcels.admin.manage")
+inline val Player.hasPermBuildAnywhere get() = hasPermission(PERM_BUILD_ANYWHERE)
+inline val Player.hasPermAdminManage get() = hasPermission(PERM_ADMIN_MANAGE)
 inline val Player.hasParcelHomeOthers get() = hasPermission("parcels.command.home.others")
 inline val Player.hasPermRandomSpecific get() = hasPermission("parcels.command.random.specific")
 val Player.parcelLimit: Int

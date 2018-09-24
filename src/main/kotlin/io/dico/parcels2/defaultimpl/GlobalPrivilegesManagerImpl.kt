@@ -9,25 +9,25 @@ import java.util.Collections
 class GlobalPrivilegesManagerImpl(val plugin: ParcelsPlugin) : GlobalPrivilegesManager {
     private val map = mutableMapOf<PlayerProfile, GlobalPrivileges>()
 
-    override fun get(owner: PlayerProfile): GlobalPrivileges {
+    override fun get(owner: PlayerProfile.Real): GlobalPrivileges {
         return map[owner] ?: GlobalPrivilegesImpl(owner).also { map[owner] = it }
     }
 
     private inner class GlobalPrivilegesImpl(
-        override val owner: PlayerProfile,
+        override val keyOfOwner: PlayerProfile.Real,
         data: MutablePrivilegeMap = emptyData
     ) : PrivilegesHolder(data), GlobalPrivileges {
 
         private inline var data get() = map; set(value) = run { map = value }
         private inline val isEmpty get() = data === emptyData
 
-        override fun setPrivilege(key: PrivilegeKey, privilege: Privilege): Boolean {
+        override fun setStoredPrivilege(key: PrivilegeKey, privilege: Privilege): Boolean {
             if (isEmpty) {
                 if (privilege == Privilege.DEFAULT) return false
                 data = mutableMapOf()
             }
-            return super<PrivilegesHolder>.setPrivilege(key, privilege).alsoIfTrue {
-                plugin.storage.setGlobalPrivilege(owner, key, privilege)
+            return super.setStoredPrivilege(key, privilege).alsoIfTrue {
+                plugin.storage.setGlobalPrivilege(keyOfOwner, key, privilege)
             }
         }
     }

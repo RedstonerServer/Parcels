@@ -20,9 +20,8 @@ import org.bukkit.block.Biome
 import org.bukkit.block.BlockFace
 import org.bukkit.block.Skull
 import org.bukkit.block.data.BlockData
-import org.bukkit.block.data.type.Sign
 import org.bukkit.block.data.type.Slab
-import java.lang.IllegalArgumentException
+import org.bukkit.block.data.type.WallSign
 import java.util.Random
 
 private val airType = Bukkit.createBlockData(Material.AIR)
@@ -201,8 +200,7 @@ class DefaultParcelGenerator(
                     o.wallType
 
                 wallBlock.blockData = wallBlockType
-
-                signBlock.blockData = (Bukkit.createBlockData(Material.WALL_SIGN) as Sign).apply { rotation = BlockFace.NORTH }
+                signBlock.blockData = (Bukkit.createBlockData(Material.WALL_SIGN) as WallSign).apply { facing = BlockFace.NORTH }
 
                 val sign = signBlock.state as org.bukkit.block.Sign
                 sign.setLine(0, "${parcel.x},${parcel.z}")
