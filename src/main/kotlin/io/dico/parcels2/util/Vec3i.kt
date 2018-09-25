@@ -2,6 +2,7 @@ package io.dico.parcels2.util
 
 import org.bukkit.World
 import org.bukkit.block.Block
+import org.bukkit.block.BlockFace
 
 data class Vec3d(
     val x: Double,
@@ -32,6 +33,27 @@ data class Vec3i(
     infix fun withY(o: Int) = Vec3i(x, o, z)
     infix fun withZ(o: Int) = Vec3i(x, y, o)
     fun add(ox: Int, oy: Int, oz: Int) = Vec3i(x + ox, y + oy, z + oz)
+    fun neg() = Vec3i(-x, -y, -z)
+
+    companion object {
+        private operator fun invoke(face: BlockFace) = Vec3i(face.modX, face.modY, face.modZ)
+        val down = Vec3i(BlockFace.DOWN)
+        val up = Vec3i(BlockFace.UP)
+        val north = Vec3i(BlockFace.NORTH)
+        val east = Vec3i(BlockFace.EAST)
+        val south = Vec3i(BlockFace.SOUTH)
+        val west = Vec3i(BlockFace.WEST)
+
+        fun convert(face: BlockFace) = when (face) {
+            BlockFace.DOWN -> down
+            BlockFace.UP -> up
+            BlockFace.NORTH -> north
+            BlockFace.EAST -> east
+            BlockFace.SOUTH -> south
+            BlockFace.WEST -> west
+            else -> Vec3i(face)
+        }
+    }
 }
 
 @Suppress("NOTHING_TO_INLINE")

@@ -162,7 +162,7 @@ class DefaultParcelGenerator(
         override val worktimeLimiter: WorktimeLimiter
     ) : ParcelBlockManagerBase(), CoroutineScope by coroutineScope {
         override val world: World = this@DefaultParcelGenerator.world
-        override val parcelTraverser: RegionTraverser = RegionTraverser.upToAndDownUntil(o.floorHeight)
+        override val parcelTraverser: RegionTraverser = RegionTraverser.convergingTo(o.floorHeight)
 
         /*override*/ fun getBottomBlock(parcel: ParcelId): Vec2i = Vec2i(
             sectionSize * (parcel.x - 1) + pathOffset + o.offsetX,

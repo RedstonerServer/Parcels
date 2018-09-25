@@ -33,7 +33,7 @@ class ParcelEntityTracker(val parcelProvider: ParcelProvider) {
                 remove()
 
                 val newParcel = parcelProvider.getParcelAt(entity.location)
-                if (newParcel !== parcel && !(newParcel != null && newParcel.hasBlockVisitors)) {
+                if (newParcel !== parcel && (newParcel == null || !newParcel.hasBlockVisitors)) {
                     entity.remove()
                 }
 
@@ -41,14 +41,13 @@ class ParcelEntityTracker(val parcelProvider: ParcelProvider) {
             }
 
             val newParcel = parcelProvider.getParcelAt(entity.location)
-            if (newParcel !== parcel && !(newParcel != null && newParcel.hasBlockVisitors)) {
+            if (newParcel !== parcel && (newParcel == null || !newParcel.hasBlockVisitors)) {
                 remove()
                 entity.remove()
             }
         }
     }
 
-    @Suppress("RedundantLambdaArrow")
     fun swapParcels(parcel1: Parcel, parcel2: Parcel) {
         map.editLoop { ->
             if (value === parcel1) {

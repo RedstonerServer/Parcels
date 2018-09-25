@@ -17,8 +17,11 @@ plugins {
     id("com.github.johnrengelman.plugin-shadow") version "2.0.3"
 }
 
+
+
 allprojects {
     apply<JavaPlugin>()
+    apply(plugin = "idea")
 
     repositories {
         mavenCentral()
@@ -68,7 +71,7 @@ dependencies {
 
     // not on sk89q maven repo yet
     compileClasspath(files("$rootDir/debug/plugins/worldedit-bukkit-7.0.0-beta-01.jar"))
-    compileClasspath(files("$rootDir/debug/lib/spigot-1.13.1.jar"))
+    //compileClasspath(files("$rootDir/debug/lib/spigot-1.13.1.jar"))
 
     compile("org.jetbrains.exposed:exposed:0.10.5") { isTransitive = false }
     compile("joda-time:joda-time:2.10")
@@ -91,7 +94,7 @@ tasks {
             javaParameters = true
             suppressWarnings = true
             jvmTarget = "1.8"
-            //freeCompilerArgs = listOf("-XXLanguage:+InlineClasses", "-Xuse-experimental=kotlin.Experimental")
+            freeCompilerArgs = listOf("-XXLanguage:+InlineClasses", "-Xuse-experimental=kotlin.Experimental")
         }
     }
 

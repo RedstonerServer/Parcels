@@ -196,11 +196,10 @@ class ParcelListeners(
         when (event.action) {
             Action.RIGHT_CLICK_BLOCK -> run {
                 val type = clickedBlock.type
-                val interactable = Interactables.listedMaterials.containsKey(type)
-                    && (parcel.effectiveInteractableConfig.isInteractable(type) || (parcel != null && parcel.canBuild(user)))
-                if (!interactable) {
-                    val interactableClassName = Interactables[type]!!.name
-                    user.sendParcelMessage(nopermit = true, message = "You cannot interact with $interactableClassName in this parcel")
+
+                val interactableClass = Interactables[type]
+                if (interactableClass != null && (parcel.effectiveInteractableConfig.isInteractable(type) || (parcel != null && parcel.canBuild(user)))) {
+                    user.sendParcelMessage(nopermit = true, message = "You cannot interact with ${interactableClass.name} in this parcel")
                     event.isCancelled = true
                     return@l
                 }

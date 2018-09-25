@@ -10,6 +10,8 @@ import io.dico.parcels2.blockvisitor.RegionTraverser
 import io.dico.parcels2.doBlockOperation
 import org.bukkit.Bukkit
 import org.bukkit.Material
+import org.bukkit.block.BlockFace
+import org.bukkit.block.data.Directional
 import org.bukkit.entity.Player
 import java.util.Random
 
@@ -53,6 +55,21 @@ class CommandsDebug(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
                     .format(progress * 100, elapsedTime / 1000.0)
             )
         }
+    }
+
+    @Cmd("directionality", aliases = ["dir"])
+    fun cmdDirectionality(sender: Player, context: ExecutionContext, material: Material): Any? {
+        val senderLoc = sender.location
+        val block = senderLoc.add(senderLoc.direction.setY(0).normalize().multiply(2).toLocation(sender.world)).block
+
+        val blockData = Bukkit.createBlockData(material)
+        if (blockData is Directional) {
+            blockData.facing = BlockFace.SOUTH
+        }
+
+        block.blockData = blockData
+        return if (blockData is Directional) "The block is facing south" else "The block is not directional, however it implements " +
+            blockData.javaClass.interfaces!!.contentToString()
     }
 
 }
