@@ -111,12 +111,12 @@ public abstract class Command {
         return Collections.unmodifiableList(contextFilters);
     }
 
-    public boolean removeContextFilter(IContextFilter contextFilter) {
+    public Command removeContextFilter(IContextFilter contextFilter) {
         boolean ret = contextFilters.remove(contextFilter);
         if (ret) {
             computeContextFilterPostParameterIndex();
         }
-        return ret;
+        return this;
     }
 
     private void computeContextFilterPostParameterIndex() {

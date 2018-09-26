@@ -7,7 +7,7 @@ public abstract class InheritingContextFilter implements IContextFilter {
 
     private static String[] addParent(String[] path, String parent) {
         String[] out = new String[path.length + 1];
-        System.arraycopy(path, 0, out, 0, path.length);
+        System.arraycopy(path, 0, out, 1, path.length);
         out[0] = parent;
         return out;
     }

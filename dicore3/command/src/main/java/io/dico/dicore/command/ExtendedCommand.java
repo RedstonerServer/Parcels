@@ -2,10 +2,11 @@ package io.dico.dicore.command;
 
 import io.dico.dicore.command.parameter.IArgumentPreProcessor;
 import io.dico.dicore.command.parameter.Parameter;
+import io.dico.dicore.command.parameter.type.ParameterType;
 
 @SuppressWarnings("unchecked")
 public abstract class ExtendedCommand<T extends ExtendedCommand<T>> extends Command {
-    protected final boolean modifiable;
+    protected boolean modifiable;
 
     public ExtendedCommand() {
         this(true);
@@ -22,6 +23,16 @@ public abstract class ExtendedCommand<T extends ExtendedCommand<T>> extends Comm
     @Override
     public T addParameter(Parameter<?, ?> parameter) {
         return modifiable ? (T) super.addParameter(parameter) : newModifiableInstance().addParameter(parameter);
+    }
+
+    @Override
+    public T addContextFilter(IContextFilter contextFilter) {
+        return modifiable ? (T) super.addContextFilter(contextFilter) : newModifiableInstance().addContextFilter(contextFilter);
+    }
+
+    @Override
+    public T removeContextFilter(IContextFilter contextFilter) {
+        return modifiable ? (T) super.removeContextFilter(contextFilter) : newModifiableInstance().removeContextFilter(contextFilter);
     }
 
     @Override

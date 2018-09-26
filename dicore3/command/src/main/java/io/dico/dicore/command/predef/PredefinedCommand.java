@@ -37,6 +37,7 @@ public abstract class PredefinedCommand<T extends PredefinedCommand<T>> extends 
 
     static {
         registerPredefinedCommandGenerator("help", HelpCommand::registerAsChild);
+        //noinspection StaticInitializerReferencesSubClass
         registerPredefinedCommandGenerator("syntax", SyntaxCommand::registerAsChild);
     }
 

@@ -52,7 +52,7 @@ public class PermissionContextFilter implements IContextFilter {
         doFilter(context, permission);
     }
 
-    private String getInheritedPermission(String[] components) {
+    public String getInheritedPermission(String[] components) {
         int insertedAmount = components.length;
         String[] currentComponents = permissionComponents;
         int currentAmount = currentComponents.length;
@@ -80,7 +80,7 @@ public class PermissionContextFilter implements IContextFilter {
 
     @Override
     public void filterSubContext(ExecutionContext subContext, String... path) throws CommandException {
-        if (permissionComponents != null) {
+        if (isInheritable()) {
             doFilter(subContext, getInheritedPermission(path));
         }
     }
@@ -88,6 +88,22 @@ public class PermissionContextFilter implements IContextFilter {
     @Override
     public Priority getPriority() {
         return Priority.PERMISSION;
+    }
+
+    public boolean isInheritable() {
+        return permissionComponents != null;
+    }
+
+    public String getPermission() {
+        return permission;
+    }
+
+    public int getComponentInsertionIndex() {
+        return componentInsertionIndex;
+    }
+
+    public String getFailMessage() {
+        return failMessage;
     }
 
 }

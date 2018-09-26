@@ -55,13 +55,13 @@ fun getParcelCommands(plugin: ParcelsPlugin): ICommandDispatcher = CommandBuilde
     generateHelpAndSyntaxCommands(parcelsAddress)
 }.getDispatcher()
 
-inline fun CommandBuilder.group(name: String, vararg aliases: String, config: CommandBuilder.() -> Unit) {
+private inline fun CommandBuilder.group(name: String, vararg aliases: String, config: CommandBuilder.() -> Unit) {
     group(name, *aliases)
     config()
     parent()
 }
 
-inline fun CommandBuilder.group(address: ICommandAddress, name: String, vararg aliases: String, config: CommandBuilder.() -> Unit) {
+private inline fun CommandBuilder.group(address: ICommandAddress, name: String, vararg aliases: String, config: CommandBuilder.() -> Unit) {
     group(address, name, *aliases)
     config()
     parent()

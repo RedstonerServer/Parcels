@@ -1,10 +1,10 @@
 package io.dico.parcels2.command
 
-import io.dico.dicore.command.CommandException
-import io.dico.dicore.command.EMessageType
-import io.dico.dicore.command.ExecutionContext
-import io.dico.dicore.command.Validate
+import io.dico.dicore.command.*
+import io.dico.dicore.command.IContextFilter.Priority.*
 import io.dico.dicore.command.annotation.Cmd
+import io.dico.dicore.command.annotation.PreprocessArgs
+import io.dico.dicore.command.parameter.ArgumentBuffer
 import io.dico.parcels2.ParcelsPlugin
 import io.dico.parcels2.Privilege
 import io.dico.parcels2.blockvisitor.RegionTraverser
@@ -93,6 +93,46 @@ class CommandsDebug(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
     @Cmd("hasperm")
     fun cmdHasperm(sender: CommandSender, target: Player, permission: String): Any? {
         return target.hasPermission(permission).toString()
+    }
+
+    @Cmd("message")
+    @PreprocessArgs
+    fun cmdMessage(sender: CommandSender, message: String): Any? {
+        sender.sendMessage(message)
+        return null
+    }
+
+    @Cmd("permissions")
+    fun cmdPermissions(context: ExecutionContext, vararg address: String): Any? {
+        val target = context.address.dispatcherForTree.getDeepChild(ArgumentBuffer(address))
+        Validate.isTrue(target.depth == address.size && target.hasCommand(), "Not found: /${address.joinToString(separator = " ")}")
+
+        val permissions = getPermissionsOf(target)
+        return permissions.joinToString(separator = "\n")
+    }
+
+    private fun getPermissionsOf(address: ICommandAddress,
+                                         path: Array<String> = emptyArray(),
+                                         result: MutableList<String> = mutableListOf()): List<String> {
+        val command = address.command ?: return result
+
+        var inherited = false
+        for (filter in command.contextFilters) {
+            when (filter) {
+                is PermissionContextFilter -> {
+                    if (path.isEmpty()) result.add(filter.permission)
+                    else if (filter.isInheritable) result.add(filter.getInheritedPermission(path))
+                }
+                is InheritingContextFilter -> {
+                    if (filter.priority == PERMISSION && address.hasParent() && !inherited) {
+                        inherited = true
+                        getPermissionsOf(address.parent, arrayOf(address.mainKey, *path), result)
+                    }
+                }
+            }
+        }
+
+        return result
     }
 
 }
