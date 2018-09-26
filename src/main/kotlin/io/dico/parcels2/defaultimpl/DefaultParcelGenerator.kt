@@ -32,9 +32,11 @@ class DefaultParcelGenerator(
     private var _world: World? = null
     override val world: World
         get() {
-            if (_world == null) _world = Bukkit.getWorld(worldName)!!.also {
-                maxHeight = it.maxHeight
-                return it
+            if (_world == null) {
+                val world = Bukkit.getWorld(worldName)
+                maxHeight = world.maxHeight
+                _world = world
+                return world
             }
             return _world!!
         }
@@ -175,7 +177,17 @@ class DefaultParcelGenerator(
 
         override fun getRegion(parcel: ParcelId): Region {
             val bottom = getBottomBlock(parcel)
-            return Region(Vec3i(bottom.x, 0, bottom.z), Vec3i(o.parcelSize, maxHeight + 1, o.parcelSize))
+            return Region(Vec3i(bottom.x, 0, bottom.z), Vec3i(o.parcelSize, maxHeight, o.parcelSize))
+        }
+
+        private fun getRegionConsideringWorld(parcel: ParcelId): Region {
+            if (parcel.worldId != worldId) {
+                (parcel.worldId as? ParcelWorld)?.let {
+                    return it.blockManager.getRegion(parcel)
+                }
+                throw IllegalArgumentException()
+            }
+            return getRegion(parcel)
         }
 
         override fun setOwnerBlock(parcel: ParcelId, owner: PlayerProfile?) {
@@ -277,10 +289,19 @@ class DefaultParcelGenerator(
         }
 
         override fun swapParcels(parcel1: ParcelId, parcel2: ParcelId): Worker = submitBlockVisitor(parcel1, parcel2) {
-            val schematicOf1 = delegateWork(0.25) { Schematic().apply { load(world, getRegion(parcel1)) } }
-            val schematicOf2 = delegateWork(0.25) { Schematic().apply { load(world, getRegion(parcel2)) } }
-            delegateWork(0.25) { with(schematicOf1) { paste(world, getRegion(parcel2).origin) } }
-            delegateWork(0.25) { with(schematicOf2) { paste(world, getRegion(parcel1).origin) } }
+            var region1 = getRegionConsideringWorld(parcel1)
+            var region2 = getRegionConsideringWorld(parcel2)
+
+            val size = region1.size.clampMax(region2.size)
+            if (size != region1.size) {
+                region1 = region1.withSize(size)
+                region2 = region2.withSize(size)
+            }
+
+            val schematicOf1 = delegateWork(0.25) { Schematic().apply { load(world, region1) } }
+            val schematicOf2 = delegateWork(0.25) { Schematic().apply { load(world, region2) } }
+            delegateWork(0.25) { with(schematicOf1) { paste(world, region2.origin) } }
+            delegateWork(0.25) { with(schematicOf2) { paste(world, region1.origin) } }
         }
 
         override fun getParcelsWithOwnerBlockIn(chunk: Chunk): Collection<Vec2i> {

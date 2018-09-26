@@ -51,7 +51,7 @@ class CommandsAdmin(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
         val parcel2 = (target as ParcelTarget.ByID).getParcel()
             ?: throw CommandException("Invalid parcel target")
 
-        Validate.isTrue(parcel2.world == world, "Parcel must be in the same world")
+        // Validate.isTrue(parcel2.world == world, "Parcel must be in the same world")
         Validate.isTrue(!parcel2.hasBlockVisitors, "A process is already running in this parcel")
 
         val data = parcel.data

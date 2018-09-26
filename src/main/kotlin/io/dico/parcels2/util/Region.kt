@@ -10,4 +10,9 @@ data class Region(val origin: Vec3i, val size: Vec3i) {
             val z = (origin.z + size.z) / 2.0
             return Vec3d(x, y, z)
         }
+
+    fun withSize(size: Vec3i): Region {
+        if (size == this.size) return this
+        return Region(origin, size)
+    }
 }

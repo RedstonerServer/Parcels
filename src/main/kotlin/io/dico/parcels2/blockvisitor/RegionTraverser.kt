@@ -218,8 +218,8 @@ inline class TraverseDirection(val bits: Int) {
 
     fun comesFirst(current: Vec3i, block: Vec3i) =
         comesFirst(current, block, Dimension.X)
-        && comesFirst(current, block, Dimension.Y)
-        && comesFirst(current, block, Dimension.Z)
+            && comesFirst(current, block, Dimension.Y)
+            && comesFirst(current, block, Dimension.Z)
 
     companion object {
         operator fun invoke(x: Int, y: Int, z: Int) = invoke(Vec3i(x, y, z))
@@ -229,7 +229,7 @@ inline class TraverseDirection(val bits: Int) {
             var bits = 0
             if (block.x > 0) bits = bits or 1
             if (block.y > 0) bits = bits or 2
-            if (block.z > 0) bits = bits or 3
+            if (block.z > 0) bits = bits or 4
             return TraverseDirection(bits)
         }
     }

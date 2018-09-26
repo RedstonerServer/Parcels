@@ -1,5 +1,6 @@
 package io.dico.parcels2.util
 
+import io.dico.parcels2.util.ext.clampMax
 import org.bukkit.World
 import org.bukkit.block.Block
 import org.bukkit.block.BlockFace
@@ -35,6 +36,7 @@ data class Vec3i(
     infix fun withZ(o: Int) = Vec3i(x, y, o)
     fun add(ox: Int, oy: Int, oz: Int) = Vec3i(x + ox, y + oy, z + oz)
     fun neg() = Vec3i(-x, -y, -z)
+    fun clampMax(o: Vec3i) = Vec3i(x.clampMax(o.x), y.clampMax(o.y), z.clampMax(o.z))
 
     companion object {
         private operator fun invoke(face: BlockFace) = Vec3i(face.modX, face.modY, face.modZ)
