@@ -26,6 +26,7 @@ data class Vec3i(
     val z: Int
 ) {
     operator fun plus(o: Vec3i) = Vec3i(x + o.x, y + o.y, z + o.z)
+    operator fun minus(o: Vec3i) = Vec3i(x - o.x, y - o.y, z - o.z)
     infix fun addX(o: Int) = Vec3i(x + o, y, z)
     infix fun addY(o: Int) = Vec3i(x, y + o, z)
     infix fun addZ(o: Int) = Vec3i(x, y, z + o)

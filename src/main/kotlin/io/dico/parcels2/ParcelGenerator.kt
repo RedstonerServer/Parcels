@@ -37,12 +37,12 @@ abstract class ParcelGenerator : ChunkGenerator() {
     abstract fun makeParcelLocatorAndBlockManager(worldId: ParcelWorldId,
                                                   container: ParcelContainer,
                                                   coroutineScope: CoroutineScope,
-                                                  worktimeLimiter: WorktimeLimiter): Pair<ParcelLocator, ParcelBlockManager>
+                                                  workDispatcher: WorkDispatcher): Pair<ParcelLocator, ParcelBlockManager>
 }
 
 interface ParcelBlockManager {
     val world: World
-    val worktimeLimiter: WorktimeLimiter
+    val workDispatcher: WorkDispatcher
     val parcelTraverser: RegionTraverser
 
     // fun getBottomBlock(parcel: ParcelId): Vec2i
@@ -61,7 +61,7 @@ interface ParcelBlockManager {
 
     fun swapParcels(parcel1: ParcelId, parcel2: ParcelId): Worker
 
-    fun submitBlockVisitor(vararg parcelIds: ParcelId, task: TimeLimitedTask): Worker
+    fun submitBlockVisitor(vararg parcelIds: ParcelId, task: WorkerTask): Worker
 
     /**
      * Used to update owner blocks in the corner of the parcel

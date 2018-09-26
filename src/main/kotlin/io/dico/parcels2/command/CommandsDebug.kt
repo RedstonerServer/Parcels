@@ -8,7 +8,6 @@ import io.dico.dicore.command.annotation.Cmd
 import io.dico.parcels2.ParcelsPlugin
 import io.dico.parcels2.Privilege
 import io.dico.parcels2.blockvisitor.RegionTraverser
-import io.dico.parcels2.blockvisitor.TickWorktimeLimiter
 import io.dico.parcels2.doBlockOperation
 import org.bukkit.Bukkit
 import org.bukkit.Material
@@ -78,15 +77,15 @@ class CommandsDebug(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
 
     @Cmd("visitors")
     fun cmdVisitors(): Any? {
-        val workers = plugin.worktimeLimiter.workers
+        val workers = plugin.workDispatcher.workers
         println(workers.map { it.job }.joinToString(separator = "\n"))
         return "Task count: ${workers.size}"
     }
 
     @Cmd("force_visitors")
     fun cmdForceVisitors(): Any? {
-        val workers = plugin.worktimeLimiter.workers
-        plugin.worktimeLimiter.completeAllTasks()
+        val workers = plugin.workDispatcher.workers
+        plugin.workDispatcher.completeAllTasks()
         return "Task count: ${workers.size}"
     }
 

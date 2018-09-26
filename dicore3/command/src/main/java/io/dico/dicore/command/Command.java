@@ -145,43 +145,50 @@ public abstract class Command {
         ExecutionContext executionContext = new ExecutionContext(sender, caller, this, buffer, false);
 
         try {
-            //System.out.println("In Command.execute(sender, caller, buffer)#try{");
-            int i, n;
-            for (i = 0, n = contextFilterPostParameterIndex; i < n; i++) {
-                contextFilters.get(i).filterContext(executionContext);
-            }
-
-            executionContext.parseParameters();
-
-            for (n = contextFilters.size(); i < n; i++) {
-                contextFilters.get(i).filterContext(executionContext);
-            }
-
-            //System.out.println("Post-contextfilters");
-
-            String message = execute(sender, executionContext);
-            caller.getChatController().sendMessage(sender, EMessageType.RESULT, message);
+            executeWithContext(executionContext);
         } catch (Throwable t) {
             caller.getChatController().handleException(sender, executionContext, t);
         }
+    }
+
+    public void executeWithContext(ExecutionContext context) throws CommandException {
+        //System.out.println("In Command.execute(sender, caller, buffer)#try{");
+        int i, n;
+        for (i = 0, n = contextFilterPostParameterIndex; i < n; i++) {
+            contextFilters.get(i).filterContext(context);
+        }
+
+        context.parseParameters();
+
+        for (n = contextFilters.size(); i < n; i++) {
+            contextFilters.get(i).filterContext(context);
+        }
+
+        //System.out.println("Post-contextfilters");
+
+        String message = execute(context.getSender(), context);
+        context.getAddress().getChatController().sendMessage(context.getSender(), EMessageType.RESULT, message);
     }
 
     public abstract String execute(CommandSender sender, ExecutionContext context) throws CommandException;
 
     public List<String> tabComplete(CommandSender sender, ICommandAddress caller, Location location, ArgumentBuffer buffer) {
         ExecutionContext executionContext = new ExecutionContext(sender, caller, this, buffer, true);
-
         try {
-            int i, n;
-            for (i = 0, n = contextFilterPostParameterIndex; i < n; i++) {
-                contextFilters.get(i).filterContext(executionContext);
-            }
+            return tabCompleteWithContext(executionContext, location);
         } catch (CommandException ex) {
             return Collections.emptyList();
         }
+    }
 
-        executionContext.parseParametersQuietly();
-        return tabComplete(sender, executionContext, location);
+    public List<String> tabCompleteWithContext(ExecutionContext context, Location location) throws CommandException {
+        int i, n;
+        for (i = 0, n = contextFilterPostParameterIndex; i < n; i++) {
+            contextFilters.get(i).filterContext(context);
+        }
+
+        context.parseParametersQuietly();
+        return tabComplete(context.getSender(), context, location);
     }
 
     public List<String> tabComplete(CommandSender sender, ExecutionContext context, Location location) {

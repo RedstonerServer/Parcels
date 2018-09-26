@@ -197,9 +197,35 @@ public final class CommandBuilder {
     public CommandBuilder group(String name, String... aliases) {
         ChildCommandAddress address = cur.getChild(name);
         if (address == null || !name.equals(address.getMainKey())) {
-            cur.addChild(address = ChildCommandAddress.newPlaceHolderCommand(name, aliases));
+            address = new ChildCommandAddress();
+            address.setupAsPlaceholder(name, aliases);
+            cur.addChild(address);
         }
         cur = address;
+        return this;
+    }
+
+    /**
+     * Similar to {@link #group(String, String[])} but this will force overwrite any present group,
+     * using the address passed. The address MUST be an instance of {@link ChildCommandAddress}.
+     *
+     * <p>The address must not have a parent or any keys</p>
+     *
+     * @param address the address object to use
+     * @param name the main key
+     * @param aliases any aliases
+     * @return this
+     * @throws IllegalArgumentException if any of the requirements set out above aren't met
+     */
+    public CommandBuilder group(ICommandAddress address, String name, String... aliases) {
+        if (address.hasParent() || address.getMainKey() != null || !(address instanceof ChildCommandAddress)) {
+            throw new IllegalArgumentException();
+        }
+
+        ChildCommandAddress asChild = (ChildCommandAddress) address;
+        asChild.setupAsPlaceholder(name, aliases);
+        cur.addChild(address);
+        cur = asChild;
         return this;
     }
 

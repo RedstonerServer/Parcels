@@ -83,7 +83,7 @@ sealed class ParcelTarget(val world: ParcelWorld, val parsedKind: Int, val isDef
         }
     }
 
-    class PType(val parcelProvider: ParcelProvider) : ParameterType<ParcelTarget, Int>(ParcelTarget::class.java, Config) {
+    class PType(val parcelProvider: ParcelProvider, val parcelAddress: SpecialCommandAddress? = null) : ParameterType<ParcelTarget, Int>(ParcelTarget::class.java, Config) {
 
         override fun parse(parameter: Parameter<ParcelTarget, Int>, sender: CommandSender, buffer: ArgumentBuffer): ParcelTarget {
             var input = buffer.next()
@@ -124,11 +124,25 @@ sealed class ParcelTarget(val world: ParcelWorld, val parsedKind: Int, val isDef
             val ownerString: String
             val index: Int?
 
+            val speciallyParsedIndex = parcelAddress?.speciallyParsedIndex
+
             if (splitIdx == -1) {
-                // just the index.
-                index = input.toIntOrNull()
-                ownerString = if (index == null) input else ""
+
+                if (speciallyParsedIndex == null) {
+                    // just the index.
+                    index = input.toIntOrNull()
+                    ownerString = if (index == null) input else ""
+                } else {
+                    // just the owner.
+                    index = speciallyParsedIndex
+                    ownerString = input
+                }
+
             } else {
+                if (speciallyParsedIndex != null) {
+                    invalidInput(parameter, "Duplicate home index")
+                }
+
                 ownerString = input.substring(0, splitIdx)
 
                 val indexString = input.substring(splitIdx + 1)
@@ -165,7 +179,7 @@ sealed class ParcelTarget(val world: ParcelWorld, val parsedKind: Int, val isDef
                 return ByID(world, id, kind, true)
             }
 
-            return ByOwner(world, PlayerProfile(player), 0, kind, true)
+            return ByOwner(world, PlayerProfile(player), parcelAddress?.speciallyParsedIndex ?: 0, kind, true)
         }
     }
 

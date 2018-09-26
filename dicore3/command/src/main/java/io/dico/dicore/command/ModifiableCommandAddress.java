@@ -120,6 +120,11 @@ public abstract class ModifiableCommandAddress implements ICommandAddress {
         return children.get(key);
     }
 
+    @Override
+    public ChildCommandAddress getChild(String key, ExecutionContext context) throws CommandException {
+        return getChild(key);
+    }
+
     public void addChild(ICommandAddress child) {
         if (!(child instanceof ChildCommandAddress)) {
             throw new IllegalArgumentException("Argument must be a ChildCommandAddress");

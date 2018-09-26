@@ -6,12 +6,11 @@ import io.dico.parcels2.util.get
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.World
-import org.bukkit.block.Block
+import org.bukkit.block.Sign
 import org.bukkit.block.data.BlockData
 
 private val air = Bukkit.createBlockData(Material.AIR)
 
-// TODO order paste such that attachables are placed after the block they depend on
 class Schematic {
     val size: Vec3i get() = _size!!
     private var _size: Vec3i? = null
@@ -21,7 +20,7 @@ class Schematic {
         }
 
     private var blockDatas: Array<BlockData?>? = null
-    private val extra = mutableMapOf<Vec3i, (Block) -> Unit>()
+    private val extra = mutableListOf<Pair<Vec3i, ExtraBlockChange>>()
     private var isLoaded = false; private set
     private val traverser: RegionTraverser = RegionTraverser.upward
 
@@ -32,7 +31,7 @@ class Schematic {
         val blocks = traverser.traverseRegion(region)
         val total = region.blockCount.toDouble()
 
-        for ((index, vec) in blocks.withIndex()) {
+        loop@ for ((index, vec) in blocks.withIndex()) {
             markSuspensionPoint()
             setProgress(index / total)
 
@@ -40,6 +39,14 @@ class Schematic {
             if (block.y > 255) continue
             val blockData = block.blockData
             data[index] = blockData
+
+            val extraChange = when (blockData.material) {
+                Material.SIGN,
+                Material.WALL_SIGN -> SignStateChange(block.state as Sign)
+                else -> continue@loop
+            }
+
+            extra += (vec - region.origin) to extraChange
         }
 
         isLoaded = true
@@ -47,53 +54,65 @@ class Schematic {
 
     suspend fun WorkerScope.paste(world: World, position: Vec3i) {
         if (!isLoaded) throw IllegalStateException()
+
         val region = Region(position, _size!!)
         val blocks = traverser.traverseRegion(region, worldHeight = world.maxHeight)
         val blockDatas = blockDatas!!
         var postponed = hashMapOf<Vec3i, BlockData>()
 
-        // 90% of the progress of this job is allocated to this code block
-        delegateWork(0.9) {
-            for ((index, vec) in blocks.withIndex()) {
-                markSuspensionPoint()
-                val block = world[vec]
-                val type = blockDatas[index] ?: air
-                if (type !== air && isAttachable(type.material)) {
-                    val supportingBlock = vec + getSupportingBlock(type)
+        val total = region.blockCount.toDouble()
+        var processed = 0
 
-                    if (!postponed.containsKey(supportingBlock) && traverser.comesFirst(vec, supportingBlock)) {
-                        block.blockData = type
-                    } else {
-                        postponed[vec] = type
-                    }
+        for ((index, vec) in blocks.withIndex()) {
+            markSuspensionPoint()
+            setProgress(index / total)
 
-                } else {
+            val block = world[vec]
+            val type = blockDatas[index] ?: air
+            if (type !== air && isAttachable(type.material)) {
+                val supportingBlock = vec + getSupportingBlock(type)
+
+                if (!postponed.containsKey(supportingBlock) && traverser.comesFirst(vec, supportingBlock)) {
                     block.blockData = type
+                    setProgress(++processed / total)
+                } else {
+                    postponed[vec] = type
                 }
+
+            } else {
+                block.blockData = type
+                setProgress(++processed / total)
             }
         }
 
-        delegateWork {
-            while (!postponed.isEmpty()) {
-                val newMap = hashMapOf<Vec3i, BlockData>()
-                for ((vec, type) in postponed) {
-                    val supportingBlock = vec + getSupportingBlock(type)
-                    if (supportingBlock in postponed && supportingBlock != vec) {
-                        newMap[vec] = type
-                    } else {
-                        world[vec].blockData = type
-                    }
+        while (!postponed.isEmpty()) {
+            markSuspensionPoint()
+            val newMap = hashMapOf<Vec3i, BlockData>()
+            for ((vec, type) in postponed) {
+                val supportingBlock = vec + getSupportingBlock(type)
+                if (supportingBlock in postponed && supportingBlock != vec) {
+                    newMap[vec] = type
+                } else {
+                    world[vec].blockData = type
+                    setProgress(++processed / total)
                 }
-                postponed = newMap
             }
+            postponed = newMap
+        }
+
+        // Should be negligible so we don't track progress
+        for ((vec, extraChange) in extra) {
+            markSuspensionPoint()
+            val block = world[position + vec]
+            extraChange.update(block)
         }
     }
 
-    fun getLoadTask(world: World, region: Region): TimeLimitedTask = {
+    fun getLoadTask(world: World, region: Region): WorkerTask = {
         load(world, region)
     }
 
-    fun getPasteTask(world: World, position: Vec3i): TimeLimitedTask = {
+    fun getPasteTask(world: World, position: Vec3i): WorkerTask = {
         paste(world, position)
     }
 

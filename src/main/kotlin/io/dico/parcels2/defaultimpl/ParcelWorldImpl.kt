@@ -3,7 +3,7 @@
 package io.dico.parcels2.defaultimpl
 
 import io.dico.parcels2.*
-import io.dico.parcels2.blockvisitor.WorktimeLimiter
+import io.dico.parcels2.blockvisitor.WorkDispatcher
 import io.dico.parcels2.options.RuntimeWorldOptions
 import io.dico.parcels2.storage.Storage
 import kotlinx.coroutines.CoroutineScope
@@ -18,7 +18,7 @@ class ParcelWorldImpl(override val world: World,
                       override val globalPrivileges: GlobalPrivilegesManager,
                       containerFactory: ParcelContainerFactory,
                       coroutineScope: CoroutineScope,
-                      worktimeLimiter: WorktimeLimiter)
+                      workDispatcher: WorkDispatcher)
     : ParcelWorld,
       ParcelWorldId,
       ParcelContainer, /* missing delegation */
@@ -39,7 +39,7 @@ class ParcelWorldImpl(override val world: World,
     override val blockManager: ParcelBlockManager
 
     init {
-        val pair = generator.makeParcelLocatorAndBlockManager(id, container, coroutineScope, worktimeLimiter)
+        val pair = generator.makeParcelLocatorAndBlockManager(id, container, coroutineScope, workDispatcher)
         locator = pair.first
         blockManager = pair.second
 

@@ -123,8 +123,6 @@ public class RootCommandAddress extends ModifiableCommandAddress implements ICom
 
     @Override
     public ModifiableCommandAddress getCommandTarget(CommandSender sender, ArgumentBuffer buffer) {
-        //System.out.println("Buffer cursor upon getCommandTarget: " + buffer.getCursor());
-
         ModifiableCommandAddress cur = this;
         ChildCommandAddress child;
         while (buffer.hasNext()) {
@@ -139,16 +137,25 @@ public class RootCommandAddress extends ModifiableCommandAddress implements ICom
             cur = child;
         }
 
-        /*
-        if (!cur.hasCommand() && cur.hasHelpCommand()) {
-            cur = cur.getHelpCommand();
-        } else {
-            while (!cur.hasCommand() && cur.hasParent()) {
-                cur = cur.getParent();
+        return cur;
+    }
+
+    @Override
+    public ModifiableCommandAddress getCommandTarget(ExecutionContext context, ArgumentBuffer buffer) throws CommandException {
+        CommandSender sender = context.getSender();
+        ModifiableCommandAddress cur = this;
+        ChildCommandAddress child;
+        while (buffer.hasNext()) {
+            child = cur.getChild(buffer.next(), context);
+            if (child == null
+                || (child.hasCommand() && !child.getCommand().isVisibleTo(sender))
+                || (cur.hasCommand() && cur.getCommand().takePrecedenceOverSubcommand(buffer.peekPrevious(), buffer.getUnaffectingCopy()))) {
                 buffer.rewind();
+                break;
             }
+
+            cur = child;
         }
-        */
 
         return cur;
     }
@@ -165,18 +172,32 @@ public class RootCommandAddress extends ModifiableCommandAddress implements ICom
 
     @Override
     public boolean dispatchCommand(CommandSender sender, ArgumentBuffer buffer) {
-        ModifiableCommandAddress targetAddress = getCommandTarget(sender, buffer);
-        Command target = targetAddress.getCommand();
+        ExecutionContext context = new ExecutionContext(sender, false);
 
-        if (target == null || target instanceof DefaultGroupCommand) {
-            if (targetAddress.hasHelpCommand()) {
-                target = targetAddress.getHelpCommand().getCommand();
-            } else if (target == null){
-                return false;
+        ModifiableCommandAddress targetAddress = null;
+
+        try {
+            targetAddress = getCommandTarget(context, buffer);
+            Command target = targetAddress.getCommand();
+
+            if (target == null || target instanceof DefaultGroupCommand) {
+                if (targetAddress.hasHelpCommand()) {
+                    target = targetAddress.getHelpCommand().getCommand();
+                } else if (target == null){
+                    return false;
+                }
             }
+
+            context.targetAcquired(targetAddress, target, buffer);
+            target.executeWithContext(context);
+
+        } catch (Throwable t) {
+            if (targetAddress == null) {
+                targetAddress = this;
+            }
+            targetAddress.getChatController().handleException(sender, context, t);
         }
 
-        target.execute(sender, targetAddress, buffer);
         return true;
     }
 
@@ -192,28 +213,38 @@ public class RootCommandAddress extends ModifiableCommandAddress implements ICom
 
     @Override
     public List<String> getTabCompletions(CommandSender sender, Location location, ArgumentBuffer buffer) {
-        ICommandAddress target = getCommandTarget(sender, buffer);
-        List<String> out = target.hasCommand() ? target.getCommand().tabComplete(sender, target, location, buffer.getUnaffectingCopy()) : Collections.emptyList();
+        ExecutionContext context = new ExecutionContext(sender, true);
 
-        int cursor = buffer.getCursor();
-        String input;
-        if (cursor >= buffer.size()) {
-            input = "";
-        } else {
-            input = buffer.get(cursor).toLowerCase();
-        }
+        try {
+            ICommandAddress target = getCommandTarget(context, buffer);
+            List<String> out = target.hasCommand()
+                ? target.getCommand().tabComplete(sender, target, location, buffer.getUnaffectingCopy())
+                : Collections.emptyList();
 
-        boolean wrapped = false;
-        for (String child : target.getChildren().keySet()) {
-            if (child.toLowerCase().startsWith(input)) {
-                if (!wrapped) {
-                    out = new ArrayList<>(out);
-                    wrapped = true;
-                }
-                out.add(child);
+            int cursor = buffer.getCursor();
+            String input;
+            if (cursor >= buffer.size()) {
+                input = "";
+            } else {
+                input = buffer.get(cursor).toLowerCase();
             }
+
+            boolean wrapped = false;
+            for (String child : target.getChildren().keySet()) {
+                if (child.toLowerCase().startsWith(input)) {
+                    if (!wrapped) {
+                        out = new ArrayList<>(out);
+                        wrapped = true;
+                    }
+                    out.add(child);
+                }
+            }
+
+            return out;
+
+        } catch (CommandException ex) {
+            return Collections.emptyList();
         }
 
-        return out;
     }
 }

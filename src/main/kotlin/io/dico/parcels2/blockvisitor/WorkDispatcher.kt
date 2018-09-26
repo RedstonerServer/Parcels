@@ -16,17 +16,17 @@ import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn
 import kotlin.coroutines.resume
 
-typealias TimeLimitedTask = suspend WorkerScope.() -> Unit
+typealias WorkerTask = suspend WorkerScope.() -> Unit
 typealias WorkerUpdateLister = Worker.(Double, Long) -> Unit
 
 data class TickWorktimeOptions(var workTime: Int, var tickInterval: Int)
 
-interface WorktimeLimiter {
+interface WorkDispatcher {
     /**
      * Submit a [task] that should be run synchronously, but limited such that it does not stall the server
      * a bunch
      */
-    fun submit(task: TimeLimitedTask): Worker
+    fun dispatch(task: WorkerTask): Worker
 
     /**
      * Get a list of all workers
@@ -39,14 +39,20 @@ interface WorktimeLimiter {
     fun completeAllTasks()
 }
 
-interface Timed {
+interface WorkerAndScopeMembersUnion {
     /**
      * The time that elapsed since this worker was dispatched, in milliseconds
      */
     val elapsedTime: Long
+
+    /**
+     * A value indicating the progress of this worker, in the range 0.0 <= progress <= 1.0
+     * with no guarantees to its accuracy.
+     */
+    val progress: Double
 }
 
-interface Worker : Timed {
+interface Worker : WorkerAndScopeMembersUnion {
     /**
      * The coroutine associated with this worker
      */
@@ -62,12 +68,6 @@ interface Worker : Timed {
      * returns that exception. Returns null otherwise.
      */
     val completionException: Throwable?
-
-    /**
-     * A value indicating the progress of this worker, in the range 0.0 <= progress <= 1.0
-     * with no guarantees to its accuracy.
-     */
-    val progress: Double
 
     /**
      * Calls the given [block] whenever the progress of this worker is updated,
@@ -96,17 +96,11 @@ interface Worker : Timed {
     //val attachment: Any?
 }
 
-interface WorkerScope : Timed {
+interface WorkerScope : WorkerAndScopeMembersUnion {
     /**
      * A task should call this frequently during its execution, such that the timer can suspend it when necessary.
      */
     suspend fun markSuspensionPoint()
-
-    /**
-     * A value indicating the progress of this worker, in the range 0.0 <= progress <= 1.0
-     * with no guarantees to its accuracy.
-     */
-    val progress: Double
 
     /**
      * A task should call this method to indicate its progress
@@ -152,14 +146,14 @@ interface WorkerInternal : Worker, WorkerScope {
  * There is a configurable maxiumum amount of milliseconds that can be allocated to all workers together in each server tick
  * This object attempts to split that maximum amount of milliseconds equally between all jobs
  */
-class TickWorktimeLimiter(private val plugin: ParcelsPlugin, var options: TickWorktimeOptions) : WorktimeLimiter {
+class BukkitWorkDispatcher(private val plugin: ParcelsPlugin, var options: TickWorktimeOptions) : WorkDispatcher {
     // The currently registered bukkit scheduler task
     private var bukkitTask: BukkitTask? = null
     // The workers.
     private val _workers = LinkedList<WorkerInternal>()
     override val workers: List<Worker> = _workers
 
-    override fun submit(task: TimeLimitedTask): Worker {
+    override fun dispatch(task: WorkerTask): Worker {
         val worker: WorkerInternal = WorkerImpl(plugin, task)
 
         if (bukkitTask == null) {
@@ -209,7 +203,7 @@ class TickWorktimeLimiter(private val plugin: ParcelsPlugin, var options: TickWo
 
 }
 
-private class WorkerImpl(scope: CoroutineScope, task: TimeLimitedTask) : WorkerInternal {
+private class WorkerImpl(scope: CoroutineScope, task: WorkerTask) : WorkerInternal {
     override val job: Job = scope.launch(start = LAZY) { task() }
 
     private var continuation: Continuation<Unit>? = null
@@ -239,7 +233,7 @@ private class WorkerImpl(scope: CoroutineScope, task: TimeLimitedTask) : WorkerI
             // report any error that occurred
             completionException = exception?.also {
                 if (it !is CancellationException)
-                    logger.error("TimeLimitedTask generated an exception", it)
+                    logger.error("WorkerTask generated an exception", it)
             }
 
             // convert to elapsed time here
@@ -316,6 +310,7 @@ private class WorkerImpl(scope: CoroutineScope, task: TimeLimitedTask) : WorkerI
             return true
         }
 
+        isStarted = true
         startTimeOrElapsedTime = System.currentTimeMillis()
         job.start()
 
@@ -348,14 +343,3 @@ private class WorkerImpl(scope: CoroutineScope, task: TimeLimitedTask) : WorkerI
             this@WorkerImpl.delegateWork(this.portion, portion)
     }
 }
-
-/*
-/**
- * While the implementation of [kotlin.coroutines.experimental.intrinsics.intercepted] is intrinsic, it should look something like this
- * We don't care for intercepting the coroutine as we want it to resume immediately when we call resume().
- * Thus, above, we use an unintercepted suspension. It's not necessary as the dispatcher (or interceptor) also calls it synchronously, but whatever.
- */
-private fun <T> Continuation<T>.interceptedImpl(): Continuation<T> {
-    return context[ContinuationInterceptor]?.interceptContinuation(this) ?: this
-}
- */

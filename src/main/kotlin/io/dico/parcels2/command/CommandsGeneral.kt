@@ -16,7 +16,7 @@ import io.dico.parcels2.util.ext.uuid
 import org.bukkit.block.Biome
 import org.bukkit.entity.Player
 
-class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
+class CommandsGeneral(plugin: ParcelsPlugin, parent: SpecialCommandAddress) : AbstractParcelCommands(plugin) {
 
     @Cmd("auto")
     @Desc(
@@ -42,6 +42,10 @@ class CommandsGeneral(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
         shortVersion = "displays information about this parcel"
     )
     fun ParcelScope.cmdInfo(player: Player) = parcel.infoString
+
+    init {
+        parent.addSpeciallyTreatedKeys("home", "h")
+    }
 
     @Cmd("home", aliases = ["h"])
     @Desc(

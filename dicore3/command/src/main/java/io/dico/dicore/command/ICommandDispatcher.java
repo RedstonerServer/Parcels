@@ -30,7 +30,22 @@ public interface ICommandDispatcher {
      * @param buffer the command itself as a buffer.
      * @return the address that is the target of the command.
      */
+    @Deprecated
     ICommandAddress getCommandTarget(CommandSender sender, ArgumentBuffer buffer);
+
+    /**
+     * Similar to {@link #getDeepChild(ArgumentBuffer)},
+     * but this method incorporates checks on the command of traversed children:
+     * {@link Command#isVisibleTo(CommandSender)}
+     * and {@link Command#takePrecedenceOverSubcommand(String, ArgumentBuffer)}
+     * <p>
+     * The target of a command is never null, however, the same instance might be returned, and the returned address might not hold a command.
+     *
+     * @param context the context of the command. The context must not have its address set.
+     * @param buffer the command itself as a buffer.
+     * @return the address that is the target of the command.
+     */
+    ICommandAddress getCommandTarget(ExecutionContext context, ArgumentBuffer buffer) throws CommandException;
 
     /**
      * dispatch the command

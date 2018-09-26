@@ -126,6 +126,16 @@ public interface ICommandAddress {
     ICommandAddress getChild(String key);
 
     /**
+     * Query for a child at the given key, with the given context for reference.
+     * Can be used to override behaviour of the tree.
+     *
+     * @param key the key. The name or alias of a command.
+     * @param context context of a command being executed
+     * @return the child, or null if it's not found, altered freely by the implementation
+     */
+    ICommandAddress getChild(String key, ExecutionContext context) throws CommandException;
+
+    /**
      * Get the command dispatcher for this tree
      *
      * @return the command dispatcher

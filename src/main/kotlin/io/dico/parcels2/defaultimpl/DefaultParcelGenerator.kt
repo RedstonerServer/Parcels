@@ -119,9 +119,9 @@ class DefaultParcelGenerator(
         worldId: ParcelWorldId,
         container: ParcelContainer,
         coroutineScope: CoroutineScope,
-        worktimeLimiter: WorktimeLimiter
+        workDispatcher: WorkDispatcher
     ): Pair<ParcelLocator, ParcelBlockManager> {
-        return ParcelLocatorImpl(worldId, container) to ParcelBlockManagerImpl(worldId, coroutineScope, worktimeLimiter)
+        return ParcelLocatorImpl(worldId, container) to ParcelBlockManagerImpl(worldId, coroutineScope, workDispatcher)
     }
 
     private inline fun <T> convertBlockLocationToId(x: Int, z: Int, mapper: (Int, Int) -> T): T? {
@@ -156,7 +156,7 @@ class DefaultParcelGenerator(
     private inner class ParcelBlockManagerImpl(
         val worldId: ParcelWorldId,
         coroutineScope: CoroutineScope,
-        override val worktimeLimiter: WorktimeLimiter
+        override val workDispatcher: WorkDispatcher
     ) : ParcelBlockManagerBase(), CoroutineScope by coroutineScope {
         override val world: World = this@DefaultParcelGenerator.world
         override val parcelTraverser: RegionTraverser = RegionTraverser.convergingTo(o.floorHeight)
@@ -222,12 +222,12 @@ class DefaultParcelGenerator(
             return world.getParcelById(parcelId)
         }
 
-        override fun submitBlockVisitor(vararg parcelIds: ParcelId, task: TimeLimitedTask): Worker {
+        override fun submitBlockVisitor(vararg parcelIds: ParcelId, task: WorkerTask): Worker {
             val parcels = parcelIds.mapNotNull { getParcel(it) }
-            if (parcels.isEmpty()) return worktimeLimiter.submit(task)
+            if (parcels.isEmpty()) return workDispatcher.dispatch(task)
             if (parcels.any { it.hasBlockVisitors }) throw IllegalArgumentException("This parcel already has a block visitor")
 
-            val worker = worktimeLimiter.submit(task)
+            val worker = workDispatcher.dispatch(task)
 
             for (parcel in parcels) {
                 launch(start = UNDISPATCHED) {
@@ -277,10 +277,10 @@ class DefaultParcelGenerator(
         }
 
         override fun swapParcels(parcel1: ParcelId, parcel2: ParcelId): Worker = submitBlockVisitor(parcel1, parcel2) {
-            val schematicOf1 = delegateWork(0.15) { Schematic().apply { load(world, getRegion(parcel1)) } }
-            val schematicOf2 = delegateWork(0.15) { Schematic().apply { load(world, getRegion(parcel2)) } }
-            delegateWork(0.35) { with(schematicOf1) { paste(world, getRegion(parcel2).origin) } }
-            delegateWork(0.35) { with(schematicOf2) { paste(world, getRegion(parcel1).origin) } }
+            val schematicOf1 = delegateWork(0.25) { Schematic().apply { load(world, getRegion(parcel1)) } }
+            val schematicOf2 = delegateWork(0.25) { Schematic().apply { load(world, getRegion(parcel2)) } }
+            delegateWork(0.25) { with(schematicOf1) { paste(world, getRegion(parcel2).origin) } }
+            delegateWork(0.25) { with(schematicOf2) { paste(world, getRegion(parcel1).origin) } }
         }
 
         override fun getParcelsWithOwnerBlockIn(chunk: Chunk): Collection<Vec2i> {

@@ -1,8 +1,6 @@
 package io.dico.parcels2.command
 
-import io.dico.dicore.command.CommandBuilder
-import io.dico.dicore.command.ICommandAddress
-import io.dico.dicore.command.ICommandDispatcher
+import io.dico.dicore.command.*
 import io.dico.dicore.command.registration.reflect.ReflectiveRegistration
 import io.dico.parcels2.Interactables
 import io.dico.parcels2.ParcelsPlugin
@@ -13,14 +11,16 @@ import java.util.Queue
 @Suppress("UsePropertyAccessSyntax")
 fun getParcelCommands(plugin: ParcelsPlugin): ICommandDispatcher =
     with(CommandBuilder()) {
+        val parcelsAddress = SpecialCommandAddress()
+
         setChatController(ParcelsChatController())
         addParameterType(false, ParcelParameterType(plugin.parcelProvider))
         addParameterType(false, ProfileParameterType())
-        addParameterType(true, ParcelTarget.PType(plugin.parcelProvider))
+        addParameterType(true, ParcelTarget.PType(plugin.parcelProvider, parcelsAddress))
 
-        group("parcel", "plot", "plots", "p") {
+        group(parcelsAddress, "parcel", "plot", "plots", "p") {
             addRequiredPermission("parcels.command")
-            registerCommands(CommandsGeneral(plugin))
+            registerCommands(CommandsGeneral(plugin, parcelsAddress))
             registerCommands(CommandsPrivilegesLocal(plugin))
 
             group("option", "opt", "o") {
@@ -63,6 +63,12 @@ inline fun CommandBuilder.group(name: String, vararg aliases: String, config: Co
     parent()
 }
 
+inline fun CommandBuilder.group(address: ICommandAddress, name: String, vararg aliases: String, config: CommandBuilder.() -> Unit) {
+    group(address, name, *aliases)
+    config()
+    parent()
+}
+
 private fun CommandBuilder.generateHelpAndSyntaxCommands(): CommandBuilder {
     generateCommands(dispatcher as ICommandAddress, "help", "syntax")
     return this
@@ -79,4 +85,38 @@ private fun generateCommands(address: ICommandAddress, vararg names: String) {
             ReflectiveRegistration.generateCommands(cur, names)
         }
     }
+}
+
+class SpecialCommandAddress : ChildCommandAddress() {
+    private val speciallyTreatedKeys = mutableListOf<String>()
+
+    // Used to allow /p h:1 syntax, which is the same as what PlotMe uses.
+    var speciallyParsedIndex: Int? = null; private set
+
+    fun addSpeciallyTreatedKeys(vararg keys: String) {
+        for (key in keys) {
+            speciallyTreatedKeys.add(key + ":")
+        }
+    }
+
+    @Throws(CommandException::class)
+    override fun getChild(key: String, context: ExecutionContext): ChildCommandAddress? {
+        speciallyParsedIndex = null
+
+        for (specialKey in speciallyTreatedKeys) {
+            if (key.startsWith(specialKey)) {
+                val result = getChild(specialKey.substring(0, specialKey.length - 1))
+                    ?: return null
+
+                val text = key.substring(specialKey.length)
+                val num = text.toIntOrNull() ?: throw CommandException("$text is not a number")
+                speciallyParsedIndex = num
+
+                return result
+            }
+        }
+
+        return super.getChild(key)
+    }
+
 }

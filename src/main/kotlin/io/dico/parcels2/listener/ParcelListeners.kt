@@ -198,8 +198,8 @@ class ParcelListeners(
                 val type = clickedBlock.type
 
                 val interactableClass = Interactables[type]
-                if (interactableClass != null && (parcel.effectiveInteractableConfig.isInteractable(type) || (parcel != null && parcel.canBuild(user)))) {
-                    user.sendParcelMessage(nopermit = true, message = "You cannot interact with ${interactableClass.name} in this parcel")
+                if (interactableClass != null && !parcel.effectiveInteractableConfig.isInteractable(type) && (parcel == null || !parcel.canBuild(user))) {
+                    user.sendParcelMessage(nopermit = true, message = "You cannot interact with ${interactableClass.name} here")
                     event.isCancelled = true
                     return@l
                 }
@@ -593,6 +593,18 @@ class ParcelListeners(
     @ListenerMarker
     val onPlayerJoinEvent = RegistratorListener<PlayerJoinEvent> l@{ event ->
         storage.updatePlayerName(event.player.uuid, event.player.name)
+    }
+
+    /**
+     * Attempts to prevent redstone contraptions from breaking while they are being swapped
+     * Might remove if it causes lag
+     */
+    @ListenerMarker
+    val onBlockRedstoneEvent = RegistratorListener<BlockRedstoneEvent> l@{ event ->
+        val (_, area) = getWorldAndArea(event.block) ?: return@l
+        if (area == null || area.hasBlockVisitors) {
+            event.newCurrent = event.oldCurrent
+        }
     }
 
 }

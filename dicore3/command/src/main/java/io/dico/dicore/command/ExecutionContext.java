@@ -17,14 +17,14 @@ import java.util.*;
  * It is also responsible for keeping track of the parameter to complete in the case of a tab completion.
  */
 public class ExecutionContext {
-    private final CommandSender sender;
-    private final ICommandAddress address;
-    private final Command command;
-    private final ArgumentBuffer originalBuffer;
-    private final ArgumentBuffer processedBuffer;
+    private CommandSender sender;
+    private ICommandAddress address;
+    private Command command;
+    private ArgumentBuffer originalBuffer;
+    private ArgumentBuffer processedBuffer;
 
     // caches the buffer's cursor before parsing. This is needed to provide the original input of the player.
-    private final int cursorStart;
+    private int cursorStart;
 
     // when the context starts parsing parameters, this flag is set, and any subsequent calls to #parseParameters() throw an IllegalStateException.
     private boolean attemptedToParse;
@@ -48,8 +48,14 @@ public class ExecutionContext {
     // if this flag is set, any messages sent through the sendMessage methods are discarded.
     private boolean muted;
 
+    public ExecutionContext(CommandSender sender, boolean tabComplete) {
+        this.sender = Objects.requireNonNull(sender);
+        this.muted = tabComplete;
+        this.tabComplete = tabComplete;
+    }
+
     /**
-     * Construct an execution context, making it ready to parse the parameter values.
+     * Construct an execution context that is ready to parse the parameter values.
      *
      * @param sender      the sender
      * @param address     the address
@@ -57,11 +63,22 @@ public class ExecutionContext {
      * @param tabComplete true if this execution is a tab-completion
      */
     public ExecutionContext(CommandSender sender, ICommandAddress address, Command command, ArgumentBuffer buffer, boolean tabComplete) {
-        this.sender = Objects.requireNonNull(sender);
+        this(sender, tabComplete);
+        targetAcquired(address, command, buffer);
+    }
+
+    void requireAddressPresent(boolean present) {
+        //noinspection DoubleNegation
+        if ((address != null) != present) {
+            throw new IllegalStateException();
+        }
+    }
+
+    void targetAcquired(ICommandAddress address, Command command, ArgumentBuffer buffer) {
+        requireAddressPresent(false);
+
         this.address = Objects.requireNonNull(address);
         this.command = Objects.requireNonNull(command);
-        this.muted = tabComplete;
-        this.tabComplete = tabComplete;
 
         // If its tab completing, keep the empty element that might be at the end of the buffer
         // due to a space at the end of the command.
@@ -80,7 +97,8 @@ public class ExecutionContext {
      *
      * @throws CommandException if an error occurs while parsing the parameters.
      */
-    public synchronized void parseParameters() throws CommandException {
+    synchronized void parseParameters() throws CommandException {
+        requireAddressPresent(true);
         if (attemptedToParse) {
             throw new IllegalStateException();
         }
@@ -101,7 +119,8 @@ public class ExecutionContext {
      * This method is typically used by tab completions.
      * After calling this method, the context is ready to provide completions.
      */
-    public synchronized void parseParametersQuietly() {
+    synchronized void parseParametersQuietly() {
+        requireAddressPresent(true);
         if (attemptedToParse) {
             throw new IllegalStateException();
         }

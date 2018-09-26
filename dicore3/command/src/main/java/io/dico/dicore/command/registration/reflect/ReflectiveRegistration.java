@@ -177,10 +177,12 @@ public class ReflectiveRegistration {
                 GroupEntry matchEntry = matchEntries[i];
                 if (patterns[i].matcher(name).matches()) {
                     if (addresses[i] == null) {
-                        addresses[i] = ChildCommandAddress.newPlaceHolderCommand(matchEntry.group(), matchEntry.groupAliases());
-                        groupRootAddress.addChild(addresses[i]);
-                        generateCommands(addresses[i], matchEntry.generatedCommands());
-                        setDescription(addresses[i], matchEntry.description(), matchEntry.shortDescription());
+                        ChildCommandAddress placeholder = new ChildCommandAddress();
+                        placeholder.setupAsPlaceholder(matchEntry.group(), matchEntry.groupAliases());
+                        addresses[i] = placeholder;
+                        groupRootAddress.addChild(placeholder);
+                        generateCommands(placeholder, matchEntry.generatedCommands());
+                        setDescription(placeholder, matchEntry.description(), matchEntry.shortDescription());
                     }
                     return addresses[i];
                 }

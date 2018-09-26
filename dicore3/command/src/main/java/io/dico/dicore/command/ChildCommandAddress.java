@@ -24,9 +24,18 @@ public class ChildCommandAddress extends ModifiableCommandAddress {
     }
 
     public static ChildCommandAddress newPlaceHolderCommand(String name, String... aliases) {
-        ChildCommandAddress rv = new ChildCommandAddress(DefaultGroupCommand.getInstance(), name, aliases);
-        HelpCommand.registerAsChild(rv);
+        ChildCommandAddress rv = new ChildCommandAddress();
+        rv.setupAsPlaceholder(name, aliases);
         return rv;
+    }
+
+    public void setupAsPlaceholder(String name, String... aliases) {
+        if (!hasCommand()) {
+            setCommand(DefaultGroupCommand.getInstance());
+        }
+
+        addNameAndAliases(name, aliases);
+        HelpCommand.registerAsChild(this);
     }
 
     @Override

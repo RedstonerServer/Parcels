@@ -59,7 +59,7 @@ class ParcelProviderImpl(val plugin: ParcelsPlugin) : ParcelProvider {
                 else WorldCreator(worldName).generator(generator).createWorld().also { logger.info("Creating world $worldName") }
 
             parcelWorld = ParcelWorldImpl(bukkitWorld, generator, worldOptions.runtime, plugin.storage,
-                plugin.globalPrivileges, ::DefaultParcelContainer, plugin, plugin.worktimeLimiter)
+                plugin.globalPrivileges, ::DefaultParcelContainer, plugin, plugin.workDispatcher)
 
             if (!worldExists) {
                 val time = DateTime.now()
