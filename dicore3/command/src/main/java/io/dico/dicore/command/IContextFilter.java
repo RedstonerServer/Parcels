@@ -5,9 +5,6 @@ import io.dico.dicore.exceptions.checkedfunctions.CheckedRunnable;
 import org.bukkit.command.CommandSender;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.List;
-import java.util.Objects;
-
 public interface IContextFilter extends Comparable<IContextFilter> {
 
     /**
