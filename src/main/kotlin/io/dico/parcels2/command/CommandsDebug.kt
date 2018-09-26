@@ -13,6 +13,7 @@ import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.block.BlockFace
 import org.bukkit.block.data.Directional
+import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 import java.util.Random
 
@@ -86,7 +87,12 @@ class CommandsDebug(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
     fun cmdForceVisitors(): Any? {
         val workers = plugin.workDispatcher.workers
         plugin.workDispatcher.completeAllTasks()
-        return "Task count: ${workers.size}"
+        return "Completed task count: ${workers.size}"
+    }
+
+    @Cmd("hasperm")
+    fun cmdHasperm(sender: CommandSender, target: Player, permission: String): Any? {
+        return target.hasPermission(permission).toString()
     }
 
 }

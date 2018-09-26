@@ -15,6 +15,7 @@ class ParcelOptionsInteractCommand(val parcelProvider: ParcelProvider) : Command
 
     init {
         addContextFilter(IContextFilter.PLAYER_ONLY)
+        addContextFilter(IContextFilter.INHERIT_PERMISSIONS)
         addParameter("allowed", "allowed", ParameterTypes.BOOLEAN)
     }
 

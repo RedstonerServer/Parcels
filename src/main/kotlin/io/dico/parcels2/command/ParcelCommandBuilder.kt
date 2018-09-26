@@ -9,53 +9,51 @@ import java.util.LinkedList
 import java.util.Queue
 
 @Suppress("UsePropertyAccessSyntax")
-fun getParcelCommands(plugin: ParcelsPlugin): ICommandDispatcher =
-    with(CommandBuilder()) {
-        val parcelsAddress = SpecialCommandAddress()
+fun getParcelCommands(plugin: ParcelsPlugin): ICommandDispatcher = CommandBuilder().apply {
+    val parcelsAddress = SpecialCommandAddress()
 
-        setChatController(ParcelsChatController())
-        addParameterType(false, ParcelParameterType(plugin.parcelProvider))
-        addParameterType(false, ProfileParameterType())
-        addParameterType(true, ParcelTarget.PType(plugin.parcelProvider, parcelsAddress))
+    setChatController(ParcelsChatController())
+    addParameterType(false, ParcelParameterType(plugin.parcelProvider))
+    addParameterType(false, ProfileParameterType())
+    addParameterType(true, ParcelTarget.PType(plugin.parcelProvider, parcelsAddress))
 
-        group(parcelsAddress, "parcel", "plot", "plots", "p") {
-            addRequiredPermission("parcels.command")
-            registerCommands(CommandsGeneral(plugin, parcelsAddress))
-            registerCommands(CommandsPrivilegesLocal(plugin))
+    group(parcelsAddress, "parcel", "plot", "plots", "p") {
+        addContextFilter(IContextFilter.inheritablePermission("parcels.command"))
+        registerCommands(CommandsGeneral(plugin, parcelsAddress))
+        registerCommands(CommandsPrivilegesLocal(plugin))
 
-            group("option", "opt", "o") {
-                setGroupDescription(
-                    "changes interaction options for this parcel",
-                    "Sets whether players who are not allowed to",
-                    "build here can interact with certain things."
-                )
+        group("option", "opt", "o") {
+            setGroupDescription(
+                "changes interaction options for this parcel",
+                "Sets whether players who are not allowed to",
+                "build here can interact with certain things."
+            )
 
-                group("interact", "i") {
-                    val command = ParcelOptionsInteractCommand(plugin.parcelProvider)
-                    Interactables.classesById.forEach {
-                        addSubCommand(it.name, command)
-                    }
+            group("interact", "i") {
+                val command = ParcelOptionsInteractCommand(plugin.parcelProvider)
+                Interactables.classesById.forEach {
+                    addSubCommand(it.name, command)
                 }
-            }
-
-            group("global", "g") {
-                registerCommands(CommandsPrivilegesGlobal(plugin))
-            }
-
-            group("admin", "a") {
-                registerCommands(CommandsAdmin(plugin))
-            }
-
-            if (!logger.isDebugEnabled) return@group
-
-            group("debug", "d") {
-                registerCommands(CommandsDebug(plugin))
             }
         }
 
-        generateHelpAndSyntaxCommands()
-        getDispatcher()
+        group("global", "g") {
+            registerCommands(CommandsPrivilegesGlobal(plugin))
+        }
+
+        group("admin", "a") {
+            registerCommands(CommandsAdmin(plugin))
+        }
+
+        if (!logger.isDebugEnabled) return@group
+
+        group("debug", "d") {
+            registerCommands(CommandsDebug(plugin))
+        }
     }
+
+    generateHelpAndSyntaxCommands(parcelsAddress)
+}.getDispatcher()
 
 inline fun CommandBuilder.group(name: String, vararg aliases: String, config: CommandBuilder.() -> Unit) {
     group(name, *aliases)
@@ -69,8 +67,8 @@ inline fun CommandBuilder.group(address: ICommandAddress, name: String, vararg a
     parent()
 }
 
-private fun CommandBuilder.generateHelpAndSyntaxCommands(): CommandBuilder {
-    generateCommands(dispatcher as ICommandAddress, "help", "syntax")
+private fun CommandBuilder.generateHelpAndSyntaxCommands(root: ICommandAddress): CommandBuilder {
+    generateCommands(root, "help", "syntax")
     return this
 }
 

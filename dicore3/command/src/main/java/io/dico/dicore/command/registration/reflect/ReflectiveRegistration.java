@@ -350,7 +350,7 @@ public class ReflectiveRegistration {
 
         try {
             //noinspection unchecked
-            String flagPermission = flag == null ? null : flag.permission();
+            String flagPermission = flag == null || flag.permission().isEmpty() ? null : flag.permission();
             return new Parameter<>(name, descString, parameterType, parameterInfo, type.isPrimitive(), name.startsWith("-"), flagPermission);
         } catch (Exception ex) {
             throw new CommandParseException("Invalid parameter", ex);

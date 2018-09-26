@@ -3,6 +3,7 @@ package io.dico.dicore.command;
 import io.dico.dicore.exceptions.checkedfunctions.CheckedConsumer;
 import io.dico.dicore.exceptions.checkedfunctions.CheckedRunnable;
 import org.bukkit.command.CommandSender;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.Objects;
@@ -52,10 +53,11 @@ public interface IContextFilter extends Comparable<IContextFilter> {
      * @return comparison value
      */
     @Override
-    default int compareTo(IContextFilter o) {
+    default int compareTo(@NotNull IContextFilter o) {
         return getPriority().compareTo(o.getPriority());
     }
 
+    /*
     default boolean isInheritable() {
         return false;
     }
@@ -66,7 +68,7 @@ public interface IContextFilter extends Comparable<IContextFilter> {
         }
 
         return this;
-    }
+    }*/
 
     /**
      * IContextFilter priorities. Executes from top to bottom.
@@ -110,6 +112,8 @@ public interface IContextFilter extends Comparable<IContextFilter> {
          */
         POST_PARAMETERS;
 
+        private IContextFilter inheritor;
+
         /**
          * Get the context filter that inherits context filters from the parent of the same priority.
          * If this filter is also present at the parent, it will do the same for the parent's parent, and so on.
@@ -117,55 +121,11 @@ public interface IContextFilter extends Comparable<IContextFilter> {
          * @return the inheritor
          */
         public IContextFilter getInheritor() {
+            if (inheritor == null) {
+                inheritor = InheritingContextFilter.inheritingPriority(this);
+            }
             return inheritor;
         }
-
-        private static String[] addParent(String[] path, String parent) {
-            String[] out = new String[path.length + 1];
-            System.arraycopy(path, 0, out, 0, path.length);
-            out[0] = parent;
-            return out;
-        }
-
-        final IContextFilter inheritor = new IContextFilter() {
-            @Override
-            public void filterContext(ExecutionContext context) throws CommandException {
-                ICommandAddress address = context.getAddress();
-
-                String[] traversedPath = new String[0];
-                do {
-                    traversedPath = addParent(traversedPath, address.getMainKey());
-                    address = address.getParent();
-
-                    if (address != null && address.hasCommand()) {
-                        boolean doBreak = true;
-
-                        Command command = address.getCommand();
-                        List<IContextFilter> contextFilterList = command.getContextFilters();
-                        for (IContextFilter filter : contextFilterList) {
-                            if (filter.getPriority() == Priority.this) {
-                                if (filter == this) {
-                                    // do the same for next parent
-                                    // this method is necessary to keep traversedPath information
-                                    doBreak = false;
-                                } else {
-                                    filter.filterSubContext(context, traversedPath);
-                                }
-                            }
-                        }
-
-                        if (doBreak) {
-                            break;
-                        }
-                    }
-                } while (address != null);
-            }
-
-            @Override
-            public Priority getPriority() {
-                return Priority.this;
-            }
-        };
 
     }
 
@@ -215,14 +175,15 @@ public interface IContextFilter extends Comparable<IContextFilter> {
     }
 
     static IContextFilter permission(String permission) {
-        Objects.requireNonNull(permission);
-        return filterSender(Priority.PERMISSION, sender -> Validate.isAuthorized(sender, permission));
+        return new PermissionContextFilter(permission);
     }
 
     static IContextFilter permission(String permission, String failMessage) {
-        Objects.requireNonNull(permission);
-        Objects.requireNonNull(failMessage);
-        return filterSender(Priority.PERMISSION, sender -> Validate.isAuthorized(sender, permission, failMessage));
+        return new PermissionContextFilter(permission, failMessage);
+    }
+
+    static IContextFilter inheritablePermission(String permission) {
+        return new PermissionContextFilter(permission, true);
     }
 
     /**
@@ -236,87 +197,8 @@ public interface IContextFilter extends Comparable<IContextFilter> {
      * @throws IllegalArgumentException if componentInsertionIndex is out of range
      */
     static IContextFilter inheritablePermission(String permission, int componentInsertionIndex, String failMessage) {
-        Objects.requireNonNull(permission);
-        Objects.requireNonNull(failMessage);
-        if (componentInsertionIndex > permission.split("\\.").length || componentInsertionIndex < -1) {
-            throw new IllegalArgumentException("componentInsertionIndex out of range");
-        }
-
-
-        return new IContextFilter() {
-            private String getInheritedPermission(String[] components) {
-                int insertedAmount = components.length;
-                String[] currentComponents = permission.split("\\.");
-                int currentAmount = currentComponents.length;
-                String[] targetArray = new String[currentAmount + insertedAmount];
-
-                int insertionIndex;
-                //int newInsertionIndex;
-                if (componentInsertionIndex == -1) {
-                    insertionIndex = currentAmount;
-                    //newInsertionIndex = -1;
-                } else {
-                    insertionIndex = componentInsertionIndex;
-                    //newInsertionIndex = insertionIndex + insertedAmount;
-                }
-
-                // copy the current components up to insertionIndex
-                System.arraycopy(currentComponents, 0, targetArray, 0, insertionIndex);
-                // copy the new components into the array at insertionIndex
-                System.arraycopy(components, 0, targetArray, insertionIndex, insertedAmount);
-                // copy the current components from insertionIndex + inserted amount
-                System.arraycopy(currentComponents, insertionIndex, targetArray, insertionIndex + insertedAmount, currentAmount - insertionIndex);
-
-                return String.join(".", targetArray);
-            }
-
-            @Override
-            public void filterContext(ExecutionContext context) throws CommandException {
-                Validate.isAuthorized(context.getSender(), permission, failMessage);
-            }
-
-            @Override
-            public void filterSubContext(ExecutionContext subContext, String... path) throws CommandException {
-                Validate.isAuthorized(subContext.getSender(), getInheritedPermission(path), failMessage);
-            }
-
-            @Override
-            public Priority getPriority() {
-                return Priority.PERMISSION;
-            }
-
-            @Override
-            public boolean isInheritable() {
-                return true;
-            }
-
-            @Override
-            public IContextFilter inherit(String... components) {
-                int insertedAmount = components.length;
-                String[] currentComponents = permission.split("\\.");
-                int currentAmount = currentComponents.length;
-                String[] targetArray = new String[currentAmount + insertedAmount];
-
-                int insertionIndex;
-                int newInsertionIndex;
-                if (componentInsertionIndex == -1) {
-                    insertionIndex = currentAmount;
-                    newInsertionIndex = -1;
-                } else {
-                    insertionIndex = componentInsertionIndex;
-                    newInsertionIndex = insertionIndex + insertedAmount;
-                }
-
-                // copy the current components up to insertionIndex
-                System.arraycopy(currentComponents, 0, targetArray, 0, insertionIndex);
-                // copy the new components into the array at insertionIndex
-                System.arraycopy(components, 0, targetArray, insertionIndex, insertedAmount);
-                // copy the current components from insertionIndex + inserted amount
-                System.arraycopy(currentComponents, insertionIndex, targetArray, insertionIndex + insertedAmount, currentAmount - insertionIndex);
-
-                return inheritablePermission(String.join(".", targetArray), newInsertionIndex, failMessage);
-            }
-        };
+        return new PermissionContextFilter(permission, componentInsertionIndex, failMessage);
     }
 
 }
+
