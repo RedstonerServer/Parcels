@@ -67,7 +67,7 @@ dependencies {
     c.kotlinStd(kotlin("stdlib-jdk8"))
     c.kotlinStd(kotlin("reflect"))
     c.kotlinStd(kotlinx("coroutines-core:0.26.1-eap13"))
-    c.kotlinStd("org.jetbrains.kotlinx:atomicfu-common:0.11.7-rc-conf")
+    c.kotlinStd("org.jetbrains.kotlinx:atomicfu-common:0.11.7-eap13")
 
     // not on sk89q maven repo yet
     compileClasspath(files("$rootDir/debug/plugins/worldedit-bukkit-7.0.0-beta-01.jar"))

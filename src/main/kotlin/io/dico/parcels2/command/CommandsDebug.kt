@@ -3,10 +3,12 @@ package io.dico.parcels2.command
 import io.dico.dicore.command.CommandException
 import io.dico.dicore.command.EMessageType
 import io.dico.dicore.command.ExecutionContext
+import io.dico.dicore.command.Validate
 import io.dico.dicore.command.annotation.Cmd
 import io.dico.parcels2.ParcelsPlugin
 import io.dico.parcels2.Privilege
 import io.dico.parcels2.blockvisitor.RegionTraverser
+import io.dico.parcels2.blockvisitor.TickWorktimeLimiter
 import io.dico.parcels2.doBlockOperation
 import org.bukkit.Bukkit
 import org.bukkit.Material
@@ -35,6 +37,8 @@ class CommandsDebug(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
     @Cmd("make_mess")
     @RequireParcelPrivilege(Privilege.OWNER)
     fun ParcelScope.cmdMakeMess(context: ExecutionContext) {
+        Validate.isTrue(!parcel.hasBlockVisitors, "A process is already running in this parcel")
+
         val server = plugin.server
         val blockDatas = arrayOf(
             server.createBlockData(Material.BLUE_WOOL),
@@ -70,6 +74,20 @@ class CommandsDebug(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
         block.blockData = blockData
         return if (blockData is Directional) "The block is facing south" else "The block is not directional, however it implements " +
             blockData.javaClass.interfaces!!.contentToString()
+    }
+
+    @Cmd("visitors")
+    fun cmdVisitors(): Any? {
+        val workers = plugin.worktimeLimiter.workers
+        println(workers.map { it.job }.joinToString(separator = "\n"))
+        return "Task count: ${workers.size}"
+    }
+
+    @Cmd("force_visitors")
+    fun cmdForceVisitors(): Any? {
+        val workers = plugin.worktimeLimiter.workers
+        plugin.worktimeLimiter.completeAllTasks()
+        return "Task count: ${workers.size}"
     }
 
 }

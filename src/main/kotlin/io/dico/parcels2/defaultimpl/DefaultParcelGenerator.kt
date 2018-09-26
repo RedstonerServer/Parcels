@@ -1,10 +1,7 @@
 package io.dico.parcels2.defaultimpl
 
 import io.dico.parcels2.*
-import io.dico.parcels2.blockvisitor.RegionTraverser
-import io.dico.parcels2.blockvisitor.TimeLimitedTask
-import io.dico.parcels2.blockvisitor.Worker
-import io.dico.parcels2.blockvisitor.WorktimeLimiter
+import io.dico.parcels2.blockvisitor.*
 import io.dico.parcels2.options.DefaultGeneratorOptions
 import io.dico.parcels2.util.Region
 import io.dico.parcels2.util.Vec2i
@@ -225,15 +222,18 @@ class DefaultParcelGenerator(
             return world.getParcelById(parcelId)
         }
 
-        override fun submitBlockVisitor(parcelId: ParcelId, task: TimeLimitedTask): Worker {
-            val parcel = getParcel(parcelId) ?: return worktimeLimiter.submit(task)
-            if (parcel.hasBlockVisitors) throw IllegalArgumentException("This parcel already has a block visitor")
+        override fun submitBlockVisitor(vararg parcelIds: ParcelId, task: TimeLimitedTask): Worker {
+            val parcels = parcelIds.mapNotNull { getParcel(it) }
+            if (parcels.isEmpty()) return worktimeLimiter.submit(task)
+            if (parcels.any { it.hasBlockVisitors }) throw IllegalArgumentException("This parcel already has a block visitor")
 
             val worker = worktimeLimiter.submit(task)
 
-            launch(start = UNDISPATCHED) {
-                parcel.withBlockVisitorPermit {
-                    worker.awaitCompletion()
+            for (parcel in parcels) {
+                launch(start = UNDISPATCHED) {
+                    parcel.withBlockVisitorPermit {
+                        worker.awaitCompletion()
+                    }
                 }
             }
 
@@ -274,6 +274,13 @@ class DefaultParcelGenerator(
                 world[vec].blockData = blockType
                 setProgress((index + 1) / blockCount)
             }
+        }
+
+        override fun swapParcels(parcel1: ParcelId, parcel2: ParcelId): Worker = submitBlockVisitor(parcel1, parcel2) {
+            val schematicOf1 = delegateWork(0.15) { Schematic().apply { load(world, getRegion(parcel1)) } }
+            val schematicOf2 = delegateWork(0.15) { Schematic().apply { load(world, getRegion(parcel2)) } }
+            delegateWork(0.35) { with(schematicOf1) { paste(world, getRegion(parcel2).origin) } }
+            delegateWork(0.35) { with(schematicOf2) { paste(world, getRegion(parcel1).origin) } }
         }
 
         override fun getParcelsWithOwnerBlockIn(chunk: Chunk): Collection<Vec2i> {

@@ -59,7 +59,9 @@ interface ParcelBlockManager {
 
     fun clearParcel(parcel: ParcelId): Worker
 
-    fun submitBlockVisitor(parcelId: ParcelId, task: TimeLimitedTask): Worker
+    fun swapParcels(parcel1: ParcelId, parcel2: ParcelId): Worker
+
+    fun submitBlockVisitor(vararg parcelIds: ParcelId, task: TimeLimitedTask): Worker
 
     /**
      * Used to update owner blocks in the corner of the parcel

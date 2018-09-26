@@ -226,19 +226,19 @@ class PlayerProfile2 private constructor(uuid: UUID?,
                 ?: PlayerProfile(null, input, !allowFake)
         }
 
-        operator fun invoke(name: String): PlayerProfile {
+        operator fun createWith(name: String): PlayerProfile {
             if (name == star.name) return star
             return PlayerProfile(null, name)
         }
 
-        operator fun invoke(uuid: UUID): PlayerProfile {
+        operator fun createWith(uuid: UUID): PlayerProfile {
             if (uuid == star.uuid) return star
             return PlayerProfile(uuid, null)
         }
 
-        operator fun invoke(player: OfflinePlayer): PlayerProfile {
+        operator fun createWith(player: OfflinePlayer): PlayerProfile {
             // avoid UUID comparison against STAR
-            return if (player.isValid) PlayerProfile(player.uuid, player.name) else invoke(player.name)
+            return if (player.isValid) PlayerProfile(player.uuid, player.name) else createWith(player.name)
         }
     }
 

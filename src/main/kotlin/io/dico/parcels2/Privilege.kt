@@ -88,7 +88,7 @@ interface Privileges : PrivilegesMinimal {
         }
 
     fun changePrivilege(key: PrivilegeKey, positive: Boolean, update: Privilege): PrivilegeChangeResult =
-        if (key != keyOfOwner) FAIL_OWNER
+        if (key == keyOfOwner) FAIL_OWNER
         else if (getStoredPrivilege(key).isChangeInDirection(positive, update)
             && setStoredPrivilege(key, update)
         ) SUCCESS

@@ -12,6 +12,13 @@ import org.bukkit.entity.Player
 
 class CommandsPrivilegesLocal(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
 
+    private fun ParcelScope.checkPrivilege(sender: Player, player: OfflinePlayer) {
+        if (!sender.hasPermAdminManage) {
+            Validate.isTrue(parcel.owner != null, "This parcel is unowned")
+            Validate.isTrue(parcel.privilege(sender) > parcel.privilege(player), "You may not change the privilege of ${player.name}")
+        }
+    }
+
     @Cmd("entrust")
     @Desc(
         "Allows a player to manage this parcel",
@@ -52,8 +59,7 @@ class CommandsPrivilegesLocal(plugin: ParcelsPlugin) : AbstractParcelCommands(pl
     )
     @RequireParcelPrivilege(Privilege.CAN_MANAGE)
     fun ParcelScope.cmdAllow(sender: Player, player: OfflinePlayer): Any? {
-        Validate.isTrue(parcel.owner != null || sender.hasPermAdminManage, "This parcel is unowned")
-        Validate.isTrue(parcel.privilege(sender) > parcel.privilege(player), "You may not change the privilege of ${player.name}")
+        checkPrivilege(sender, player)
 
         return when (parcel.allowBuild(player)) {
             FAIL_OWNER -> err("The target already owns the parcel")
@@ -70,8 +76,7 @@ class CommandsPrivilegesLocal(plugin: ParcelsPlugin) : AbstractParcelCommands(pl
     )
     @RequireParcelPrivilege(Privilege.CAN_MANAGE)
     fun ParcelScope.cmdDisallow(sender: Player, player: OfflinePlayer): Any? {
-        Validate.isTrue(parcel.owner != null || sender.hasPermAdminManage, "This parcel is unowned")
-        Validate.isTrue(parcel.privilege(sender) > parcel.privilege(player), "You may not change the privilege of ${player.name}")
+        checkPrivilege(sender, player)
 
         return when (parcel.disallowBuild(player)) {
             FAIL_OWNER -> err("The target owns the parcel")
@@ -88,8 +93,7 @@ class CommandsPrivilegesLocal(plugin: ParcelsPlugin) : AbstractParcelCommands(pl
     )
     @RequireParcelPrivilege(Privilege.CAN_MANAGE)
     fun ParcelScope.cmdBan(sender: Player, player: OfflinePlayer): Any? {
-        Validate.isTrue(parcel.owner != null || sender.hasPermAdminManage, "This parcel is unowned")
-        Validate.isTrue(parcel.privilege(sender) > parcel.privilege(player), "You may not change the privilege of ${player.name}")
+        checkPrivilege(sender, player)
 
         return when (parcel.disallowBuild(player)) {
             FAIL_OWNER -> err("The target owns the parcel")
@@ -106,8 +110,7 @@ class CommandsPrivilegesLocal(plugin: ParcelsPlugin) : AbstractParcelCommands(pl
     )
     @RequireParcelPrivilege(Privilege.CAN_MANAGE)
     fun ParcelScope.cmdUnban(sender: Player, player: OfflinePlayer): Any? {
-        Validate.isTrue(parcel.owner != null || sender.hasPermAdminManage, "This parcel is unowned")
-        Validate.isTrue(parcel.privilege(sender) > parcel.privilege(player), "You may not change the privilege of ${player.name}")
+        checkPrivilege(sender, player)
 
         return when (parcel.disallowBuild(player)) {
             FAIL_OWNER -> err("The target owns the parcel")

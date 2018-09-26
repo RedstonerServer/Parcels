@@ -4,7 +4,7 @@ import io.dico.dicore.command.*
 import io.dico.parcels2.ParcelWorld
 import io.dico.parcels2.ParcelsPlugin
 import io.dico.parcels2.PlayerProfile
-import io.dico.parcels2.PrivilegeChangeResult
+import io.dico.parcels2.blockvisitor.Worker
 import io.dico.parcels2.util.ext.hasPermAdminManage
 import io.dico.parcels2.util.ext.parcelLimit
 import org.bukkit.entity.Player
@@ -43,14 +43,17 @@ abstract class AbstractParcelCommands(val plugin: ParcelsPlugin) : ICommandRecei
     protected fun ParcelScope.clearWithProgressUpdates(context: ExecutionContext, action: String) {
         Validate.isTrue(!parcel.hasBlockVisitors, "A process is already running in this parcel")
         world.blockManager.clearParcel(parcel.id)
-            .onProgressUpdate(1000, 1000) { progress, elapsedTime ->
-                val alt = context.getFormat(EMessageType.NUMBER)
-                val main = context.getFormat(EMessageType.INFORMATIVE)
-                context.sendMessage(
-                    EMessageType.INFORMATIVE, false, "$action progress: $alt%.02f$main%%, $alt%.2f${main}s elapsed"
-                        .format(progress * 100, elapsedTime / 1000.0)
-                )
-            }
+    }
+
+    protected fun Worker.reportProgressUpdates(context: ExecutionContext, action: String) {
+        onProgressUpdate(1000, 1000) { progress, elapsedTime ->
+            val alt = context.getFormat(EMessageType.NUMBER)
+            val main = context.getFormat(EMessageType.INFORMATIVE)
+            context.sendMessage(
+                EMessageType.INFORMATIVE, false, "$action progress: $alt%.02f$main%%, $alt%.2f${main}s elapsed"
+                    .format(progress * 100, elapsedTime / 1000.0)
+            )
+        }
     }
 
     protected fun err(message: String): Nothing = throw CommandException(message)

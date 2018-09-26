@@ -46,7 +46,7 @@ private val attachables = EnumSet.of(
 
 fun isAttachable(type: Material) = attachables.contains(type)
 
-fun supportingBlock(data: BlockData): Vec3i = when (data) {
+fun getSupportingBlock(data: BlockData): Vec3i = when (data) {
     //is MultipleFacing -> // fuck it xD this is good enough
 
     is Directional -> Vec3i.convert(when (data.material) {

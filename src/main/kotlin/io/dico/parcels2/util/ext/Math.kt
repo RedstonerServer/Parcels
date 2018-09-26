@@ -33,6 +33,7 @@ fun IntRange.clamp(min: Int, max: Int): IntRange {
 
 // the name coerceAtMost is bad
 fun Int.clampMax(max: Int) = coerceAtMost(max)
+fun Double.clampMin(min: Double) = coerceAtLeast(min)
 
 // Why does this not exist?
 infix fun Int.ceilDiv(divisor: Int): Int {

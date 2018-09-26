@@ -28,8 +28,8 @@ sealed class RegionTraverser {
     protected abstract suspend fun Scope.build(region: Region)
 
     companion object {
-        val upward = Directional(TraverseDirection(1, 1, 1), TraverseOrder(Dimension.Y, Dimension.X))
-        val downward = Directional(TraverseDirection(1, -1, 1), TraverseOrder(Dimension.Y, Dimension.X))
+        val upward = Directional(TraverseDirection(1, 1, 1), TraverseOrderFactory.createWith(Dimension.Y, Dimension.X))
+        val downward = Directional(TraverseDirection(1, -1, 1), TraverseOrderFactory.createWith(Dimension.Y, Dimension.X))
         val toClear get() = downward
         val toFill get() = upward
 
@@ -42,8 +42,34 @@ sealed class RegionTraverser {
         val direction: TraverseDirection,
         val order: TraverseOrder
     ) : RegionTraverser() {
+
+        private inline fun iterate(max: Int, increasing: Boolean, action: (Int) -> Unit) {
+            for (i in 0..max) {
+                action(if (increasing) i else max - i)
+            }
+        }
+
         override suspend fun Scope.build(region: Region) {
-            //traverserLogic(region, order, direction)
+            val order = order
+            val (primary, secondary, tertiary) = order.toArray()
+            val (origin, size) = region
+
+            val maxOfPrimary = primary.extract(size) - 1
+            val maxOfSecondary = secondary.extract(size) - 1
+            val maxOfTertiary = tertiary.extract(size) - 1
+
+            val isPrimaryIncreasing = direction.isIncreasing(primary)
+            val isSecondaryIncreasing = direction.isIncreasing(secondary)
+            val isTertiaryIncreasing = direction.isIncreasing(tertiary)
+
+            iterate(maxOfPrimary, isPrimaryIncreasing) { p ->
+                iterate(maxOfSecondary, isSecondaryIncreasing) { s ->
+                    iterate(maxOfTertiary, isTertiaryIncreasing) { t ->
+                        yield(order.add(origin, p, s, t))
+                    }
+                }
+            }
+
         }
 
     }
@@ -77,6 +103,38 @@ sealed class RegionTraverser {
         }
     }
 
+    fun childForPosition(position: Vec3i): Directional {
+        var cur = this
+        while (true) {
+            when (cur) {
+                is Directional ->
+                    return cur
+                is Slicing ->
+                    cur =
+                        if (position.y <= cur.bottomSectionMaxY) cur.bottomTraverser
+                        else cur.topTraverser
+            }
+        }
+    }
+
+    fun comesFirst(current: Vec3i, block: Vec3i): Boolean {
+        var cur = this
+        while (true) {
+            when (cur) {
+                is Directional -> return cur.direction.comesFirst(current, block)
+                is Slicing -> {
+                    val border = cur.bottomSectionMaxY
+                    cur = when {
+                        current.y <= border && block.y <= border -> cur.bottomTraverser
+                        current.y <= border -> return !cur.bottomFirst
+                        block.y <= border -> return cur.bottomFirst
+                        else -> cur.topTraverser
+                    }
+                }
+            }
+        }
+    }
+
 }
 
 enum class Dimension {
@@ -97,8 +155,18 @@ enum class Dimension {
     }
 }
 
+object TraverseOrderFactory {
+    private fun isSwap(primary: Dimension, secondary: Dimension) = secondary.ordinal != (primary.ordinal + 1) % 3
+
+    fun createWith(primary: Dimension, secondary: Dimension): TraverseOrder {
+        // tertiary is implicit
+        if (primary == secondary) throw IllegalArgumentException()
+        return TraverseOrder(primary, isSwap(primary, secondary))
+    }
+}
+
 inline class TraverseOrder(val orderNum: Int) {
-    private constructor(first: Dimension, swap: Boolean)
+    constructor(first: Dimension, swap: Boolean)
         : this(if (swap) first.ordinal + 3 else first.ordinal)
 
     @Suppress("NOTHING_TO_INLINE")
@@ -126,18 +194,8 @@ inline class TraverseOrder(val orderNum: Int) {
      */
     fun toArray() = arrayOf(primary, secondary, tertiary)
 
-    companion object {
-        private fun isSwap(primary: Dimension, secondary: Dimension) = secondary.ordinal != (primary.ordinal + 1) % 3
-
-        operator fun invoke(primary: Dimension, secondary: Dimension): TraverseOrder {
-            // tertiary is implicit
-            if (primary == secondary) throw IllegalArgumentException()
-            return TraverseOrder(primary, isSwap(primary, secondary))
-        }
-    }
-
     fun add(vec: Vec3i, dp: Int, ds: Int, dt: Int): Vec3i =
-        // optimize this, will be called lots
+    // optimize this, will be called lots
         when (orderNum) {
             0 -> vec.add(dp, ds, dt) // xyz
             1 -> vec.add(dt, dp, ds) // yzx
@@ -149,48 +207,19 @@ inline class TraverseOrder(val orderNum: Int) {
         }
 }
 
-class AltTraverser(val size: Vec3i,
-                   val order: TraverseOrder,
-                   val direction: TraverseDirection) {
-
-
-    suspend fun Scope.build() {
-        doPrimary()
-    }
-
-    private suspend fun Scope.doPrimary() {
-        val dimension = order.primary
-        direction.directionOf(dimension).traverse(dimension.extract(size)) { value ->
-
-        }
-    }
-
-    private fun Dimension.setValue(value: Int) {
-
-    }
-
-}
-
-enum class Increment(val offset: Int) {
-    UP(1),
-    DOWN(-1);
-
-    companion object {
-        fun convert(bool: Boolean) = if (bool) UP else DOWN
-    }
-
-    inline fun traverse(size: Int, op: (Int) -> Unit) {
-        when (this) {
-            UP -> repeat(size, op)
-            DOWN -> repeat(size) { op(size - it - 1) }
-        }
-    }
-
-}
-
 inline class TraverseDirection(val bits: Int) {
+    fun isIncreasing(dimension: Dimension) = (1 shl dimension.ordinal) and bits != 0
 
-    fun directionOf(dimension: Dimension) = Increment.convert((1 shl dimension.ordinal) and bits != 0)
+    fun comesFirst(current: Vec3i, block: Vec3i, dimension: Dimension): Boolean =
+        if (isIncreasing(dimension))
+            dimension.extract(block) <= dimension.extract(current)
+        else
+            dimension.extract(block) >= dimension.extract(current)
+
+    fun comesFirst(current: Vec3i, block: Vec3i) =
+        comesFirst(current, block, Dimension.X)
+        && comesFirst(current, block, Dimension.Y)
+        && comesFirst(current, block, Dimension.Z)
 
     companion object {
         operator fun invoke(x: Int, y: Int, z: Int) = invoke(Vec3i(x, y, z))
