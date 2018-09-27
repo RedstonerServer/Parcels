@@ -4,10 +4,7 @@ import io.dico.dicore.command.CommandException
 import io.dico.dicore.command.ExecutionContext
 import io.dico.dicore.command.ICommandReceiver
 import io.dico.dicore.command.Validate
-import io.dico.parcels2.Parcel
-import io.dico.parcels2.ParcelProvider
-import io.dico.parcels2.ParcelWorld
-import io.dico.parcels2.Privilege
+import io.dico.parcels2.*
 import io.dico.parcels2.Privilege.*
 import io.dico.parcels2.util.ext.hasPermAdminManage
 import io.dico.parcels2.util.ext.uuid

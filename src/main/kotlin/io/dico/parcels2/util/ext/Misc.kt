@@ -1,5 +1,6 @@
 package io.dico.parcels2.util.ext
 
+import io.dico.dicore.Formatting
 import io.dico.parcels2.logger
 import java.io.File
 
@@ -70,3 +71,6 @@ class EditLoopScope<T, U>(val _map: MutableMap<T, U>) {
     }
 
 }
+
+operator fun Formatting.plus(other: Formatting) = toString() + other
+operator fun Formatting.plus(other: String) = toString() + other

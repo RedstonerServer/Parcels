@@ -115,7 +115,10 @@ interface PlayerProfile {
     }
 
     object Star : BaseImpl(), Real {
-        override val name: String = "*"
+        override val name get() = "*"
+        override val nameOrBukkitName get() = name
+        override val notNullName get() = name
+
         // hopefully nobody will have this random UUID :)
         override val uuid: UUID = UUID.fromString("7d09c4c6-117d-4f36-9778-c4d24618cee1")
 

@@ -6,7 +6,6 @@ import io.dico.parcels2.Privilege.*
 import io.dico.parcels2.util.Vec2i
 import io.dico.parcels2.util.ext.alsoIfTrue
 import org.bukkit.Material
-import org.bukkit.OfflinePlayer
 import org.joda.time.DateTime
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -36,34 +35,6 @@ class ParcelImpl(
         world.storage.setParcelData(this, null)
     }
 
-    override val privilegeMap: PrivilegeMap get() = data.privilegeMap
-    override fun getStoredPrivilege(key: PrivilegeKey) = data.getStoredPrivilege(key)
-
-    override fun setStoredPrivilege(key: PrivilegeKey, privilege: Privilege): Boolean {
-        return data.setStoredPrivilege(key, privilege).alsoIfTrue {
-            world.storage.setLocalPrivilege(this, key, privilege)
-        }
-    }
-
-    override fun privilege(player: OfflinePlayer, adminPerm: String): Privilege {
-        val privilege = super.privilege(player, adminPerm)
-        return if (privilege == DEFAULT) globalPrivileges?.privilege(player, adminPerm) ?: DEFAULT
-        else privilege
-    }
-
-    override val globalPrivileges: GlobalPrivileges?
-        get() = keyOfOwner?.let { world.globalPrivileges[it] }
-
-    override val lastClaimTime: DateTime? get() = data.lastClaimTime
-
-    override var ownerSignOutdated: Boolean
-        get() = data.ownerSignOutdated
-        set(value) {
-            if (data.ownerSignOutdated != value) {
-                world.storage.setParcelOwnerSignOutdated(this, value)
-                data.ownerSignOutdated = value
-            }
-        }
 
     override var owner: PlayerProfile?
         get() = data.owner
@@ -75,11 +46,44 @@ class ParcelImpl(
             }
         }
 
+    override val lastClaimTime: DateTime?
+        get() = data.lastClaimTime
+
+    override var ownerSignOutdated: Boolean
+        get() = data.ownerSignOutdated
+        set(value) {
+            if (data.ownerSignOutdated != value) {
+                world.storage.setParcelOwnerSignOutdated(this, value)
+                data.ownerSignOutdated = value
+            }
+        }
+
+
+    override val privilegeMap: PrivilegeMap
+        get() = data.privilegeMap
+
+    override val globalPrivileges: GlobalPrivileges?
+        get() = keyOfOwner?.let { world.globalPrivileges[it] }
+
+    override fun getRawStoredPrivilege(key: PrivilegeKey) = data.getRawStoredPrivilege(key)
+
+    override fun setRawStoredPrivilege(key: PrivilegeKey, privilege: Privilege) =
+        data.setRawStoredPrivilege(key, privilege).alsoIfTrue {
+            world.storage.setLocalPrivilege(this, key, privilege)
+        }
+
+    override fun getStoredPrivilege(key: PrivilegeKey): Privilege =
+        super.getStoredPrivilege(key).takeIf { it != DEFAULT }
+            ?: globalPrivileges?.getStoredPrivilege(key)
+            ?: DEFAULT
+
+
+    private var _interactableConfig: InteractableConfiguration? = null
+
     private fun updateInteractableConfigStorage() {
         world.storage.setParcelOptionsInteractConfig(this, data.interactableConfig)
     }
 
-    private var _interactableConfig: InteractableConfiguration? = null
     override var interactableConfig: InteractableConfiguration
         get() {
             if (_interactableConfig == null) {
@@ -103,6 +107,7 @@ class ParcelImpl(
             }
         }
 
+
     private var blockVisitors = AtomicInteger(0)
 
     override suspend fun withBlockVisitorPermit(block: suspend () -> Unit) {
@@ -116,9 +121,6 @@ class ParcelImpl(
 
     override fun toString() = toStringExt()
 }
-
-private operator fun Formatting.plus(other: Formatting) = toString() + other
-private operator fun Formatting.plus(other: String) = toString() + other
 
 private object ParcelInfoStringComputer {
     val infoStringColor1 = Formatting.GREEN
@@ -148,20 +150,34 @@ private object ParcelInfoStringComputer {
         }, value)
     }
 
-    private fun StringBuilder.appendAddedList(local: PrivilegeMap, global: PrivilegeMap, privilege: Privilege, fieldName: String) {
-        // local takes precedence over global
+    private fun processPrivileges(local: RawPrivileges, global: RawPrivileges?,
+                                  privilege: Privilege): Pair<LinkedHashMap<PrivilegeKey, Privilege>, Int> {
+        val map = linkedMapOf<PrivilegeKey, Privilege>()
+        local.privilegeOfStar.takeIf { it != DEFAULT }?.let { map[PlayerProfile.Star] = it }
+        map.values.retainAll { it.isDistanceGrEq(privilege) }
+        val localCount = map.size
 
-        val localFiltered = local.filterValues { it.isDistanceGrEq(privilege) }
-        // global keys are dropped here when merged with the local ones
-        val all = localFiltered + global.filterValues { it.isDistanceGrEq(privilege) }
-        if (all.isEmpty()) return
+        if (global != null) {
+            global.privilegeMap.forEach {
+                if (it.value.isDistanceGrEq(privilege))
+                    map.putIfAbsent(it.key, it.value)
+            }
 
-        appendFieldWithCount(fieldName, all.size) {
-            val separator = "$infoStringColor1, $infoStringColor2"
+            global.privilegeOfStar.takeIf { it != DEFAULT && it.isDistanceGrEq(privilege) }
+                ?.let { map.putIfAbsent(PlayerProfile.Star, it) }
+        }
 
+        return map to localCount
+    }
+
+    private fun StringBuilder.appendAddedList(local: RawPrivileges, global: RawPrivileges?, privilege: Privilege, fieldName: String) {
+        val (map, localCount) = processPrivileges(local, global, privilege)
+        if (map.isEmpty()) return
+
+        appendFieldWithCount(fieldName, map.size) {
             // first [localCount] entries are local
-            val localCount = localFiltered.size
-            val iterator = all.iterator()
+            val separator = "$infoStringColor1, $infoStringColor2"
+            val iterator = map.iterator()
 
             if (localCount != 0) {
                 appendPrivilegeEntry(false, iterator.next().toPair())
@@ -185,17 +201,17 @@ private object ParcelInfoStringComputer {
     private fun StringBuilder.appendPrivilegeEntry(global: Boolean, pair: Pair<PrivilegeKey, Privilege>) {
         val (key, priv) = pair
 
-        // prefix. Maybe T should be M for mod or something. T means they have CAN_MANAGE privilege.
+        append(key.notNullName)
+
+        // suffix. Maybe T should be M for mod or something. T means they have CAN_MANAGE privilege.
         append(
             when {
-                global && priv == CAN_MANAGE -> "(GT)"
-                global -> "(G)"
-                priv == CAN_MANAGE -> "(T)"
+                global && priv == CAN_MANAGE -> " (G) (T)"
+                global -> " (G)"
+                priv == CAN_MANAGE -> " (T)"
                 else -> ""
             }
         )
-
-        append(key.notNullName)
     }
 
     fun getInfoString(parcel: Parcel): String = buildString {
@@ -219,8 +235,8 @@ private object ParcelInfoStringComputer {
 
         append('\n')
 
-        val local = parcel.privilegeMap
-        val global = parcel.globalPrivileges?.privilegeMap ?: emptyMap()
+        val local: RawPrivileges = parcel.data
+        val global = parcel.globalPrivileges
         appendAddedList(local, global, CAN_BUILD, "Allowed") // includes CAN_MANAGE privilege
         append('\n')
         appendAddedList(local, global, BANNED, "Banned")

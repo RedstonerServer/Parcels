@@ -38,7 +38,7 @@ interface Parcel : ParcelData, Privileges {
     val homeLocation: Location get() = world.blockManager.getHomeLocation(id)
 }
 
-interface ParcelData : PrivilegesMinimal {
+interface ParcelData : RawPrivileges {
     var owner: PlayerProfile?
     val lastClaimTime: DateTime?
     var ownerSignOutdated: Boolean
@@ -60,12 +60,6 @@ class ParcelDataHolder(addedMap: MutablePrivilegeMap = mutableMapOf())
     override var owner: PlayerProfile? = null
     override var lastClaimTime: DateTime? = null
     override var ownerSignOutdated = false
-
-    //override fun canBuild(player: OfflinePlayer, checkAdmin: Boolean, checkGlobal: Boolean) =
-    //    hasPrivilegeToBuild(player)
-    //    || owner.let { it != null && it.matches(player, allowNameMatch = false) }
-    //    || (checkAdmin && player is Player && player.hasPermBuildAnywhere)
-
     override var interactableConfig: InteractableConfiguration = BitmaskInteractableConfiguration()
 }
 

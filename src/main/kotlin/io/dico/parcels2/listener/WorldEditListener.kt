@@ -14,6 +14,7 @@ import com.sk89q.worldedit.world.biome.BaseBiome
 import com.sk89q.worldedit.world.block.BlockStateHolder
 import io.dico.parcels2.ParcelWorld
 import io.dico.parcels2.ParcelsPlugin
+import io.dico.parcels2.canBuildFast
 import io.dico.parcels2.util.ext.hasPermBuildAnywhere
 import io.dico.parcels2.util.ext.sendParcelMessage
 import org.bukkit.entity.Player

@@ -1,10 +1,13 @@
 package io.dico.parcels2.command
 
 import io.dico.dicore.command.*
+import io.dico.dicore.command.predef.DefaultGroupCommand
 import io.dico.dicore.command.registration.reflect.ReflectiveRegistration
 import io.dico.parcels2.Interactables
 import io.dico.parcels2.ParcelsPlugin
 import io.dico.parcels2.logger
+import io.dico.parcels2.util.ext.hasPermAdminManage
+import org.bukkit.command.CommandSender
 import java.util.LinkedList
 import java.util.Queue
 
@@ -37,12 +40,19 @@ fun getParcelCommands(plugin: ParcelsPlugin): ICommandDispatcher = CommandBuilde
             }
         }
 
+        val adminPrivilegesGlobal = CommandsAdminPrivilegesGlobal(plugin)
+
         group("global", "g") {
-            registerCommands(CommandsPrivilegesGlobal(plugin))
+            registerCommands(CommandsPrivilegesGlobal(plugin, adminVersion = adminPrivilegesGlobal))
         }
 
         group("admin", "a") {
+            setCommand(AdminGroupCommand())
             registerCommands(CommandsAdmin(plugin))
+
+            group("global", "g") {
+                registerCommands(adminPrivilegesGlobal)
+            }
         }
 
         if (!logger.isDebugEnabled) return@group
@@ -117,4 +127,8 @@ class SpecialCommandAddress : ChildCommandAddress() {
         return super.getChild(key)
     }
 
+}
+
+private class AdminGroupCommand : DefaultGroupCommand() {
+    override fun isVisibleTo(sender: CommandSender) = sender.hasPermAdminManage
 }

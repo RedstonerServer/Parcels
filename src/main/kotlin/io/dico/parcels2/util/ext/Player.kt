@@ -5,6 +5,7 @@ import io.dico.parcels2.ParcelsPlugin
 import io.dico.parcels2.logger
 import org.bukkit.OfflinePlayer
 import org.bukkit.entity.Player
+import org.bukkit.permissions.Permissible
 import org.bukkit.plugin.java.JavaPlugin
 
 inline val OfflinePlayer.uuid get() = uniqueId
@@ -17,12 +18,12 @@ const val PERM_BAN_BYPASS = "parcels.admin.bypass.ban"
 const val PERM_BUILD_ANYWHERE = "parcels.admin.bypass.build"
 const val PERM_ADMIN_MANAGE = "parcels.admin.manage"
 
-inline val Player.hasPermBanBypass get() = hasPermission(PERM_BAN_BYPASS)
-inline val Player.hasPermGamemodeBypass get() = hasPermission("parcels.admin.bypass.gamemode")
-inline val Player.hasPermBuildAnywhere get() = hasPermission(PERM_BUILD_ANYWHERE)
-inline val Player.hasPermAdminManage get() = hasPermission(PERM_ADMIN_MANAGE)
-inline val Player.hasParcelHomeOthers get() = hasPermission("parcels.command.home.others")
-inline val Player.hasPermRandomSpecific get() = hasPermission("parcels.command.random.specific")
+inline val Permissible.hasPermBanBypass get() = hasPermission(PERM_BAN_BYPASS)
+inline val Permissible.hasPermGamemodeBypass get() = hasPermission("parcels.admin.bypass.gamemode")
+inline val Permissible.hasPermBuildAnywhere get() = hasPermission(PERM_BUILD_ANYWHERE)
+inline val Permissible.hasPermAdminManage get() = hasPermission(PERM_ADMIN_MANAGE)
+inline val Permissible.hasParcelHomeOthers get() = hasPermission("parcels.command.home.others")
+inline val Permissible.hasPermRandomSpecific get() = hasPermission("parcels.command.random.specific")
 val Player.parcelLimit: Int
     get() {
         for (info in effectivePermissions) {

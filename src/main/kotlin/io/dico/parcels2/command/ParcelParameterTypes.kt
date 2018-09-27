@@ -4,10 +4,7 @@ import io.dico.dicore.command.CommandException
 import io.dico.dicore.command.parameter.ArgumentBuffer
 import io.dico.dicore.command.parameter.Parameter
 import io.dico.dicore.command.parameter.type.ParameterType
-import io.dico.parcels2.Parcel
-import io.dico.parcels2.ParcelProvider
-import io.dico.parcels2.ParcelWorld
-import io.dico.parcels2.PlayerProfile
+import io.dico.parcels2.*
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 

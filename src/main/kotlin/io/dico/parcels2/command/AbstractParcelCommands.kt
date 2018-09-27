@@ -4,6 +4,8 @@ import io.dico.dicore.command.*
 import io.dico.parcels2.ParcelWorld
 import io.dico.parcels2.ParcelsPlugin
 import io.dico.parcels2.PlayerProfile
+import io.dico.parcels2.PlayerProfile.*
+import io.dico.parcels2.PrivilegeKey
 import io.dico.parcels2.blockvisitor.Worker
 import io.dico.parcels2.util.ext.hasPermAdminManage
 import io.dico.parcels2.util.ext.parcelLimit
@@ -35,6 +37,13 @@ abstract class AbstractParcelCommands(val plugin: ParcelsPlugin) : ICommandRecei
         if (numOwnedParcels >= limit) {
             error("You have enough plots for now")
         }
+    }
+
+    protected suspend fun toPrivilegeKey(profile: PlayerProfile): PrivilegeKey = when (profile) {
+        is Real -> profile
+        is Unresolved -> profile.tryResolveSuspendedly(plugin.storage)
+            ?: throw CommandException()
+        else -> throw CommandException()
     }
 
     protected fun areYouSureMessage(context: ExecutionContext) = "Are you sure? You cannot undo this action!\n" +

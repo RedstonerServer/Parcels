@@ -17,6 +17,10 @@ public class DefaultGroupCommand extends PredefinedCommand<DefaultGroupCommand> 
         this.modifiable = modifiable;
     }
 
+    public DefaultGroupCommand() {
+        this(true);
+    }
+
     @Override
     protected DefaultGroupCommand newModifiableInstance() {
         return new DefaultGroupCommand(true);

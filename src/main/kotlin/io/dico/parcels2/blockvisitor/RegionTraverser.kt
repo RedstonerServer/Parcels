@@ -83,9 +83,9 @@ sealed class RegionTraverser {
 
         private fun slice(region: Region, atY: Int): Pair<Region, Region?> {
             if (atY < region.size.y + 1) {
-                val first = Region(region.origin, region.size.withY(atY + 1))
-                val second = Region(region.origin.withY(atY), region.size.addY(-atY - 1))
-                return first to second
+                val bottom = Region(region.origin, region.size.withY(atY + 1))
+                val top = Region(region.origin.withY(atY + 1), region.size.addY(-atY - 1))
+                return bottom to top
             }
             return region to null
         }
