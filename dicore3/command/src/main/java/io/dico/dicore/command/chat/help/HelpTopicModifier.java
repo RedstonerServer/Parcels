@@ -15,8 +15,8 @@ public abstract class HelpTopicModifier implements IHelpTopic {
     }
 
     @Override
-    public List<IHelpComponent> getComponents(ICommandAddress target, Permissible viewer, ExecutionContext context) {
-        return modify(delegate.getComponents(target, viewer, context), target, viewer, context);
+    public List<IHelpComponent> getComponents(ICommandAddress target, Permissible viewer, ExecutionContext context, boolean isForPage) {
+        return modify(delegate.getComponents(target, viewer, context, true), target, viewer, context);
     }
 
     protected abstract List<IHelpComponent> modify(List<IHelpComponent> components, ICommandAddress target, Permissible viewer, ExecutionContext context);

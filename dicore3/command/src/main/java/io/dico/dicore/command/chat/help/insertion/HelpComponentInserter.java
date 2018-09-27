@@ -24,7 +24,7 @@ public class HelpComponentInserter extends HelpTopicModifier {
         for (int i = insertions.size() - 1; i >= 0; i--) {
             IInsertion insertion = insertions.get(i);
             int idx = insertion.insertionIndex(components, target, viewer, context);
-            List<IHelpComponent> inserted = insertion.getComponents(target, viewer, context);
+            List<IHelpComponent> inserted = insertion.getComponents(target, viewer, context, true);
             components.addAll(idx, inserted);
         }
 

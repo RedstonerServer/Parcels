@@ -16,7 +16,7 @@ import java.util.List;
 public class DescriptionHelpTopic implements IHelpTopic {
 
     @Override
-    public List<IHelpComponent> getComponents(ICommandAddress target, Permissible viewer, ExecutionContext context) {
+    public List<IHelpComponent> getComponents(ICommandAddress target, Permissible viewer, ExecutionContext context, boolean isForPage) {
         List<IHelpComponent> out = new ArrayList<>();
         Formatting format = context.getFormat(EMessageType.DESCRIPTION);
 

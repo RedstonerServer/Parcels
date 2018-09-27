@@ -19,56 +19,74 @@ import java.util.Map;
 public class SyntaxHelpTopic implements IHelpTopic {
 
     @Override
-    public List<IHelpComponent> getComponents(ICommandAddress target, Permissible viewer, ExecutionContext context) {
+    public List<IHelpComponent> getComponents(ICommandAddress target, Permissible viewer, ExecutionContext context, boolean isForPage) {
         if (!target.hasCommand()) {
             return Collections.emptyList();
         }
 
-        String line = context.getFormat(EMessageType.SYNTAX) + "Syntax: "
-                + context.getFormat(EMessageType.INSTRUCTION) + target.getAddress()
-                + ' ' + getShortSyntax(target, context);
+        if (target.hasChildren()) {
+            if (!isForPage) {
+                // HelpPages will send help instead of syntax, which might in turn include syntax as well.
+                return Collections.emptyList();
+            }
 
-        return Collections.singletonList(new SimpleHelpComponent(line));
+            if (!target.hasUserDeclaredCommand() && !target.getCommand().getParameterList().hasAnyParameters()) {
+                // no point adding syntax at all
+                return Collections.emptyList();
+            }
+        }
+
+        StringBuilder line = new StringBuilder();
+        if (isForPage)
+            line.append(context.getFormat(EMessageType.SYNTAX))
+                .append("Syntax: ");
+
+        line.append('/')
+            .append(context.getFormat(EMessageType.INSTRUCTION))
+            .append(target.getAddress())
+            .append(' ');
+
+        addShortSyntax(line, target, context);
+
+        return Collections.singletonList(new SimpleHelpComponent(line.toString()));
     }
 
-    private static String getShortSyntax(ICommandAddress target, ExecutionContext ctx) {
-        StringBuilder syntax = new StringBuilder();
-        if (target.hasCommand()) {
+    private static void addShortSyntax(StringBuilder builder, ICommandAddress address, ExecutionContext ctx) {
+        if (address.hasCommand()) {
             Formatting syntaxColor = ctx.getFormat(EMessageType.SYNTAX);
             Formatting highlight = ctx.getFormat(EMessageType.HIGHLIGHT);
-            syntax.append(syntaxColor);
+            builder.append(syntaxColor);
 
-            Command command = target.getCommand();
+            Command command = address.getCommand();
             ParameterList list = command.getParameterList();
             Parameter<?, ?> repeated = list.getRepeatedParameter();
 
             int requiredCount = list.getRequiredCount();
             List<Parameter<?, ?>> indexedParameters = list.getIndexedParameters();
             for (int i = 0, n = indexedParameters.size(); i < n; i++) {
-                syntax.append(i < requiredCount ? " <" : " [");
+                builder.append(i < requiredCount ? " <" : " [");
                 Parameter<?, ?> param = indexedParameters.get(i);
-                syntax.append(param.getName());
+                builder.append(param.getName());
                 if (param == repeated) {
-                    syntax.append(highlight).append("...").append(syntaxColor);
+                    builder.append(highlight).append("...").append(syntaxColor);
                 }
-                syntax.append(i < requiredCount ? '>' : ']');
+                builder.append(i < requiredCount ? '>' : ']');
             }
 
             Map<String, Parameter<?, ?>> parametersByName = list.getParametersByName();
             for (Parameter<?, ?> param : parametersByName.values()) {
                 if (param.isFlag()) {
-                    syntax.append(" [").append(param.getName());
+                    builder.append(" [").append(param.getName());
                     if (param.expectsInput()) {
-                        syntax.append(" <").append(param.getName()).append(">");
+                        builder.append(" <").append(param.getName()).append(">");
                     }
-                    syntax.append(']');
+                    builder.append(']');
                 }
             }
 
         } else {
-            syntax.append(' ');
+            builder.append(' ');
         }
-        return syntax.toString();
     }
 
 }

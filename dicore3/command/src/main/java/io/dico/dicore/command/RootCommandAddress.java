@@ -217,9 +217,14 @@ public class RootCommandAddress extends ModifiableCommandAddress implements ICom
 
         try {
             ICommandAddress target = getCommandTarget(context, buffer);
-            List<String> out = target.hasCommand()
-                ? target.getCommand().tabComplete(sender, target, location, buffer.getUnaffectingCopy())
-                : Collections.emptyList();
+
+            List<String> out;
+            if (target.hasCommand()) {
+                context.targetAcquired(target, target.getCommand(), buffer);
+                out = target.getCommand().tabCompleteWithContext(context, location);
+            } else {
+                out = Collections.emptyList();
+            }
 
             int cursor = buffer.getCursor();
             String input;
@@ -230,7 +235,7 @@ public class RootCommandAddress extends ModifiableCommandAddress implements ICom
             }
 
             boolean wrapped = false;
-            for (String child : target.getChildren().keySet()) {
+            for (String child : target.getChildrenMainKeys()) {
                 if (child.toLowerCase().startsWith(input)) {
                     if (!wrapped) {
                         out = new ArrayList<>(out);

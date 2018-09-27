@@ -60,6 +60,14 @@ public class ParameterList {
         return this;
     }
 
+    public boolean hasAnyParameters() {
+        return !byName.isEmpty();
+    }
+
+    public int getIndexedParameterCount() {
+        return indexedParameters.size();
+    }
+
     public List<Parameter<?, ?>> getIndexedParameters() {
         return Collections.unmodifiableList(indexedParameters);
     }

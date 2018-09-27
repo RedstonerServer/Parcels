@@ -17,8 +17,8 @@ public class Insertions {
     public static IInsertion combine(IHelpTopic topic, IInsertionFunction function) {
         return new IInsertion() {
             @Override
-            public List<IHelpComponent> getComponents(ICommandAddress target, Permissible viewer, ExecutionContext context) {
-                return topic.getComponents(target, viewer, context);
+            public List<IHelpComponent> getComponents(ICommandAddress target, Permissible viewer, ExecutionContext context, boolean isForPage) {
+                return topic.getComponents(target, viewer, context, true);
             }
 
             @Override

@@ -10,10 +10,13 @@ import java.util.*;
 
 public abstract class ModifiableCommandAddress implements ICommandAddress {
     Map<String, ChildCommandAddress> children;
+    Collection<String> childrenMainKeys = Collections.emptyList();
+
     // the chat controller as configured by the programmer
     IChatController chatController;
     // cache for the algorithm that finds the first chat controller going up the tree
     transient IChatController chatControllerCache;
+
     ModifiableCommandAddress helpChild;
 
     public ModifiableCommandAddress() {
@@ -111,6 +114,21 @@ public abstract class ModifiableCommandAddress implements ICommandAddress {
     }
 
     @Override
+    public boolean hasChildren() {
+        return !children.isEmpty();
+    }
+
+    @Override
+    public int getNumberOfRealChildren() {
+        return childrenMainKeys.size();
+    }
+
+    @Override
+    public Collection<String> getChildrenMainKeys() {
+        return Collections.unmodifiableCollection(childrenMainKeys);
+    }
+
+    @Override
     public Map<String, ? extends ModifiableCommandAddress> getChildren() {
         return Collections.unmodifiableMap(children);
     }
@@ -140,7 +158,16 @@ public abstract class ModifiableCommandAddress implements ICommandAddress {
         }
 
         Iterator<String> names = mChild.modifiableNamesIterator();
-        children.put(names.next(), mChild);
+        String mainKey = names.next();
+
+        if (!childrenMainKeys.contains(mainKey)) {
+            if (!(childrenMainKeys instanceof ArrayList)) {
+                childrenMainKeys = new ArrayList<>();
+            }
+            childrenMainKeys.add(mainKey);
+        }
+
+        children.put(mainKey, mChild);
 
         while (names.hasNext()) {
             String name = names.next();
@@ -168,19 +195,29 @@ public abstract class ModifiableCommandAddress implements ICommandAddress {
             }
 
             if (removeAliases) {
-                for (Iterator<String> iterator = keyTarget.namesModifiable.iterator(); iterator.hasNext(); ) {
+                Iterator<String> iterator = keyTarget.namesModifiable.iterator();
+                boolean first = true;
+                while (iterator.hasNext()) {
                     String alias = iterator.next();
                     ChildCommandAddress aliasTarget = getChild(key);
                     if (aliasTarget == keyTarget) {
+                        if (first) {
+                            childrenMainKeys.remove(alias);
+                        }
                         children.remove(alias);
-                        iterator.remove();
                     }
+                    iterator.remove();
+                    first = false;
                 }
-                continue;
-            }
 
-            children.remove(key);
-            keyTarget.namesModifiable.remove(key);
+            } else {
+                if (key.equals(keyTarget.getMainKey())) {
+                    childrenMainKeys.remove(key);
+                }
+
+                children.remove(key);
+                keyTarget.namesModifiable.remove(key);
+            }
         }
     }
 

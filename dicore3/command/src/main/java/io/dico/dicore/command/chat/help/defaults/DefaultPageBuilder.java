@@ -20,7 +20,7 @@ public class DefaultPageBuilder implements IPageBuilder {
 
         List<IHelpComponent> components = new LinkedList<>();
         for (IHelpTopic topic : helpTopics) {
-            components.addAll(topic.getComponents(target, viewer, context));
+            components.addAll(topic.getComponents(target, viewer, context, true));
         }
 
         PageBorders pageBorders = null;

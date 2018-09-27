@@ -11,12 +11,13 @@ public interface IHelpTopic {
     /**
      * Get the components of this help topic
      *
-     * @param target  The address of the command to provide help about
-     * @param viewer  The permissible that the page will be shown to (null -> choose a default set).
-     * @param context Context of the command execution
+     * @param target    The address of the command to provide help about
+     * @param viewer    The permissible that the page will be shown to (null -> choose a default set).
+     * @param context   Context of the command execution
+     * @param isForPage A boolean indicating if the components are to be used in a page (for help)
      * @return a mutable list of components to include in the help pages
      */
-    List<IHelpComponent> getComponents(ICommandAddress target, Permissible viewer, ExecutionContext context);
+    List<IHelpComponent> getComponents(ICommandAddress target, Permissible viewer, ExecutionContext context, boolean isForPage);
 
 
 }

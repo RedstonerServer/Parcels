@@ -82,7 +82,7 @@ public class HelpPages {
     }
 
     public @NotNull String getSyntax(Permissible viewer, ExecutionContext context, ICommandAddress address) {
-        List<IHelpComponent> components = syntaxTopic.getComponents(address, viewer, context);
+        List<IHelpComponent> components = syntaxTopic.getComponents(address, viewer, context, false);
         if (components.isEmpty()) {
             return getHelpPage(viewer, context, address, 1);
         }

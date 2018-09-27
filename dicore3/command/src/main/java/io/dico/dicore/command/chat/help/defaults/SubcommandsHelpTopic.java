@@ -11,29 +11,31 @@ import io.dico.dicore.command.predef.PredefinedCommand;
 import org.bukkit.command.CommandSender;
 import org.bukkit.permissions.Permissible;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class SubcommandsHelpTopic implements IHelpTopic {
 
     @Override
-    public List<IHelpComponent> getComponents(ICommandAddress target, Permissible viewer, ExecutionContext context) {
-        List<IHelpComponent> out = new ArrayList<>();
-        Map<String, ? extends ICommandAddress> children = target.getChildren();
-        if (children.isEmpty()) {
-            //System.out.println("No subcommands");
-            return out;
+    public List<IHelpComponent> getComponents(ICommandAddress target, Permissible viewer, ExecutionContext context, boolean isForPage) {
+        Collection<String> mainKeys = target.getChildrenMainKeys();
+        if (mainKeys.isEmpty()) {
+            return Collections.emptyList();
         }
 
-        CommandSender sender = viewer instanceof CommandSender ? (CommandSender) viewer : context.getSender();
-        children.values().stream().distinct().forEach(child -> {
-            if ((!child.hasCommand() || child.getCommand().isVisibleTo(sender)) && !(child instanceof PredefinedCommand)) {
-                out.add(getComponent(child, viewer, context));
-            }
-        });
+        List<IHelpComponent> result = new ArrayList<>();
 
-        return out;
+        mainKeys = new ArrayList<>(target.getChildrenMainKeys());
+        ((ArrayList<String>) mainKeys).sort(null);
+
+        CommandSender sender = viewer instanceof CommandSender ? (CommandSender) viewer : context.getSender();
+        for (String key : mainKeys) {
+            ICommandAddress child = target.getChild(key);
+            if ((child.hasChildren() || child.hasUserDeclaredCommand()) && child.getCommand().isVisibleTo(sender)) {
+                result.add(getComponent(child, viewer, context));
+            }
+        }
+
+        return result;
     }
 
     public IHelpComponent getComponent(ICommandAddress child, Permissible viewer, ExecutionContext context) {

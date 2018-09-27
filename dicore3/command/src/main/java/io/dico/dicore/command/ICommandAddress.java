@@ -5,6 +5,7 @@ import io.dico.dicore.command.parameter.ArgumentBuffer;
 import io.dico.dicore.command.predef.PredefinedCommand;
 import org.bukkit.command.CommandSender;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -108,6 +109,23 @@ public interface ICommandAddress {
      * @return true if the depth of this address is larger than the argument.
      */
     boolean isDepthLargerThan(int depth);
+
+    /**
+     * @return true if this address has any children.
+     */
+    boolean hasChildren();
+
+    /**
+     * @return total number of children, not considering any aliases
+     */
+    int getNumberOfRealChildren();
+
+    /**
+     * Get an unmodifiable view of all main keys of the children of this address.
+     *
+     * @return the main keys
+     */
+    Collection<String> getChildrenMainKeys();
 
     /**
      * Get an unmodifiable view of the children of this address.
