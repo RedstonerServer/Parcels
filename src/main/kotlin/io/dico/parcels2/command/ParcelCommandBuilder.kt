@@ -33,7 +33,7 @@ fun getParcelCommands(plugin: ParcelsPlugin): ICommandDispatcher = CommandBuilde
             )
 
             group("interact", "i") {
-                val command = ParcelOptionsInteractCommand(plugin.parcelProvider)
+                val command = ParcelOptionsInteractCommand(plugin)
                 Interactables.classesById.forEach {
                     addSubCommand(it.name, command)
                 }

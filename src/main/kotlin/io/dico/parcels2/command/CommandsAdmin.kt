@@ -8,18 +8,19 @@ import io.dico.dicore.command.annotation.Flag
 import io.dico.parcels2.ParcelsPlugin
 import io.dico.parcels2.PlayerProfile
 import io.dico.parcels2.Privilege
-import io.dico.parcels2.command.ParcelTarget.Companion.ID
-import io.dico.parcels2.command.ParcelTarget.Kind
+import io.dico.parcels2.command.ParcelTarget.TargetKind
+import io.dico.parcels2.resolved
 
 class CommandsAdmin(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
 
     @Cmd("setowner")
     @RequireParcelPrivilege(Privilege.ADMIN)
-    fun ParcelScope.cmdSetowner(target: PlayerProfile): Any? {
-        parcel.owner = target
+    suspend fun ParcelScope.cmdSetowner(@ProfileKind(ProfileKind.ANY) target: PlayerProfile): Any? {
+        val profile = target.resolved(plugin.storage, resolveToFake = true)!!
+        parcel.owner = profile
 
-        val fakeString = if (target.isFake) " (fake)" else ""
-        return "${target.notNullName}$fakeString is the new owner of (${parcel.id.idString})"
+        val fakeString = if (profile.isFake) " (fake)" else ""
+        return "${profile.notNullName}$fakeString is the new owner of (${parcel.id.idString})"
     }
 
     @Cmd("dispose")
@@ -43,7 +44,7 @@ class CommandsAdmin(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
     @Cmd("swap")
     @RequireParcelPrivilege(Privilege.ADMIN)
     fun ParcelScope.cmdSwap(context: ExecutionContext,
-                            @Kind(ID) target: ParcelTarget,
+                            @TargetKind(TargetKind.ID) target: ParcelTarget,
                             @Flag sure: Boolean): Any? {
         Validate.isTrue(!parcel.hasBlockVisitors, "A process is already running in this parcel")
         if (!sure) return areYouSureMessage(context)

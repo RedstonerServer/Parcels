@@ -3,13 +3,11 @@
 package io.dico.parcels2
 
 import io.dico.parcels2.storage.Storage
-import io.dico.parcels2.util.PLAYER_NAME_PLACEHOLDER
-import io.dico.parcels2.util.getPlayerName
+import io.dico.parcels2.util.ext.PLAYER_NAME_PLACEHOLDER
 import io.dico.parcels2.util.ext.isValid
 import io.dico.parcels2.util.ext.uuid
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.Unconfined
-import kotlinx.coroutines.async
+import io.dico.parcels2.util.getOfflinePlayer
+import io.dico.parcels2.util.getPlayerName
 import org.bukkit.Bukkit
 import org.bukkit.OfflinePlayer
 import java.util.UUID
@@ -70,8 +68,7 @@ interface PlayerProfile {
 
             if (input == Star.name) return Star
 
-            return Bukkit.getOfflinePlayer(input).takeIf { it.isValid }?.let { PlayerProfile(it) }
-                ?: Unresolved(input)
+            return getOfflinePlayer(input)?.let { PlayerProfile(it) } ?: Unresolved(input)
         }
     }
 
@@ -83,8 +80,7 @@ interface PlayerProfile {
         override val notNullName: String
             get() = nameOrBukkitName ?: PLAYER_NAME_PLACEHOLDER
 
-        val player: OfflinePlayer? get() = Bukkit.getOfflinePlayer(uuid).takeIf { it.isValid }
-        val playerUnchecked: OfflinePlayer get() = Bukkit.getOfflinePlayer(uuid)
+        val player: OfflinePlayer? get() = getOfflinePlayer(uuid)
 
         override fun matches(player: OfflinePlayer, allowNameMatch: Boolean): Boolean {
             return uuid == player.uuid || (allowNameMatch && name?.let { it == player.name } == true)
@@ -147,10 +143,6 @@ interface PlayerProfile {
             return other is Unresolved && name == other.name
         }
 
-        fun tryResolve(storage: Storage): Deferred<Real?> {
-            return async(Unconfined) { tryResolveSuspendedly(storage) }
-        }
-
         suspend fun tryResolveSuspendedly(storage: Storage): Real? {
             return storage.getPlayerUuidForName(name).await()?.let { resolve(it) }
         }
@@ -178,120 +170,9 @@ interface PlayerProfile {
 
 }
 
-
-/*
-
-
-/**
- * This class can represent:
- *
- * An existing player
- * A fake player (with only a name)
- * An existing player who must have its uuid resolved from the database (after checking against Bukkit OfflinePlayer)
- * STAR profile, which matches everyone. This profile is considered a REAL player, because it can have a privilege.
- */
-class PlayerProfile2 private constructor(uuid: UUID?,
-                                        val name: String?,
-                                        val isReal: Boolean = uuid != null) {
-    private var _uuid: UUID? = uuid
-    val notNullName: String get() = name ?: getPlayerNameOrDefault(uuid!!)
-
-    val uuid: UUID? get() = _uuid ?: if (isReal) throw IllegalStateException("This PlayerProfile must be resolved first") else null
-
-    companion object {
-        // below uuid is just a randomly generated one (version 4). Hopefully no minecraft player will ever have it :)
-        val star = PlayerProfile(UUID.fromString("7d09c4c6-117d-4f36-9778-c4d24618cee1"), "*", true)
-
-        fun nameless(player: OfflinePlayer): PlayerProfile {
-            if (!player.isValid) throw IllegalArgumentException("The given OfflinePlayer is not valid")
-            return PlayerProfile(player.uuid)
-        }
-
-        fun fromNameAndUuid(name: String?, uuid: UUID?): PlayerProfile? {
-            if (name == null && uuid == null) return null
-            if (star.name == name && star._uuid == uuid) return star
-            return PlayerProfile(uuid, name)
-        }
-
-        fun realPlayerByName(name: String): PlayerProfile {
-            return fromString(name, allowReal = true, allowFake = false)
-        }
-
-        fun fromString(input: String, allowReal: Boolean = true, allowFake: Boolean = false): PlayerProfile {
-            if (!allowReal) {
-                if (!allowFake) throw IllegalArgumentException("at least one of allowReal and allowFake must be true")
-                return PlayerProfile(input)
-            }
-
-            if (input == star.name) return star
-
-            return Bukkit.getOfflinePlayer(input).takeIf { it.isValid }?.let { PlayerProfile(it) }
-                ?: PlayerProfile(null, input, !allowFake)
-        }
-
-        operator fun createWith(name: String): PlayerProfile {
-            if (name == star.name) return star
-            return PlayerProfile(null, name)
-        }
-
-        operator fun createWith(uuid: UUID): PlayerProfile {
-            if (uuid == star.uuid) return star
-            return PlayerProfile(uuid, null)
-        }
-
-        operator fun createWith(player: OfflinePlayer): PlayerProfile {
-            // avoid UUID comparison against STAR
-            return if (player.isValid) PlayerProfile(player.uuid, player.name) else createWith(player.name)
-        }
+suspend fun PlayerProfile.resolved(storage: Storage, resolveToFake: Boolean = false): PlayerProfile? =
+    when (this) {
+        is PlayerProfile.Unresolved -> tryResolveSuspendedly(storage)
+            ?: if (resolveToFake) PlayerProfile.Fake(name) else null
+        else -> this
     }
-
-    val isStar: Boolean get() = this === star || (name == star.name && _uuid == star._uuid)
-    val hasUUID: Boolean get() = _uuid != null
-    val mustBeResolved: Boolean get() = isReal && _uuid == null
-
-    val onlinePlayer: Player? get() = uuid?.let { Bukkit.getPlayer(uuid) }
-
-    val onlinePlayerAllowingNameMatch: Player? get() = onlinePlayer ?: name?.let { Bukkit.getPlayerExact(name) }
-    val offlinePlayer: OfflinePlayer? get() = uuid?.let { Bukkit.getOfflinePlayer(it).takeIf { it.isValid } }
-    val offlinePlayerAllowingNameMatch: OfflinePlayer?
-        get() = offlinePlayer ?: Bukkit.getOfflinePlayer(name).takeIf { it.isValid }
-
-    fun matches(player: OfflinePlayer, allowNameMatch: Boolean = false): Boolean {
-        if (isStar) return true
-        return uuid?.let { it == player.uniqueId } ?: false
-            || (allowNameMatch && name?.let { it == player.name } ?: false)
-    }
-
-    fun equals(other: PlayerProfile): Boolean {
-        return if (_uuid != null) _uuid == other._uuid
-        else other._uuid == null && isReal == other.isReal && name == other.name
-    }
-
-    override fun equals(other: Any?): Boolean {
-        return other is PlayerProfile && equals(other)
-    }
-
-    override fun hashCode(): Int {
-        return _uuid?.hashCode() ?: name!!.hashCode()
-    }
-
-    /**
-     * resolve the uuid of this player profile if [mustBeResolved], using specified [storage].
-     * returns true if the PlayerProfile has a uuid after this call.
-     */
-    suspend fun resolve(storage: Storage): Boolean {
-        if (mustBeResolved) {
-            val uuid = storage.getPlayerUuidForName(name!!).await()
-            _uuid = uuid
-            return uuid != null
-        }
-        return _uuid != null
-    }
-
-    fun resolve(uuid: UUID) {
-        if (isReal && _uuid == null) {
-            _uuid = uuid
-        }
-    }
-}
-*/

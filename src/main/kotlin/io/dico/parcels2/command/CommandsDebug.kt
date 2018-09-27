@@ -1,14 +1,17 @@
 package io.dico.parcels2.command
 
 import io.dico.dicore.command.*
-import io.dico.dicore.command.IContextFilter.Priority.*
+import io.dico.dicore.command.IContextFilter.Priority.PERMISSION
 import io.dico.dicore.command.annotation.Cmd
 import io.dico.dicore.command.annotation.PreprocessArgs
+import io.dico.dicore.command.annotation.RequireParameters
 import io.dico.dicore.command.parameter.ArgumentBuffer
-import io.dico.parcels2.ParcelsPlugin
-import io.dico.parcels2.Privilege
+import io.dico.parcels2.*
 import io.dico.parcels2.blockvisitor.RegionTraverser
-import io.dico.parcels2.doBlockOperation
+import io.dico.parcels2.util.ext.PERM_ADMIN_MANAGE
+import io.dico.parcels2.util.ext.PERM_BAN_BYPASS
+import io.dico.parcels2.util.ext.PERM_BUILD_ANYWHERE
+import kotlinx.coroutines.launch
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.block.BlockFace
@@ -29,7 +32,7 @@ class CommandsDebug(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
         if (worldName == "list") {
             return Bukkit.getWorlds().joinToString("\n- ", "- ", "")
         }
-        val world = Bukkit.getWorld(worldName) ?: throw CommandException("World $worldName is not loaded")
+        val world = Bukkit.getWorld(worldName) ?: err("World $worldName is not loaded")
         sender.teleport(world.spawnLocation)
         return "Teleported you to $worldName spawn"
     }
@@ -76,44 +79,64 @@ class CommandsDebug(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
             blockData.javaClass.interfaces!!.contentToString()
     }
 
-    @Cmd("visitors")
-    fun cmdVisitors(): Any? {
+    @Cmd("jobs")
+    fun cmdJobs(): Any? {
         val workers = plugin.workDispatcher.workers
         println(workers.map { it.job }.joinToString(separator = "\n"))
         return "Task count: ${workers.size}"
     }
 
-    @Cmd("force_visitors")
-    fun cmdForceVisitors(): Any? {
-        val workers = plugin.workDispatcher.workers
-        plugin.workDispatcher.completeAllTasks()
-        return "Completed task count: ${workers.size}"
-    }
-
-    @Cmd("hasperm")
-    fun cmdHasperm(sender: CommandSender, target: Player, permission: String): Any? {
-        return target.hasPermission(permission).toString()
+    @Cmd("complete_jobs")
+    fun cmdCompleteJobs(): Any? = cmdJobs().also {
+        plugin.launch { plugin.workDispatcher.completeAllTasks() }
     }
 
     @Cmd("message")
     @PreprocessArgs
     fun cmdMessage(sender: CommandSender, message: String): Any? {
+        // testing @PreprocessArgs which merges "hello there" into a single argument
         sender.sendMessage(message)
         return null
     }
 
-    @Cmd("permissions")
-    fun cmdPermissions(context: ExecutionContext, vararg address: String): Any? {
-        val target = context.address.dispatcherForTree.getDeepChild(ArgumentBuffer(address))
-        Validate.isTrue(target.depth == address.size && target.hasCommand(), "Not found: /${address.joinToString(separator = " ")}")
-
-        val permissions = getPermissionsOf(target)
-        return permissions.joinToString(separator = "\n")
+    @Cmd("hasperm")
+    fun cmdHasperm(target: Player, permission: String): Any? {
+        return target.hasPermission(permission).toString()
     }
 
-    private fun getPermissionsOf(address: ICommandAddress,
-                                         path: Array<String> = emptyArray(),
-                                         result: MutableList<String> = mutableListOf()): List<String> {
+    @Cmd("permissions")
+    fun cmdPermissions(context: ExecutionContext, of: Player, vararg address: String): Any? {
+        val target = context.address.dispatcherForTree.getDeepChild(ArgumentBuffer(address))
+        Validate.isTrue(target.depth == address.size && target.hasCommand(), "Not found: /${address.joinToString(separator = " ")}")
+        return getPermissionsOf(target).joinToString(separator = "\n") { "$it: ${of.hasPermission(it)}" }
+    }
+
+    @Cmd("privilege")
+    @RequireParameters(1)
+    suspend fun ParcelScope.cmdPrivilege(target: PlayerProfile, adminPerm: String?): Any? {
+        val key = toPrivilegeKey(target)
+
+        val perm = when (adminPerm) {
+            "none" -> null
+            "build" -> PERM_BUILD_ANYWHERE
+            "manage", null -> PERM_ADMIN_MANAGE
+            "enter" -> PERM_BAN_BYPASS
+            else -> err("adminPerm should be build, manager or enter")
+        }
+
+        val privilege = if (perm == null) {
+            parcel.getStoredPrivilege(key)
+        } else {
+            if (key is PlayerProfile.Star) err("* can't have permissions")
+            parcel.getEffectivePrivilege(key.player!!, perm)
+        }
+
+        return privilege.toString()
+    }
+
+    private fun getPermissionsOf(address: ICommandAddress) = getPermissionsOf(address, emptyArray(), mutableListOf())
+
+    private fun getPermissionsOf(address: ICommandAddress, path: Array<String>, result: MutableList<String>): List<String> {
         val command = address.command ?: return result
 
         var inherited = false

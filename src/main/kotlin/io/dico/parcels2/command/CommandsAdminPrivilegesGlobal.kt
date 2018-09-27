@@ -9,16 +9,14 @@ import io.dico.dicore.command.annotation.Desc
 import io.dico.parcels2.*
 import io.dico.parcels2.PrivilegeChangeResult.*
 import io.dico.parcels2.util.ext.PERM_ADMIN_MANAGE
-import io.dico.parcels2.util.ext.hasPermAdminManage
 import org.bukkit.OfflinePlayer
-import org.bukkit.command.CommandSender
-import org.bukkit.entity.Player
 
 class CommandsAdminPrivilegesGlobal(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
     private val data
         inline get() = plugin.globalPrivileges
 
     private fun checkContext(context: ExecutionContext, owner: OfflinePlayer): OfflinePlayer {
+        checkConnected("have privileges changed")
         val sender = context.sender
         if (sender !== owner) {
             Validate.isAuthorized(sender, PERM_ADMIN_MANAGE)

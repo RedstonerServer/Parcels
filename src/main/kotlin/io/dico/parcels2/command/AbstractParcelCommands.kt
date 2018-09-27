@@ -20,12 +20,8 @@ abstract class AbstractParcelCommands(val plugin: ParcelsPlugin) : ICommandRecei
         return getParcelCommandReceiver(plugin.parcelProvider, context, target, cmdName)
     }
 
-    protected fun error(message: String): Nothing {
-        throw CommandException(message)
-    }
-
     protected fun checkConnected(action: String) {
-        if (!plugin.storage.isConnected) error("Parcels cannot $action right now because of a database error")
+        if (!plugin.storage.isConnected) err("Parcels cannot $action right now because of a database error")
     }
 
     protected suspend fun checkParcelLimit(player: Player, world: ParcelWorld) {
@@ -35,7 +31,7 @@ abstract class AbstractParcelCommands(val plugin: ParcelsPlugin) : ICommandRecei
 
         val limit = player.parcelLimit
         if (numOwnedParcels >= limit) {
-            error("You have enough plots for now")
+            err("You have enough plots for now")
         }
     }
 
@@ -65,10 +61,7 @@ abstract class AbstractParcelCommands(val plugin: ParcelsPlugin) : ICommandRecei
         }
     }
 
-    protected fun err(message: String): Nothing = throw CommandException(message)
-
     override fun getCoroutineContext() = plugin.coroutineContext
-
-
 }
 
+fun err(message: String): Nothing = throw CommandException(message)

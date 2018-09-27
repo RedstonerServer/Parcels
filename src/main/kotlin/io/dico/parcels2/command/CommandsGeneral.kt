@@ -9,7 +9,7 @@ import io.dico.dicore.command.annotation.RequireParameters
 import io.dico.parcels2.ParcelsPlugin
 import io.dico.parcels2.PlayerProfile
 import io.dico.parcels2.Privilege
-import io.dico.parcels2.command.ParcelTarget.Kind
+import io.dico.parcels2.command.ParcelTarget.TargetKind
 import io.dico.parcels2.util.ext.hasParcelHomeOthers
 import io.dico.parcels2.util.ext.hasPermAdminManage
 import io.dico.parcels2.util.ext.uuid
@@ -29,7 +29,7 @@ class CommandsGeneral(plugin: ParcelsPlugin, parent: SpecialCommandAddress) : Ab
         checkParcelLimit(player, world)
 
         val parcel = world.nextEmptyParcel()
-            ?: error("This world is full, please ask an admin to upsize it")
+            ?: err("This world is full, please ask an admin to upsize it")
         parcel.owner = PlayerProfile(uuid = player.uuid)
         player.teleport(parcel.homeLocation)
         return "Enjoy your new parcel!"
@@ -58,7 +58,7 @@ class CommandsGeneral(plugin: ParcelsPlugin, parent: SpecialCommandAddress) : Ab
     @RequireParameters(0)
     suspend fun cmdHome(
         player: Player,
-        @Kind(ParcelTarget.OWNER_REAL) target: ParcelTarget
+        @TargetKind(TargetKind.OWNER_REAL) target: ParcelTarget
     ): Any? {
         return cmdGoto(player, target)
     }
@@ -66,7 +66,7 @@ class CommandsGeneral(plugin: ParcelsPlugin, parent: SpecialCommandAddress) : Ab
     @Cmd("tp", aliases = ["teleport"])
     suspend fun cmdTp(
         player: Player,
-        @Kind(ParcelTarget.ID) target: ParcelTarget
+        @TargetKind(TargetKind.ID) target: ParcelTarget
     ): Any? {
         return cmdGoto(player, target)
     }
@@ -74,17 +74,17 @@ class CommandsGeneral(plugin: ParcelsPlugin, parent: SpecialCommandAddress) : Ab
     @Cmd("goto")
     suspend fun cmdGoto(
         player: Player,
-        @Kind(ParcelTarget.ANY) target: ParcelTarget
+        @TargetKind(TargetKind.ANY) target: ParcelTarget
     ): Any? {
         if (target is ParcelTarget.ByOwner) {
             target.resolveOwner(plugin.storage)
             if (!target.owner.matches(player) && !player.hasParcelHomeOthers) {
-                error("You do not have permission to teleport to other people's parcels")
+                err("You do not have permission to teleport to other people's parcels")
             }
         }
 
         val match = target.getParcelSuspend(plugin.storage)
-            ?: error("The specified parcel could not be matched")
+            ?: err("The specified parcel could not be matched")
         player.teleport(match.homeLocation)
         return null
     }
@@ -92,7 +92,7 @@ class CommandsGeneral(plugin: ParcelsPlugin, parent: SpecialCommandAddress) : Ab
     @Cmd("goto_fake")
     suspend fun cmdGotoFake(
         player: Player,
-        @Kind(ParcelTarget.OWNER_FAKE) target: ParcelTarget
+        @TargetKind(TargetKind.OWNER_FAKE) target: ParcelTarget
     ): Any? {
         return cmdGoto(player, target)
     }
@@ -105,7 +105,7 @@ class CommandsGeneral(plugin: ParcelsPlugin, parent: SpecialCommandAddress) : Ab
     suspend fun ParcelScope.cmdClaim(player: Player): Any? {
         checkConnected("be claimed")
         parcel.owner.takeIf { !player.hasPermAdminManage }?.let {
-            error(if (it.matches(player)) "You already own this parcel" else "This parcel is not available")
+            err(if (it.matches(player)) "You already own this parcel" else "This parcel is not available")
         }
 
         checkParcelLimit(player, world)
@@ -117,6 +117,7 @@ class CommandsGeneral(plugin: ParcelsPlugin, parent: SpecialCommandAddress) : Ab
     @Desc("Unclaims this parcel")
     @RequireParcelPrivilege(Privilege.OWNER)
     fun ParcelScope.cmdUnclaim(player: Player): Any? {
+        checkConnected("be unclaimed")
         parcel.dispose()
         return "Your parcel has been disposed"
     }

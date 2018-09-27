@@ -53,3 +53,5 @@ fun Player.sendParcelMessage(except: Boolean = false, nopermit: Boolean = false,
         sendMessage(prefix + Formatting.translateChars('&', message))
     }
 }
+
+const val PLAYER_NAME_PLACEHOLDER = ":unknown_name:"

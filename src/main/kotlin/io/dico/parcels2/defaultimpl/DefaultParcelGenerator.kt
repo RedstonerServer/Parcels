@@ -219,7 +219,7 @@ class DefaultParcelGenerator(
                 skullBlock.type = Material.PLAYER_HEAD
                 val skull = skullBlock.state as Skull
                 if (owner is PlayerProfile.Real) {
-                    skull.owningPlayer = owner.playerUnchecked
+                    skull.owningPlayer = Bukkit.getOfflinePlayer(owner.uuid)
                 } else {
                     skull.owner = owner.name
                 }

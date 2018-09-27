@@ -60,7 +60,7 @@ class ParcelListeners(
         val user = event.player
         if (user.hasPermBanBypass) return@l
         val parcel = parcelProvider.getParcelAt(event.to) ?: return@l
-        if (!parcel.canEnter(user)) {
+        if (!parcel.canEnterFast(user)) {
             parcelProvider.getParcelAt(event.from)?.also {
                 user.teleport(it.homeLocation)
                 user.sendParcelMessage(nopermit = true, message = "You are banned from this parcel")

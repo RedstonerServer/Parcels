@@ -28,6 +28,7 @@ class CommandsPrivilegesLocal(plugin: ParcelsPlugin) : AbstractParcelCommands(pl
     )
     @RequireParcelPrivilege(Privilege.OWNER)
     suspend fun ParcelScope.cmdEntrust(sender: Player, player: PlayerProfile): Any? {
+        checkConnected("have privileges changed")
         checkOwned(sender)
 
         val key = toPrivilegeKey(player)
@@ -46,6 +47,7 @@ class CommandsPrivilegesLocal(plugin: ParcelsPlugin) : AbstractParcelCommands(pl
     )
     @RequireParcelPrivilege(Privilege.OWNER)
     suspend fun ParcelScope.cmdDistrust(sender: Player, player: PlayerProfile): Any? {
+        checkConnected("have privileges changed")
         checkOwned(sender)
 
         val key = toPrivilegeKey(player)
@@ -63,6 +65,7 @@ class CommandsPrivilegesLocal(plugin: ParcelsPlugin) : AbstractParcelCommands(pl
     )
     @RequireParcelPrivilege(Privilege.CAN_MANAGE)
     suspend fun ParcelScope.cmdAllow(sender: Player, player: PlayerProfile): Any? {
+        checkConnected("have privileges changed")
         checkOwned(sender)
 
         val key = toPrivilegeKey(player)
@@ -83,6 +86,7 @@ class CommandsPrivilegesLocal(plugin: ParcelsPlugin) : AbstractParcelCommands(pl
     )
     @RequireParcelPrivilege(Privilege.CAN_MANAGE)
     suspend fun ParcelScope.cmdDisallow(sender: Player, player: PlayerProfile): Any? {
+        checkConnected("have privileges changed")
         checkOwned(sender)
 
         val key = toPrivilegeKey(player)
@@ -103,6 +107,7 @@ class CommandsPrivilegesLocal(plugin: ParcelsPlugin) : AbstractParcelCommands(pl
     )
     @RequireParcelPrivilege(Privilege.CAN_MANAGE)
     suspend fun ParcelScope.cmdBan(sender: Player, player: PlayerProfile): Any? {
+        checkConnected("have privileges changed")
         checkOwned(sender)
 
         val key = toPrivilegeKey(player)
@@ -123,6 +128,7 @@ class CommandsPrivilegesLocal(plugin: ParcelsPlugin) : AbstractParcelCommands(pl
     )
     @RequireParcelPrivilege(Privilege.CAN_MANAGE)
     suspend fun ParcelScope.cmdUnban(sender: Player, player: PlayerProfile): Any? {
+        checkConnected("have privileges changed")
         checkOwned(sender)
 
         val key = toPrivilegeKey(player)

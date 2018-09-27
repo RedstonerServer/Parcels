@@ -4,11 +4,12 @@ import io.dico.dicore.command.*
 import io.dico.dicore.command.parameter.type.ParameterTypes
 import io.dico.parcels2.Interactables
 import io.dico.parcels2.ParcelProvider
+import io.dico.parcels2.ParcelsPlugin
 import io.dico.parcels2.Privilege
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 
-class ParcelOptionsInteractCommand(val parcelProvider: ParcelProvider) : Command() {
+class ParcelOptionsInteractCommand(val plugin: ParcelsPlugin) : Command() {
 
     init {
         setShortDescription("View and/or change the setting")
@@ -20,10 +21,12 @@ class ParcelOptionsInteractCommand(val parcelProvider: ParcelProvider) : Command
     }
 
     override fun execute(sender: CommandSender, context: ExecutionContext): String? {
+        if (!plugin.storage.isConnected) err("Parcels cannot have their options changed right now because of a database error")
+
         val interactableClass = Interactables[context.address.mainKey]
         val allowed: Boolean? = context.get("allowed")
 
-        val parcel = parcelProvider.getParcelRequired(sender as Player,
+        val parcel = plugin.parcelProvider.getParcelRequired(sender as Player,
             if (allowed == null) Privilege.DEFAULT else Privilege.CAN_MANAGE)
 
         if (allowed == null) {
@@ -52,5 +55,3 @@ class ParcelOptionsInteractCommand(val parcelProvider: ParcelProvider) : Command
     }
 
 }
-
-private fun err(message: String): Nothing = throw CommandException(message)

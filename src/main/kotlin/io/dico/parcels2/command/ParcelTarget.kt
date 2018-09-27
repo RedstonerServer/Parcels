@@ -4,21 +4,26 @@ import io.dico.dicore.command.parameter.ArgumentBuffer
 import io.dico.dicore.command.parameter.Parameter
 import io.dico.dicore.command.parameter.type.ParameterConfig
 import io.dico.dicore.command.parameter.type.ParameterType
-import io.dico.parcels2.*
+import io.dico.parcels2.Parcel
+import io.dico.parcels2.ParcelProvider
+import io.dico.parcels2.ParcelWorld
+import io.dico.parcels2.PlayerProfile
+import io.dico.parcels2.command.ParcelTarget.TargetKind.Companion.DEFAULT_KIND
+import io.dico.parcels2.command.ParcelTarget.TargetKind.Companion.ID
+import io.dico.parcels2.command.ParcelTarget.TargetKind.Companion.OWNER
+import io.dico.parcels2.command.ParcelTarget.TargetKind.Companion.OWNER_FAKE
+import io.dico.parcels2.command.ParcelTarget.TargetKind.Companion.OWNER_REAL
+import io.dico.parcels2.command.ParcelTarget.TargetKind.Companion.PREFER_OWNED_FOR_DEFAULT
+import io.dico.parcels2.command.ParcelTarget.TargetKind.Companion.REAL
 import io.dico.parcels2.storage.Storage
 import io.dico.parcels2.util.Vec2i
 import io.dico.parcels2.util.ext.floor
-import kotlinx.coroutines.CoroutineStart.UNDISPATCHED
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.async
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 
 sealed class ParcelTarget(val world: ParcelWorld, val parsedKind: Int, val isDefault: Boolean) {
 
     abstract suspend fun getParcelSuspend(storage: Storage): Parcel?
-
-    fun ParcelsPlugin.getParcelDeferred(): Deferred<Parcel?> = async(start = UNDISPATCHED) { getParcelSuspend(storage) }
 
     class ByID(world: ParcelWorld, val id: Vec2i?, parsedKind: Int, isDefault: Boolean) : ParcelTarget(world, parsedKind, isDefault) {
         override suspend fun getParcelSuspend(storage: Storage): Parcel? = getParcel()
@@ -61,29 +66,29 @@ sealed class ParcelTarget(val world: ParcelWorld, val parsedKind: Int, val isDef
         }
     }
 
-    companion object {
-        const val ID = 1 // ID
-        const val OWNER_REAL = 2 // an owner backed by a UUID
-        const val OWNER_FAKE = 4 // an owner not backed by a UUID
+    annotation class TargetKind(val kind: Int) {
+        companion object : ParameterConfig<TargetKind, Int>(TargetKind::class.java) {
+            const val ID = 1 // ID
+            const val OWNER_REAL = 2 // an owner backed by a UUID
+            const val OWNER_FAKE = 4 // an owner not backed by a UUID
 
-        const val OWNER = OWNER_REAL or OWNER_FAKE // any owner
-        const val ANY = ID or OWNER_REAL or OWNER_FAKE // any
-        const val REAL = ID or OWNER_REAL // no owner not backed by a UUID
+            const val OWNER = OWNER_REAL or OWNER_FAKE // any owner
+            const val ANY = ID or OWNER_REAL or OWNER_FAKE // any
+            const val REAL = ID or OWNER_REAL // no owner not backed by a UUID
 
-        const val DEFAULT_KIND = REAL
+            const val DEFAULT_KIND = REAL
 
-        const val PREFER_OWNED_FOR_DEFAULT = 8 // if the kind can be ID and OWNER_REAL, prefer OWNER_REAL for default
-        // instead of parcel that the player is in
-    }
+            const val PREFER_OWNED_FOR_DEFAULT = 8 // if the kind can be ID and OWNER_REAL, prefer OWNER_REAL for default
+            // instead of parcel that the player is in
 
-    annotation class Kind(val kind: Int)
-    private object Config : ParameterConfig<Kind, Int>(Kind::class.java) {
-        override fun toParameterInfo(annotation: Kind): Int {
-            return annotation.kind
+            override fun toParameterInfo(annotation: TargetKind): Int {
+                return annotation.kind
+            }
         }
     }
 
-    class PType(val parcelProvider: ParcelProvider, val parcelAddress: SpecialCommandAddress? = null) : ParameterType<ParcelTarget, Int>(ParcelTarget::class.java, Config) {
+    class PType(val parcelProvider: ParcelProvider, val parcelAddress: SpecialCommandAddress? = null) :
+        ParameterType<ParcelTarget, Int>(ParcelTarget::class.java, TargetKind) {
 
         override fun parse(parameter: Parameter<ParcelTarget, Int>, sender: CommandSender, buffer: ArgumentBuffer): ParcelTarget {
             var input = buffer.next()

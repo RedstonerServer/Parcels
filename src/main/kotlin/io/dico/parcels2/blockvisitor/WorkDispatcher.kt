@@ -24,7 +24,6 @@ data class TickWorktimeOptions(var workTime: Int, var tickInterval: Int)
 interface WorkDispatcher {
     /**
      * Submit a [task] that should be run synchronously, but limited such that it does not stall the server
-     * a bunch
      */
     fun dispatch(task: WorkerTask): Worker
 
@@ -89,11 +88,6 @@ interface Worker : WorkerAndScopeMembersUnion {
      * Await completion of this worker
      */
     suspend fun awaitCompletion()
-
-    /**
-     * An object attached to this worker
-     */
-    //val attachment: Any?
 }
 
 interface WorkerScope : WorkerAndScopeMembersUnion {
@@ -114,7 +108,7 @@ interface WorkerScope : WorkerAndScopeMembersUnion {
 
     /**
      * Get a [WorkerScope] that is responsible for [portion] part of the progress
-     * If [portion] is negative, the remainder of the progress is used
+     * If [portion] is negative, the remaining progress is used
      */
     fun delegateWork(portion: Double = -1.0): WorkerScope
 }
