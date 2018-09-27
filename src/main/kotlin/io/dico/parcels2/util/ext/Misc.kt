@@ -77,3 +77,8 @@ class EditLoopScope<T, U>(val _map: MutableMap<T, U>) {
 
 operator fun Formatting.plus(other: Formatting) = toString() + other
 operator fun Formatting.plus(other: String) = toString() + other
+
+inline fun <T> Pair<T, T>.forEach(block: (T) -> Unit) {
+    block(first)
+    block(second)
+}

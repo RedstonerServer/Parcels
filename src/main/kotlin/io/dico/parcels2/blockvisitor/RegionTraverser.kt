@@ -1,8 +1,9 @@
 package io.dico.parcels2.blockvisitor
 
-import io.dico.parcels2.util.Region
-import io.dico.parcels2.util.Vec3i
-import io.dico.parcels2.util.ext.clampMax
+import io.dico.parcels2.util.math.Dimension
+import io.dico.parcels2.util.math.Region
+import io.dico.parcels2.util.math.Vec3i
+import io.dico.parcels2.util.math.ext.clampMax
 
 private typealias Scope = SequenceScope<Vec3i>
 
@@ -54,9 +55,9 @@ sealed class RegionTraverser {
             val (primary, secondary, tertiary) = order.toArray()
             val (origin, size) = region
 
-            val maxOfPrimary = primary.extract(size) - 1
-            val maxOfSecondary = secondary.extract(size) - 1
-            val maxOfTertiary = tertiary.extract(size) - 1
+            val maxOfPrimary = size[primary] - 1
+            val maxOfSecondary = size[secondary] - 1
+            val maxOfTertiary = size[tertiary] - 1
 
             val isPrimaryIncreasing = direction.isIncreasing(primary)
             val isSecondaryIncreasing = direction.isIncreasing(secondary)
@@ -137,24 +138,6 @@ sealed class RegionTraverser {
 
 }
 
-enum class Dimension {
-    X,
-    Y,
-    Z;
-
-    fun extract(block: Vec3i) =
-        when (this) {
-            X -> block.x
-            Y -> block.y
-            Z -> block.z
-        }
-
-    companion object {
-        private val values = values()
-        operator fun get(ordinal: Int) = values[ordinal]
-    }
-}
-
 object TraverseOrderFactory {
     private fun isSwap(primary: Dimension, secondary: Dimension) = secondary.ordinal != (primary.ordinal + 1) % 3
 
@@ -194,15 +177,15 @@ inline class TraverseOrder(val orderNum: Int) {
      */
     fun toArray() = arrayOf(primary, secondary, tertiary)
 
-    fun add(vec: Vec3i, dp: Int, ds: Int, dt: Int): Vec3i =
+    fun add(vec: Vec3i, p: Int, s: Int, t: Int): Vec3i =
     // optimize this, will be called lots
         when (orderNum) {
-            0 -> vec.add(dp, ds, dt) // xyz
-            1 -> vec.add(dt, dp, ds) // yzx
-            2 -> vec.add(ds, dt, dp) // zxy
-            3 -> vec.add(dp, dt, ds) // xzy
-            4 -> vec.add(ds, dp, dt) // yxz
-            5 -> vec.add(dt, ds, dp) // zyx
+            0 -> vec.add(p, s, t) // xyz
+            1 -> vec.add(t, p, s) // yzx
+            2 -> vec.add(s, t, p) // zxy
+            3 -> vec.add(p, t, s) // xzy
+            4 -> vec.add(s, p, t) // yxz
+            5 -> vec.add(t, s, p) // zyx
             else -> error("Invalid orderNum $orderNum")
         }
 }
@@ -212,9 +195,9 @@ inline class TraverseDirection(val bits: Int) {
 
     fun comesFirst(current: Vec3i, block: Vec3i, dimension: Dimension): Boolean =
         if (isIncreasing(dimension))
-            dimension.extract(block) <= dimension.extract(current)
+            block[dimension] <= current[dimension]
         else
-            dimension.extract(block) >= dimension.extract(current)
+            block[dimension] >= current[dimension]
 
     fun comesFirst(current: Vec3i, block: Vec3i) =
         comesFirst(current, block, Dimension.X)

@@ -6,7 +6,7 @@ import io.dico.parcels2.ParcelsPlugin
 import io.dico.parcels2.PlayerProfile
 import io.dico.parcels2.PlayerProfile.*
 import io.dico.parcels2.PrivilegeKey
-import io.dico.parcels2.blockvisitor.Worker
+import io.dico.parcels2.blockvisitor.Job
 import io.dico.parcels2.util.ext.hasPermAdminManage
 import io.dico.parcels2.util.ext.parcelLimit
 import org.bukkit.entity.Player
@@ -50,7 +50,7 @@ abstract class AbstractParcelCommands(val plugin: ParcelsPlugin) : ICommandRecei
         world.blockManager.clearParcel(parcel.id)
     }
 
-    protected fun Worker.reportProgressUpdates(context: ExecutionContext, action: String) {
+    protected fun Job.reportProgressUpdates(context: ExecutionContext, action: String) {
         onProgressUpdate(1000, 1000) { progress, elapsedTime ->
             val alt = context.getFormat(EMessageType.NUMBER)
             val main = context.getFormat(EMessageType.INFORMATIVE)

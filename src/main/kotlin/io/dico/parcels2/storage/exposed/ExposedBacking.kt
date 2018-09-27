@@ -6,7 +6,7 @@ import com.zaxxer.hikari.HikariDataSource
 import io.dico.parcels2.*
 import io.dico.parcels2.PlayerProfile.Star.name
 import io.dico.parcels2.storage.*
-import io.dico.parcels2.util.ext.clampMax
+import io.dico.parcels2.util.math.ext.clampMax
 import io.dico.parcels2.util.ext.synchronized
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ArrayChannel
@@ -193,6 +193,10 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource, val poolSi
             PrivilegesLocalT.setPrivilege(parcel, profile, privilege)
         }
 
+        data.privilegeOfStar.takeIf { it != Privilege.DEFAULT }?.let { privilege ->
+            PrivilegesLocalT.setPrivilege(parcel, PlayerProfile.Star, privilege)
+        }
+
         setParcelOptionsInteractConfig(parcel, data.interactableConfig)
     }
 
@@ -242,13 +246,13 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource, val poolSi
         }
     }
 
-    override fun transmitAllGlobalAddedData(channel: SendChannel<AddedDataPair<PlayerProfile>>) {
-        PrivilegesGlobalT.sendAllAddedData(channel)
+    override fun transmitAllGlobalPrivileges(channel: SendChannel<PrivilegePair<PlayerProfile>>) {
+        PrivilegesGlobalT.sendAllPrivilegesH(channel)
         channel.close()
     }
 
-    override fun readGlobalPrivileges(owner: PlayerProfile): MutablePrivilegeMap {
-        return PrivilegesGlobalT.readPrivileges(ProfilesT.getId(owner.toOwnerProfile()) ?: return hashMapOf())
+    override fun readGlobalPrivileges(owner: PlayerProfile): PrivilegesHolder? {
+        return PrivilegesGlobalT.readPrivileges(ProfilesT.getId(owner.toOwnerProfile()) ?: return null)
     }
 
     override fun setGlobalPrivilege(owner: PlayerProfile, player: PlayerProfile, privilege: Privilege) {
@@ -267,7 +271,10 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource, val poolSi
             System.arraycopy(source, 0, target, 0, source.size.clampMax(target.size))
         }
 
-        privilegeMap = PrivilegesLocalT.readPrivileges(id)
+        val privileges = PrivilegesLocalT.readPrivileges(id)
+        if (privileges != null) {
+            copyPrivilegesFrom(privileges)
+        }
     }
 
 }

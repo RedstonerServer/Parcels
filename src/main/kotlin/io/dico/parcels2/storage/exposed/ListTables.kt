@@ -15,7 +15,7 @@ object ParcelOptionsT : Table("parcel_options") {
     val interact_bitmask = binary("interact_bitmask", 4)
 }
 
-typealias PrivilegesSendChannel<AttachT> = SendChannel<Pair<AttachT, MutablePrivilegeMap>>
+typealias PrivilegesSendChannel<AttachT> = SendChannel<Pair<AttachT, PrivilegesHolder>>
 
 sealed class PrivilegesTable<AttachT>(name: String, val idTable: IdTransactionsTable<*, AttachT>) : Table(name) {
     val attach_id = integer("attach_id").references(idTable.id, ReferenceOption.CASCADE)
@@ -43,32 +43,32 @@ sealed class PrivilegesTable<AttachT>(name: String, val idTable: IdTransactionsT
         }
     }
 
-    fun readPrivileges(id: Int): MutablePrivilegeMap {
+    fun readPrivileges(id: Int): PrivilegesHolder? {
         val list = slice(profile_id, privilege).select { attach_id eq id }
-        val result = MutablePrivilegeMap()
+        val result = PrivilegesHolder()
         for (row in list) {
             val profile = ProfilesT.getRealItem(row[profile_id]) ?: continue
-            result[profile] = Privilege.getByNumber(row[privilege]) ?: continue
+            result.setRawStoredPrivilege(profile, Privilege.getByNumber(row[privilege]) ?: continue)
         }
         return result
     }
 
-    fun sendAllAddedData(channel: PrivilegesSendChannel<AttachT>) {
+    fun sendAllPrivilegesH(channel: PrivilegesSendChannel<AttachT>) {
         val iterator = selectAll().orderBy(attach_id).iterator()
 
         if (iterator.hasNext()) {
             val firstRow = iterator.next()
             var id: Int = firstRow[attach_id]
             var attach: AttachT? = null
-            var map: MutablePrivilegeMap? = null
+            var map: PrivilegesHolder? = null
 
             fun initAttachAndMap() {
                 attach = idTable.getItem(id)
-                map = attach?.let { mutableMapOf() }
+                map = attach?.let { PrivilegesHolder() }
             }
 
             fun sendIfPresent() {
-                if (attach != null && map != null && map!!.isNotEmpty()) {
+                if (attach != null && map != null) {
                     channel.offer(attach!! to map!!)
                 }
                 attach = null
@@ -91,7 +91,7 @@ sealed class PrivilegesTable<AttachT>(name: String, val idTable: IdTransactionsT
 
                 val profile = ProfilesT.getRealItem(row[profile_id]) ?: continue
                 val privilege = Privilege.getByNumber(row[privilege]) ?: continue
-                map!![profile] = privilege
+                map!!.setRawStoredPrivilege(profile, privilege)
             }
 
             sendIfPresent()

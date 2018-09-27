@@ -66,7 +66,7 @@ interface RawPrivileges {
 open class PrivilegesHolder(override var privilegeMap: MutablePrivilegeMap = EmptyPrivilegeMap) : RawPrivileges {
     private var _privilegeOfStar: Privilege = DEFAULT
 
-    override var privilegeOfStar: Privilege
+    override /*open*/ var privilegeOfStar: Privilege
         get() = _privilegeOfStar
         set(value) = run { _privilegeOfStar = value }
 
@@ -93,6 +93,11 @@ open class PrivilegesHolder(override var privilegeMap: MutablePrivilegeMap = Emp
 
         return if (privilege == DEFAULT) privilegeMap.remove(key) != null
         else privilegeMap.put(key, privilege) != privilege
+    }
+
+    fun copyPrivilegesFrom(other: PrivilegesHolder) {
+        privilegeMap = other.privilegeMap
+        privilegeOfStar = other.privilegeOfStar
     }
 }
 

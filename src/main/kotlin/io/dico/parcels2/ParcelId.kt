@@ -1,6 +1,6 @@
 package io.dico.parcels2
 
-import io.dico.parcels2.util.Vec2i
+import io.dico.parcels2.util.math.Vec2i
 import org.bukkit.Bukkit
 import org.bukkit.World
 import java.util.UUID

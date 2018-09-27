@@ -3,8 +3,8 @@ package io.dico.parcels2
 import io.dico.dicore.Registrator
 import io.dico.dicore.command.EOverridePolicy
 import io.dico.dicore.command.ICommandDispatcher
-import io.dico.parcels2.blockvisitor.BukkitWorkDispatcher
-import io.dico.parcels2.blockvisitor.WorkDispatcher
+import io.dico.parcels2.blockvisitor.BukkitJobDispatcher
+import io.dico.parcels2.blockvisitor.JobDispatcher
 import io.dico.parcels2.command.getParcelCommands
 import io.dico.parcels2.defaultimpl.GlobalPrivilegesManagerImpl
 import io.dico.parcels2.defaultimpl.ParcelProviderImpl
@@ -44,7 +44,7 @@ class ParcelsPlugin : JavaPlugin(), CoroutineScope, PluginScheduler {
 
     override val coroutineContext: CoroutineContext = MainThreadDispatcher(this)
     override val plugin: Plugin get() = this
-    val workDispatcher: WorkDispatcher by lazy { BukkitWorkDispatcher(this, options.tickWorktime) }
+    val jobDispatcher: JobDispatcher by lazy { BukkitJobDispatcher(this, options.tickJobtime) }
 
     override fun onEnable() {
         plogger.info("Debug enabled: ${plogger.isDebugEnabled}")
@@ -55,11 +55,11 @@ class ParcelsPlugin : JavaPlugin(), CoroutineScope, PluginScheduler {
     }
 
     override fun onDisable() {
-        val hasWorkers = workDispatcher.workers.isNotEmpty()
+        val hasWorkers = jobDispatcher.jobs.isNotEmpty()
         if (hasWorkers) {
-            plogger.warn("Parcels is attempting to complete all ${workDispatcher.workers.size} remaining jobs before shutdown...")
+            plogger.warn("Parcels is attempting to complete all ${jobDispatcher.jobs.size} remaining jobs before shutdown...")
         }
-        workDispatcher.completeAllTasks()
+        jobDispatcher.completeAllTasks()
         if (hasWorkers) {
             plogger.info("Parcels has completed the remaining jobs.")
         }

@@ -1,9 +1,9 @@
 package io.dico.parcels2
 
 import io.dico.parcels2.blockvisitor.*
-import io.dico.parcels2.util.Region
-import io.dico.parcels2.util.Vec2i
-import io.dico.parcels2.util.get
+import io.dico.parcels2.util.math.Region
+import io.dico.parcels2.util.math.Vec2i
+import io.dico.parcels2.util.math.get
 import kotlinx.coroutines.CoroutineScope
 import org.bukkit.Chunk
 import org.bukkit.Location
@@ -37,12 +37,12 @@ abstract class ParcelGenerator : ChunkGenerator() {
     abstract fun makeParcelLocatorAndBlockManager(worldId: ParcelWorldId,
                                                   container: ParcelContainer,
                                                   coroutineScope: CoroutineScope,
-                                                  workDispatcher: WorkDispatcher): Pair<ParcelLocator, ParcelBlockManager>
+                                                  jobDispatcher: JobDispatcher): Pair<ParcelLocator, ParcelBlockManager>
 }
 
 interface ParcelBlockManager {
     val world: World
-    val workDispatcher: WorkDispatcher
+    val jobDispatcher: JobDispatcher
     val parcelTraverser: RegionTraverser
 
     // fun getBottomBlock(parcel: ParcelId): Vec2i
@@ -55,13 +55,13 @@ interface ParcelBlockManager {
 
     fun setOwnerBlock(parcel: ParcelId, owner: PlayerProfile?)
 
-    fun setBiome(parcel: ParcelId, biome: Biome): Worker
+    fun setBiome(parcel: ParcelId, biome: Biome): Job
 
-    fun clearParcel(parcel: ParcelId): Worker
+    fun clearParcel(parcel: ParcelId): Job
 
-    fun swapParcels(parcel1: ParcelId, parcel2: ParcelId): Worker
+    fun swapParcels(parcel1: ParcelId, parcel2: ParcelId): Job
 
-    fun submitBlockVisitor(vararg parcelIds: ParcelId, task: WorkerTask): Worker
+    fun submitBlockVisitor(vararg parcelIds: ParcelId, task: JobFunction): Job
 
     /**
      * Used to update owner blocks in the corner of the parcel
@@ -71,7 +71,7 @@ interface ParcelBlockManager {
 
 inline fun ParcelBlockManager.doBlockOperation(parcel: ParcelId,
                                                traverser: RegionTraverser,
-                                               crossinline operation: suspend WorkerScope.(Block) -> Unit) = submitBlockVisitor(parcel) {
+                                               crossinline operation: suspend JobScope.(Block) -> Unit) = submitBlockVisitor(parcel) {
     val region = getRegion(parcel)
     val blockCount = region.blockCount.toDouble()
     val blocks = traverser.traverseRegion(region)

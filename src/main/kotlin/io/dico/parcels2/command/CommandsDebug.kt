@@ -81,14 +81,14 @@ class CommandsDebug(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
 
     @Cmd("jobs")
     fun cmdJobs(): Any? {
-        val workers = plugin.workDispatcher.workers
+        val workers = plugin.jobDispatcher.jobs
         println(workers.map { it.job }.joinToString(separator = "\n"))
         return "Task count: ${workers.size}"
     }
 
     @Cmd("complete_jobs")
     fun cmdCompleteJobs(): Any? = cmdJobs().also {
-        plugin.launch { plugin.workDispatcher.completeAllTasks() }
+        plugin.launch { plugin.jobDispatcher.completeAllTasks() }
     }
 
     @Cmd("message")

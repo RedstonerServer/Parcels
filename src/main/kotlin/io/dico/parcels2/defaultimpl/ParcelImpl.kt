@@ -3,7 +3,7 @@ package io.dico.parcels2.defaultimpl
 import io.dico.dicore.Formatting
 import io.dico.parcels2.*
 import io.dico.parcels2.Privilege.*
-import io.dico.parcels2.util.Vec2i
+import io.dico.parcels2.util.math.Vec2i
 import io.dico.parcels2.util.ext.alsoIfTrue
 import org.bukkit.Material
 import org.joda.time.DateTime

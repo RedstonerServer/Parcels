@@ -14,7 +14,7 @@ import java.util.UUID
 import kotlin.coroutines.CoroutineContext
 
 typealias DataPair = Pair<ParcelId, ParcelData?>
-typealias AddedDataPair<TAttach> = Pair<TAttach, MutablePrivilegeMap>
+typealias PrivilegePair<TAttach> = Pair<TAttach, PrivilegesHolder>
 
 interface Storage {
     val name: String
@@ -55,9 +55,9 @@ interface Storage {
     fun setParcelOptionsInteractConfig(parcel: ParcelId, config: InteractableConfiguration): Job
 
 
-    fun transmitAllGlobalAddedData(): ReceiveChannel<AddedDataPair<PlayerProfile>>
+    fun transmitAllGlobalPrivileges(): ReceiveChannel<PrivilegePair<PlayerProfile>>
 
-    fun readGlobalPrivileges(owner: PlayerProfile): Deferred<MutablePrivilegeMap?>
+    fun readGlobalPrivileges(owner: PlayerProfile): Deferred<PrivilegesHolder?>
 
     fun setGlobalPrivilege(owner: PlayerProfile, player: PlayerProfile, privilege: Privilege): Job
 
@@ -104,9 +104,9 @@ class BackedStorage internal constructor(val b: Backing) : Storage, CoroutineSco
     override fun setParcelOptionsInteractConfig(parcel: ParcelId, config: InteractableConfiguration) = b.launchJob { b.setParcelOptionsInteractConfig(parcel, config) }
 
 
-    override fun transmitAllGlobalAddedData(): ReceiveChannel<AddedDataPair<PlayerProfile>> = b.openChannel { b.transmitAllGlobalAddedData(it) }
+    override fun transmitAllGlobalPrivileges(): ReceiveChannel<PrivilegePair<PlayerProfile>> = b.openChannel { b.transmitAllGlobalPrivileges(it) }
 
-    override fun readGlobalPrivileges(owner: PlayerProfile): Deferred<MutablePrivilegeMap?> = b.launchFuture { b.readGlobalPrivileges(owner) }
+    override fun readGlobalPrivileges(owner: PlayerProfile): Deferred<PrivilegesHolder?> = b.launchFuture { b.readGlobalPrivileges(owner) }
 
     override fun setGlobalPrivilege(owner: PlayerProfile, player: PlayerProfile, privilege: Privilege) = b.launchJob { b.setGlobalPrivilege(owner, player, privilege) }
 

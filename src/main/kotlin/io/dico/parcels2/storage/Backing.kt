@@ -61,9 +61,9 @@ interface Backing {
     fun setParcelOptionsInteractConfig(parcel: ParcelId, config: InteractableConfiguration)
 
 
-    fun transmitAllGlobalAddedData(channel: SendChannel<AddedDataPair<PlayerProfile>>)
+    fun transmitAllGlobalPrivileges(channel: SendChannel<PrivilegePair<PlayerProfile>>)
 
-    fun readGlobalPrivileges(owner: PlayerProfile): MutablePrivilegeMap
+    fun readGlobalPrivileges(owner: PlayerProfile): PrivilegesHolder?
 
     fun setGlobalPrivilege(owner: PlayerProfile, player: PlayerProfile, privilege: Privilege)
 }

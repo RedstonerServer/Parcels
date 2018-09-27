@@ -1,6 +1,6 @@
 package io.dico.parcels2.options
 
-import io.dico.parcels2.blockvisitor.TickWorktimeOptions
+import io.dico.parcels2.blockvisitor.TickJobtimeOptions
 import org.bukkit.GameMode
 import org.bukkit.Material
 import java.io.Reader
@@ -11,7 +11,7 @@ class Options {
     var worlds: Map<String, WorldOptions> = hashMapOf()
         private set
     var storage: StorageOptions = StorageOptions()
-    var tickWorktime: TickWorktimeOptions = TickWorktimeOptions(20, 1)
+    var tickJobtime: TickJobtimeOptions = TickJobtimeOptions(20, 1)
     var migration = MigrationOptionsHolder()
 
     fun addWorld(name: String,

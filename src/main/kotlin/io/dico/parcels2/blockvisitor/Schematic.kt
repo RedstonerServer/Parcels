@@ -1,8 +1,8 @@
 package io.dico.parcels2.blockvisitor
 
-import io.dico.parcels2.util.Region
-import io.dico.parcels2.util.Vec3i
-import io.dico.parcels2.util.get
+import io.dico.parcels2.util.math.Region
+import io.dico.parcels2.util.math.Vec3i
+import io.dico.parcels2.util.math.get
 import org.bukkit.Bukkit
 import org.bukkit.Material
 import org.bukkit.World
@@ -24,7 +24,7 @@ class Schematic {
     private var isLoaded = false; private set
     private val traverser: RegionTraverser = RegionTraverser.upward
 
-    suspend fun WorkerScope.load(world: World, region: Region) {
+    suspend fun JobScope.load(world: World, region: Region) {
         _size = region.size
 
         val data = arrayOfNulls<BlockData>(region.blockCount).also { blockDatas = it }
@@ -52,7 +52,7 @@ class Schematic {
         isLoaded = true
     }
 
-    suspend fun WorkerScope.paste(world: World, position: Vec3i) {
+    suspend fun JobScope.paste(world: World, position: Vec3i) {
         if (!isLoaded) throw IllegalStateException()
 
         val region = Region(position, _size!!)
@@ -108,11 +108,11 @@ class Schematic {
         }
     }
 
-    fun getLoadTask(world: World, region: Region): WorkerTask = {
+    fun getLoadTask(world: World, region: Region): JobFunction = {
         load(world, region)
     }
 
-    fun getPasteTask(world: World, position: Vec3i): WorkerTask = {
+    fun getPasteTask(world: World, position: Vec3i): JobFunction = {
         paste(world, position)
     }
 

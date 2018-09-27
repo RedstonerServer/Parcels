@@ -1,6 +1,6 @@
 package io.dico.parcels2.blockvisitor
 
-import io.dico.parcels2.util.Vec3i
+import io.dico.parcels2.util.math.Vec3i
 import io.dico.parcels2.util.ext.getMaterialsWithWoodTypePrefix
 import io.dico.parcels2.util.ext.getMaterialsWithWoolColorPrefix
 import org.bukkit.Material

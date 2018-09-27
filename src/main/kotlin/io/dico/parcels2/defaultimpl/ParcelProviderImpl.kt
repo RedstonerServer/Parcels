@@ -58,8 +58,10 @@ class ParcelProviderImpl(val plugin: ParcelsPlugin) : ParcelProvider {
                 if (worldExists) Bukkit.getWorld(worldName)!!
                 else WorldCreator(worldName).generator(generator).createWorld().also { logger.info("Creating world $worldName") }
 
-            parcelWorld = ParcelWorldImpl(bukkitWorld, generator, worldOptions.runtime, plugin.storage,
-                plugin.globalPrivileges, ::DefaultParcelContainer, plugin, plugin.workDispatcher)
+            parcelWorld = ParcelWorldImpl(
+                bukkitWorld, generator, worldOptions.runtime, plugin.storage,
+                plugin.globalPrivileges, ::DefaultParcelContainer, plugin, plugin.jobDispatcher
+            )
 
             if (!worldExists) {
                 val time = DateTime.now()
@@ -95,11 +97,18 @@ class ParcelProviderImpl(val plugin: ParcelsPlugin) : ParcelProvider {
 
             logger.info("Loading all parcel data...")
             val channel = plugin.storage.transmitAllParcelData()
-            do {
-                val pair = channel.receiveOrNull() ?: break
-                val parcel = getParcelById(pair.first) ?: continue
-                pair.second?.let { parcel.copyDataIgnoringDatabase(it) }
-            } while (true)
+            while (true) {
+                val (id, data) = channel.receiveOrNull() ?: break
+                val parcel = getParcelById(id) ?: continue
+                data?.let { parcel.copyDataIgnoringDatabase(it) }
+            }
+
+            val channel2 = plugin.storage.transmitAllGlobalPrivileges()
+            while (true) {
+                val (profile, data) = channel2.receiveOrNull() ?: break
+                val key = profile as? PrivilegeKey ?: continue
+                (plugin.globalPrivileges[key] as PrivilegesHolder).copyPrivilegesFrom(data)
+            }
 
             logger.info("Loading data completed")
             _dataIsLoaded = true

@@ -7,6 +7,12 @@ import io.dico.dicore.RegistratorListener
 import io.dico.parcels2.*
 import io.dico.parcels2.storage.Storage
 import io.dico.parcels2.util.ext.*
+import io.dico.parcels2.util.math.Dimension
+import io.dico.parcels2.util.math.Vec3d
+import io.dico.parcels2.util.math.Vec3i
+import io.dico.parcels2.util.math.ext.clampMax
+import io.dico.parcels2.util.math.ext.clampMin
+import org.bukkit.Location
 import org.bukkit.Material.*
 import org.bukkit.World
 import org.bukkit.block.Biome
@@ -52,6 +58,7 @@ class ParcelListeners(
         return world to world.getParcelAt(block)
     }
 
+
     /*
      * Prevents players from entering plots they are banned from
      */
@@ -59,12 +66,36 @@ class ParcelListeners(
     val onPlayerMoveEvent = RegistratorListener<PlayerMoveEvent> l@{ event ->
         val user = event.player
         if (user.hasPermBanBypass) return@l
-        val parcel = parcelProvider.getParcelAt(event.to) ?: return@l
+        val toLoc = event.to
+        val parcel = parcelProvider.getParcelAt(toLoc) ?: return@l
+
         if (!parcel.canEnterFast(user)) {
-            parcelProvider.getParcelAt(event.from)?.also {
-                user.teleport(it.homeLocation)
+            val region = parcel.world.blockManager.getRegion(parcel.id)
+            val dimension = region.getFirstUncontainedDimensionOf(Vec3i(event.from))
+
+            if (dimension == null) {
+                user.teleport(parcel.homeLocation)
                 user.sendParcelMessage(nopermit = true, message = "You are banned from this parcel")
-            } ?: run { event.to = event.from }
+
+            } else {
+                val speed = getPlayerSpeed(user)
+                val from = Vec3d(event.from)
+                val to = Vec3d(toLoc).with(dimension, from[dimension])
+
+                var newTo = to
+                dimension.otherDimensions.forEach {
+                    val delta = to[it] - from[it]
+                    newTo = newTo.add(it, delta * 100 * if (it == Dimension.Y) 0.5 else speed)
+                }
+
+
+
+                event.to = Location(
+                    toLoc.world,
+                    newTo.x, newTo.y.clampMin(0.0).clampMax(255.0), newTo.z,
+                    toLoc.yaw, toLoc.pitch
+                )
+            }
         }
     }
 
@@ -606,5 +637,17 @@ class ParcelListeners(
             event.newCurrent = event.oldCurrent
         }
     }
+
+
+    private fun getPlayerSpeed(player: Player): Double =
+        if (player.isFlying) {
+            player.flySpeed * if (player.isSprinting) 21.6 else 10.92
+        } else {
+            player.walkSpeed * when {
+                player.isSprinting -> 5.612
+                player.isSneaking -> 1.31
+                else -> 4.317
+            } / 1.5 //?
+        } / 20.0
 
 }

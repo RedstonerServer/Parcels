@@ -1,4 +1,4 @@
-package io.dico.parcels2.util.ext
+package io.dico.parcels2.util.math.ext
 
 fun Double.floor(): Int {
     val down = toInt()
@@ -34,6 +34,7 @@ fun IntRange.clamp(min: Int, max: Int): IntRange {
 // the name coerceAtMost is bad
 fun Int.clampMax(max: Int) = coerceAtMost(max)
 fun Double.clampMin(min: Double) = coerceAtLeast(min)
+fun Double.clampMax(max: Double) = coerceAtMost(max)
 
 // Why does this not exist?
 infix fun Int.ceilDiv(divisor: Int): Int {

@@ -2,11 +2,11 @@ package io.dico.parcels2.blockvisitor
 
 import io.dico.parcels2.ParcelsPlugin
 import io.dico.parcels2.logger
-import io.dico.parcels2.util.ext.clampMin
+import io.dico.parcels2.util.math.ext.clampMin
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart.LAZY
-import kotlinx.coroutines.Job
+import kotlinx.coroutines.Job as CoroutineJob
 import kotlinx.coroutines.launch
 import org.bukkit.scheduler.BukkitTask
 import java.lang.System.currentTimeMillis
@@ -16,21 +16,21 @@ import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
 import kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn
 import kotlin.coroutines.resume
 
-typealias WorkerTask = suspend WorkerScope.() -> Unit
-typealias WorkerUpdateLister = Worker.(Double, Long) -> Unit
+typealias JobFunction = suspend JobScope.() -> Unit
+typealias JobUpdateLister = Job.(Double, Long) -> Unit
 
-data class TickWorktimeOptions(var workTime: Int, var tickInterval: Int)
+data class TickJobtimeOptions(var jobTime: Int, var tickInterval: Int)
 
-interface WorkDispatcher {
+interface JobDispatcher {
     /**
      * Submit a [task] that should be run synchronously, but limited such that it does not stall the server
      */
-    fun dispatch(task: WorkerTask): Worker
+    fun dispatch(task: JobFunction): Job
 
     /**
-     * Get a list of all workers
+     * Get a list of all jobs
      */
-    val workers: List<Worker>
+    val jobs: List<Job>
 
     /**
      * Attempts to complete any remaining tasks immediately, without suspension.
@@ -38,27 +38,27 @@ interface WorkDispatcher {
     fun completeAllTasks()
 }
 
-interface WorkerAndScopeMembersUnion {
+interface JobAndScopeMembersUnion {
     /**
-     * The time that elapsed since this worker was dispatched, in milliseconds
+     * The time that elapsed since this job was dispatched, in milliseconds
      */
     val elapsedTime: Long
 
     /**
-     * A value indicating the progress of this worker, in the range 0.0 <= progress <= 1.0
+     * A value indicating the progress of this job, in the range 0.0 <= progress <= 1.0
      * with no guarantees to its accuracy.
      */
     val progress: Double
 }
 
-interface Worker : WorkerAndScopeMembersUnion {
+interface Job : JobAndScopeMembersUnion {
     /**
-     * The coroutine associated with this worker
+     * The coroutine associated with this job
      */
-    val job: Job
+    val job: CoroutineJob
 
     /**
-     * true if this worker has completed
+     * true if this job has completed
      */
     val isComplete: Boolean
 
@@ -69,28 +69,28 @@ interface Worker : WorkerAndScopeMembersUnion {
     val completionException: Throwable?
 
     /**
-     * Calls the given [block] whenever the progress of this worker is updated,
+     * Calls the given [block] whenever the progress of this job is updated,
      * if [minInterval] milliseconds expired since the last call.
      * The first call occurs after at least [minDelay] milliseconds in a likewise manner.
      * Repeated invocations of this method result in an [IllegalStateException]
      *
      * if [asCompletionListener] is true, [onCompleted] is called with the same [block]
      */
-    fun onProgressUpdate(minDelay: Int, minInterval: Int, asCompletionListener: Boolean = true, block: WorkerUpdateLister): Worker
+    fun onProgressUpdate(minDelay: Int, minInterval: Int, asCompletionListener: Boolean = true, block: JobUpdateLister): Job
 
     /**
-     * Calls the given [block] when this worker completes, with the progress value 1.0.
+     * Calls the given [block] when this job completes, with the progress value 1.0.
      * Multiple listeners may be registered to this function.
      */
-    fun onCompleted(block: WorkerUpdateLister): Worker
+    fun onCompleted(block: JobUpdateLister): Job
 
     /**
-     * Await completion of this worker
+     * Await completion of this job
      */
     suspend fun awaitCompletion()
 }
 
-interface WorkerScope : WorkerAndScopeMembersUnion {
+interface JobScope : JobAndScopeMembersUnion {
     /**
      * A task should call this frequently during its execution, such that the timer can suspend it when necessary.
      */
@@ -107,29 +107,29 @@ interface WorkerScope : WorkerAndScopeMembersUnion {
     fun markComplete() = setProgress(1.0)
 
     /**
-     * Get a [WorkerScope] that is responsible for [portion] part of the progress
+     * Get a [JobScope] that is responsible for [portion] part of the progress
      * If [portion] is negative, the remaining progress is used
      */
-    fun delegateWork(portion: Double = -1.0): WorkerScope
+    fun delegateProgress(portion: Double = -1.0): JobScope
 }
 
-inline fun <T> WorkerScope.delegateWork(portion: Double = -1.0, block: WorkerScope.() -> T): T {
-    delegateWork(portion).apply {
+inline fun <T> JobScope.delegateWork(portion: Double = -1.0, block: JobScope.() -> T): T {
+    delegateProgress(portion).apply {
         val result = block()
         markComplete()
         return result
     }
 }
 
-interface WorkerInternal : Worker, WorkerScope {
+interface JobInternal : Job, JobScope {
     /**
-     * Start or resumes the execution of this worker
-     * and returns true if the worker completed
+     * Start or resumes the execution of this job
+     * and returns true if the job completed
      *
      * [worktime] is the maximum amount of time, in milliseconds,
      * that this job may run for until suspension.
      *
-     * If [worktime] is not positive, the worker will complete
+     * If [worktime] is not positive, the job will complete
      * without suspension and this method will always return true.
      */
     fun resume(worktime: Long): Boolean
@@ -137,68 +137,68 @@ interface WorkerInternal : Worker, WorkerScope {
 
 /**
  * An object that controls one or more jobs, ensuring that they don't stall the server too much.
- * There is a configurable maxiumum amount of milliseconds that can be allocated to all workers together in each server tick
+ * There is a configurable maxiumum amount of milliseconds that can be allocated to all jobs together in each server tick
  * This object attempts to split that maximum amount of milliseconds equally between all jobs
  */
-class BukkitWorkDispatcher(private val plugin: ParcelsPlugin, var options: TickWorktimeOptions) : WorkDispatcher {
+class BukkitJobDispatcher(private val plugin: ParcelsPlugin, var options: TickJobtimeOptions) : JobDispatcher {
     // The currently registered bukkit scheduler task
     private var bukkitTask: BukkitTask? = null
-    // The workers.
-    private val _workers = LinkedList<WorkerInternal>()
-    override val workers: List<Worker> = _workers
+    // The jobs.
+    private val _jobs = LinkedList<JobInternal>()
+    override val jobs: List<Job> = _jobs
 
-    override fun dispatch(task: WorkerTask): Worker {
-        val worker: WorkerInternal = WorkerImpl(plugin, task)
+    override fun dispatch(task: JobFunction): Job {
+        val job: JobInternal = JobImpl(plugin, task)
 
         if (bukkitTask == null) {
-            val completed = worker.resume(options.workTime.toLong())
-            if (completed) return worker
-            bukkitTask = plugin.scheduleRepeating(0, options.tickInterval) { tickJobs() }
+            val completed = job.resume(options.jobTime.toLong())
+            if (completed) return job
+            bukkitTask = plugin.scheduleRepeating(0, options.tickInterval) { tickCoroutineJobs() }
         }
-        _workers.addFirst(worker)
-        return worker
+        _jobs.addFirst(job)
+        return job
     }
 
-    private fun tickJobs() {
-        val workers = _workers
-        if (workers.isEmpty()) return
+    private fun tickCoroutineJobs() {
+        val jobs = _jobs
+        if (jobs.isEmpty()) return
         val tickStartTime = System.currentTimeMillis()
 
-        val iterator = workers.listIterator(index = 0)
+        val iterator = jobs.listIterator(index = 0)
         while (iterator.hasNext()) {
             val time = System.currentTimeMillis()
             val timeElapsed = time - tickStartTime
-            val timeLeft = options.workTime - timeElapsed
+            val timeLeft = options.jobTime - timeElapsed
             if (timeLeft <= 0) return
 
-            val count = workers.size - iterator.nextIndex()
+            val count = jobs.size - iterator.nextIndex()
             val timePerJob = (timeLeft + count - 1) / count
-            val worker = iterator.next()
-            val completed = worker.resume(timePerJob)
+            val job = iterator.next()
+            val completed = job.resume(timePerJob)
             if (completed) {
                 iterator.remove()
             }
         }
 
-        if (workers.isEmpty()) {
+        if (jobs.isEmpty()) {
             bukkitTask?.cancel()
             bukkitTask = null
         }
     }
 
     override fun completeAllTasks() {
-        _workers.forEach {
+        _jobs.forEach {
             it.resume(-1)
         }
-        _workers.clear()
+        _jobs.clear()
         bukkitTask?.cancel()
         bukkitTask = null
     }
 
 }
 
-private class WorkerImpl(scope: CoroutineScope, task: WorkerTask) : WorkerInternal {
-    override val job: Job = scope.launch(start = LAZY) { task() }
+private class JobImpl(scope: CoroutineScope, task: JobFunction) : JobInternal {
+    override val job: CoroutineJob = scope.launch(start = LAZY) { task() }
 
     private var continuation: Continuation<Unit>? = null
     private var nextSuspensionTime: Long = 0L
@@ -217,17 +217,17 @@ private class WorkerImpl(scope: CoroutineScope, task: WorkerTask) : WorkerIntern
     override var completionException: Throwable? = null; private set
 
     private var startTimeOrElapsedTime: Long = 0L // startTime before completed, elapsed time otherwise
-    private var onProgressUpdate: WorkerUpdateLister? = null
+    private var onProgressUpdate: JobUpdateLister? = null
     private var progressUpdateInterval: Int = 0
     private var lastUpdateTime: Long = 0L
-    private var onCompleted: WorkerUpdateLister? = null
+    private var onCompleted: JobUpdateLister? = null
 
     init {
         job.invokeOnCompletion { exception ->
             // report any error that occurred
             completionException = exception?.also {
                 if (it !is CancellationException)
-                    logger.error("WorkerTask generated an exception", it)
+                    logger.error("JobFunction generated an exception", it)
             }
 
             // convert to elapsed time here
@@ -239,7 +239,7 @@ private class WorkerImpl(scope: CoroutineScope, task: WorkerTask) : WorkerIntern
         }
     }
 
-    override fun onProgressUpdate(minDelay: Int, minInterval: Int, asCompletionListener: Boolean, block: WorkerUpdateLister): Worker {
+    override fun onProgressUpdate(minDelay: Int, minInterval: Int, asCompletionListener: Boolean, block: JobUpdateLister): Job {
         onProgressUpdate?.let { throw IllegalStateException() }
         if (asCompletionListener) onCompleted(block)
         if (isComplete) return this
@@ -250,7 +250,7 @@ private class WorkerImpl(scope: CoroutineScope, task: WorkerTask) : WorkerIntern
         return this
     }
 
-    override fun onCompleted(block: WorkerUpdateLister): Worker {
+    override fun onCompleted(block: JobUpdateLister): Job {
         if (isComplete) {
             block(1.0, startTimeOrElapsedTime)
             return this
@@ -260,7 +260,7 @@ private class WorkerImpl(scope: CoroutineScope, task: WorkerTask) : WorkerIntern
         onCompleted = if (cur == null) {
             block
         } else {
-            fun Worker.(prog: Double, el: Long) {
+            fun Job.(prog: Double, el: Long) {
                 cur(prog, el)
                 block(prog, el)
             }
@@ -315,25 +315,25 @@ private class WorkerImpl(scope: CoroutineScope, task: WorkerTask) : WorkerIntern
         job.join()
     }
 
-    private fun delegateWork(curPortion: Double, portion: Double): WorkerScope =
+    private fun delegateProgress(curPortion: Double, portion: Double): JobScope =
         DelegateScope(progress, curPortion * (if (portion < 0) 1.0 - progress else portion).clampMin(0.0))
 
-    override fun delegateWork(portion: Double): WorkerScope = delegateWork(1.0, portion)
+    override fun delegateProgress(portion: Double): JobScope = delegateProgress(1.0, portion)
 
-    private inner class DelegateScope(val progressStart: Double, val portion: Double) : WorkerScope {
+    private inner class DelegateScope(val progressStart: Double, val portion: Double) : JobScope {
         override val elapsedTime: Long
-            get() = this@WorkerImpl.elapsedTime
+            get() = this@JobImpl.elapsedTime
 
         override suspend fun markSuspensionPoint() =
-            this@WorkerImpl.markSuspensionPoint()
+            this@JobImpl.markSuspensionPoint()
 
         override val progress: Double
-            get() = (this@WorkerImpl.progress - progressStart) / portion
+            get() = (this@JobImpl.progress - progressStart) / portion
 
         override fun setProgress(progress: Double) =
-            this@WorkerImpl.setProgress(progressStart + progress * portion)
+            this@JobImpl.setProgress(progressStart + progress * portion)
 
-        override fun delegateWork(portion: Double): WorkerScope =
-            this@WorkerImpl.delegateWork(this.portion, portion)
+        override fun delegateProgress(portion: Double): JobScope =
+            this@JobImpl.delegateProgress(this.portion, portion)
     }
 }

@@ -2,8 +2,8 @@ package io.dico.parcels2
 
 import io.dico.parcels2.options.RuntimeWorldOptions
 import io.dico.parcels2.storage.Storage
-import io.dico.parcels2.util.Vec2i
-import io.dico.parcels2.util.ext.floor
+import io.dico.parcels2.util.math.Vec2i
+import io.dico.parcels2.util.math.ext.floor
 import org.bukkit.Location
 import org.bukkit.World
 import org.bukkit.block.Block

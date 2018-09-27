@@ -3,12 +3,12 @@ package io.dico.parcels2.defaultimpl
 import io.dico.parcels2.*
 import io.dico.parcels2.blockvisitor.*
 import io.dico.parcels2.options.DefaultGeneratorOptions
-import io.dico.parcels2.util.Region
-import io.dico.parcels2.util.Vec2i
-import io.dico.parcels2.util.Vec3i
-import io.dico.parcels2.util.ext.even
-import io.dico.parcels2.util.ext.umod
-import io.dico.parcels2.util.get
+import io.dico.parcels2.util.math.Region
+import io.dico.parcels2.util.math.Vec2i
+import io.dico.parcels2.util.math.Vec3i
+import io.dico.parcels2.util.math.ext.even
+import io.dico.parcels2.util.math.ext.umod
+import io.dico.parcels2.util.math.get
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart.UNDISPATCHED
 import kotlinx.coroutines.launch
@@ -121,9 +121,9 @@ class DefaultParcelGenerator(
         worldId: ParcelWorldId,
         container: ParcelContainer,
         coroutineScope: CoroutineScope,
-        workDispatcher: WorkDispatcher
+        jobDispatcher: JobDispatcher
     ): Pair<ParcelLocator, ParcelBlockManager> {
-        return ParcelLocatorImpl(worldId, container) to ParcelBlockManagerImpl(worldId, coroutineScope, workDispatcher)
+        return ParcelLocatorImpl(worldId, container) to ParcelBlockManagerImpl(worldId, coroutineScope, jobDispatcher)
     }
 
     private inline fun <T> convertBlockLocationToId(x: Int, z: Int, mapper: (Int, Int) -> T): T? {
@@ -158,7 +158,7 @@ class DefaultParcelGenerator(
     private inner class ParcelBlockManagerImpl(
         val worldId: ParcelWorldId,
         coroutineScope: CoroutineScope,
-        override val workDispatcher: WorkDispatcher
+        override val jobDispatcher: JobDispatcher
     ) : ParcelBlockManagerBase(), CoroutineScope by coroutineScope {
         override val world: World = this@DefaultParcelGenerator.world
         override val parcelTraverser: RegionTraverser = RegionTraverser.convergingTo(o.floorHeight)
@@ -177,7 +177,10 @@ class DefaultParcelGenerator(
 
         override fun getRegion(parcel: ParcelId): Region {
             val bottom = getBottomBlock(parcel)
-            return Region(Vec3i(bottom.x, 0, bottom.z), Vec3i(o.parcelSize, maxHeight, o.parcelSize))
+            return Region(
+                Vec3i(bottom.x, 0, bottom.z),
+                Vec3i(o.parcelSize, maxHeight, o.parcelSize)
+            )
         }
 
         private fun getRegionConsideringWorld(parcel: ParcelId): Region {
@@ -234,12 +237,12 @@ class DefaultParcelGenerator(
             return world.getParcelById(parcelId)
         }
 
-        override fun submitBlockVisitor(vararg parcelIds: ParcelId, task: WorkerTask): Worker {
+        override fun submitBlockVisitor(vararg parcelIds: ParcelId, task: JobFunction): Job {
             val parcels = parcelIds.mapNotNull { getParcel(it) }
-            if (parcels.isEmpty()) return workDispatcher.dispatch(task)
+            if (parcels.isEmpty()) return jobDispatcher.dispatch(task)
             if (parcels.any { it.hasBlockVisitors }) throw IllegalArgumentException("This parcel already has a block visitor")
 
-            val worker = workDispatcher.dispatch(task)
+            val worker = jobDispatcher.dispatch(task)
 
             for (parcel in parcels) {
                 launch(start = UNDISPATCHED) {
@@ -252,7 +255,7 @@ class DefaultParcelGenerator(
             return worker
         }
 
-        override fun setBiome(parcel: ParcelId, biome: Biome): Worker = submitBlockVisitor(parcel) {
+        override fun setBiome(parcel: ParcelId, biome: Biome): Job = submitBlockVisitor(parcel) {
             val world = world
             val b = getBottomBlock(parcel)
             val parcelSize = o.parcelSize
@@ -264,7 +267,7 @@ class DefaultParcelGenerator(
             }
         }
 
-        override fun clearParcel(parcel: ParcelId): Worker = submitBlockVisitor(parcel) {
+        override fun clearParcel(parcel: ParcelId): Job = submitBlockVisitor(parcel) {
             val region = getRegion(parcel)
             val blocks = parcelTraverser.traverseRegion(region)
             val blockCount = region.blockCount.toDouble()
@@ -288,7 +291,7 @@ class DefaultParcelGenerator(
             }
         }
 
-        override fun swapParcels(parcel1: ParcelId, parcel2: ParcelId): Worker = submitBlockVisitor(parcel1, parcel2) {
+        override fun swapParcels(parcel1: ParcelId, parcel2: ParcelId): Job = submitBlockVisitor(parcel1, parcel2) {
             var region1 = getRegionConsideringWorld(parcel1)
             var region2 = getRegionConsideringWorld(parcel2)
 

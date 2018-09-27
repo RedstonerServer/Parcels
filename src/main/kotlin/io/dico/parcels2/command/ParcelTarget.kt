@@ -16,8 +16,8 @@ import io.dico.parcels2.command.ParcelTarget.TargetKind.Companion.OWNER_REAL
 import io.dico.parcels2.command.ParcelTarget.TargetKind.Companion.PREFER_OWNED_FOR_DEFAULT
 import io.dico.parcels2.command.ParcelTarget.TargetKind.Companion.REAL
 import io.dico.parcels2.storage.Storage
-import io.dico.parcels2.util.Vec2i
-import io.dico.parcels2.util.ext.floor
+import io.dico.parcels2.util.math.Vec2i
+import io.dico.parcels2.util.math.ext.floor
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 
