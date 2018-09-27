@@ -78,7 +78,9 @@ public class RootCommandAddress extends ModifiableCommandAddress implements ICom
     }
 
     private static void debugChildren(ModifiableCommandAddress address) {
-        for (ModifiableCommandAddress child : new HashSet<ModifiableCommandAddress>(address.getChildren().values())) {
+        Collection<String> keys = address.getChildrenMainKeys();
+        for (String key : keys) {
+            ChildCommandAddress child = address.getChild(key);
             System.out.println(child.getAddress());
             debugChildren(child);
         }
@@ -180,10 +182,10 @@ public class RootCommandAddress extends ModifiableCommandAddress implements ICom
             targetAddress = getCommandTarget(context, buffer);
             Command target = targetAddress.getCommand();
 
-            if (target == null || target instanceof DefaultGroupCommand) {
+            if (target == null) {
                 if (targetAddress.hasHelpCommand()) {
                     target = targetAddress.getHelpCommand().getCommand();
-                } else if (target == null){
+                } else {
                     return false;
                 }
             }

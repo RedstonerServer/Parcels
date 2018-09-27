@@ -2,7 +2,7 @@ package io.dico.parcels2.blockvisitor
 
 import io.dico.parcels2.ParcelsPlugin
 import io.dico.parcels2.logger
-import io.dico.parcels2.util.math.ext.clampMin
+import io.dico.parcels2.util.math.clampMin
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart.LAZY

@@ -6,8 +6,8 @@ import io.dico.parcels2.options.DefaultGeneratorOptions
 import io.dico.parcels2.util.math.Region
 import io.dico.parcels2.util.math.Vec2i
 import io.dico.parcels2.util.math.Vec3i
-import io.dico.parcels2.util.math.ext.even
-import io.dico.parcels2.util.math.ext.umod
+import io.dico.parcels2.util.math.even
+import io.dico.parcels2.util.math.umod
 import io.dico.parcels2.util.math.get
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart.UNDISPATCHED

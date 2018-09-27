@@ -1,6 +1,6 @@
 package io.dico.dicore.command;
 
-import io.dico.dicore.command.chat.Formatting;
+import io.dico.dicore.Formatting;
 import io.dico.dicore.command.parameter.ArgumentBuffer;
 import io.dico.dicore.command.parameter.ContextParser;
 import io.dico.dicore.command.parameter.Parameter;

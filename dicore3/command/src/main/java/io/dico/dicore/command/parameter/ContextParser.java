@@ -105,7 +105,7 @@ public class ContextParser {
             requireInput = m_curParamIndex <= m_requiredIndex;
 
         } else if (m_buffer.hasNext()) {
-            throw new CommandException("Too many arguments");
+            throw new CommandException("Too many arguments for /" + m_context.getAddress().getAddress());
 
         } else {
             m_done = true;

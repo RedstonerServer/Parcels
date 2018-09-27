@@ -3,7 +3,7 @@ package io.dico.dicore.command.chat.help.defaults;
 import io.dico.dicore.command.EMessageType;
 import io.dico.dicore.command.ExecutionContext;
 import io.dico.dicore.command.ICommandAddress;
-import io.dico.dicore.command.chat.Formatting;
+import io.dico.dicore.Formatting;
 import io.dico.dicore.command.chat.help.IHelpComponent;
 import io.dico.dicore.command.chat.help.IHelpTopic;
 import io.dico.dicore.command.chat.help.SimpleHelpComponent;

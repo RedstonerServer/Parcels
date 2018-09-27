@@ -3,7 +3,7 @@ package io.dico.parcels2.blockvisitor
 import io.dico.parcels2.util.math.Dimension
 import io.dico.parcels2.util.math.Region
 import io.dico.parcels2.util.math.Vec3i
-import io.dico.parcels2.util.math.ext.clampMax
+import io.dico.parcels2.util.math.clampMax
 
 private typealias Scope = SequenceScope<Vec3i>
 

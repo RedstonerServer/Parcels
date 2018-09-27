@@ -88,7 +88,7 @@ private fun generateCommands(address: ICommandAddress, vararg names: String) {
 
     while (addresses.isNotEmpty()) {
         val cur = addresses.poll()
-        addresses.addAll(cur.children.values.distinct())
+        cur.childrenMainKeys.mapTo(addresses) { cur.getChild(it) }
         if (cur.hasCommand()) {
             ReflectiveRegistration.generateCommands(cur, names)
         }

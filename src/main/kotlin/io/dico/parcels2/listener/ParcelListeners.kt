@@ -10,8 +10,8 @@ import io.dico.parcels2.util.ext.*
 import io.dico.parcels2.util.math.Dimension
 import io.dico.parcels2.util.math.Vec3d
 import io.dico.parcels2.util.math.Vec3i
-import io.dico.parcels2.util.math.ext.clampMax
-import io.dico.parcels2.util.math.ext.clampMin
+import io.dico.parcels2.util.math.clampMax
+import io.dico.parcels2.util.math.clampMin
 import org.bukkit.Location
 import org.bukkit.Material.*
 import org.bukkit.World

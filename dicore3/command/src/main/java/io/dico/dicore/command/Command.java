@@ -91,18 +91,18 @@ public abstract class Command {
      * ---- CONTEXT FILTERS ----
      * Filter the contexts. For example, if the sender must be a player but it's the console,
      * throw a CommandException describing the problem.
-     * <p>
-     * The index of the first element in contextFilters whose priority is POST_PARAMETERS
-     * Computed by {@link #computeContextFilterPostParameterIndex()}
      */
-    private transient int contextFilterPostParameterIndex;
+    private transient int postParameterFilterCount = 0;
 
     public Command addContextFilter(IContextFilter contextFilter) {
         Objects.requireNonNull(contextFilter);
         if (!contextFilters.contains(contextFilter)) {
             contextFilters.add(contextFilter);
             contextFilters.sort(null);
-            computeContextFilterPostParameterIndex();
+
+            if (contextFilter.getPriority().compareTo(Priority.POST_PARAMETERS) >= 0) {
+                postParameterFilterCount++;
+            }
         }
         return this;
     }
@@ -114,19 +114,11 @@ public abstract class Command {
     public Command removeContextFilter(IContextFilter contextFilter) {
         boolean ret = contextFilters.remove(contextFilter);
         if (ret) {
-            computeContextFilterPostParameterIndex();
-        }
-        return this;
-    }
-
-    private void computeContextFilterPostParameterIndex() {
-        List<IContextFilter> contextFilters = this.contextFilters;
-        contextFilterPostParameterIndex = 0;
-        for (int i = contextFilters.size() - 1; i >= 0; i--) {
-            if (contextFilters.get(i).getPriority() != Priority.POST_PARAMETERS) {
-                contextFilterPostParameterIndex = i + 1;
+            if (contextFilter.getPriority().compareTo(Priority.POST_PARAMETERS) >= 0) {
+                postParameterFilterCount--;
             }
         }
+        return this;
     }
 
     // ---- CONTROL FLOW IN COMMAND TREES ----
@@ -154,7 +146,7 @@ public abstract class Command {
     public void executeWithContext(ExecutionContext context) throws CommandException {
         //System.out.println("In Command.execute(sender, caller, buffer)#try{");
         int i, n;
-        for (i = 0, n = contextFilterPostParameterIndex; i < n; i++) {
+        for (i = 0, n = contextFilters.size() - postParameterFilterCount; i < n; i++) {
             contextFilters.get(i).filterContext(context);
         }
 
@@ -183,7 +175,7 @@ public abstract class Command {
 
     public List<String> tabCompleteWithContext(ExecutionContext context, Location location) throws CommandException {
         int i, n;
-        for (i = 0, n = contextFilterPostParameterIndex; i < n; i++) {
+        for (i = 0, n = contextFilters.size() - postParameterFilterCount; i < n; i++) {
             contextFilters.get(i).filterContext(context);
         }
 

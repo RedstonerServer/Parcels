@@ -1,5 +1,6 @@
 package io.dico.dicore.command.chat;
 
+import io.dico.dicore.Formatting;
 import io.dico.dicore.command.CommandException;
 import io.dico.dicore.command.EMessageType;
 import io.dico.dicore.command.ExecutionContext;

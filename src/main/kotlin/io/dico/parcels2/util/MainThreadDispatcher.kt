@@ -36,7 +36,7 @@ fun MainThreadDispatcher(plugin: Plugin): MainThreadDispatcher {
                 with (continuation) { resumeUndispatched(Unit) }
             }
 
-            val millis = TimeUnit.MILLISECONDS.convert(time, unit)
+            val millis = unit.toMillis(time)
             plugin.server.scheduler.runTaskLater(plugin, task, (millis + 25) / 50 - 1)
         }
     }

@@ -6,7 +6,7 @@ import com.zaxxer.hikari.HikariDataSource
 import io.dico.parcels2.*
 import io.dico.parcels2.PlayerProfile.Star.name
 import io.dico.parcels2.storage.*
-import io.dico.parcels2.util.math.ext.clampMax
+import io.dico.parcels2.util.math.clampMax
 import io.dico.parcels2.util.ext.synchronized
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ArrayChannel

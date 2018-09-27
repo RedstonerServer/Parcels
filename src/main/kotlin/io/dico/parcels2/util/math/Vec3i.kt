@@ -1,6 +1,5 @@
 package io.dico.parcels2.util.math
 
-import io.dico.parcels2.util.math.ext.clampMax
 import org.bukkit.Location
 import org.bukkit.World
 import org.bukkit.block.Block

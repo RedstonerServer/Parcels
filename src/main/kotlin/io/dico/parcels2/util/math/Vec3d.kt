@@ -1,6 +1,5 @@
 package io.dico.parcels2.util.math
 
-import io.dico.parcels2.util.math.ext.floor
 import org.bukkit.Location
 import kotlin.math.sqrt
 

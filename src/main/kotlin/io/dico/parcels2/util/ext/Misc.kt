@@ -2,10 +2,7 @@ package io.dico.parcels2.util.ext
 
 import io.dico.dicore.Formatting
 import io.dico.parcels2.logger
-import org.bukkit.Bukkit
-import org.bukkit.OfflinePlayer
 import java.io.File
-import java.util.UUID
 
 fun File.tryCreate(): Boolean {
     if (exists()) {

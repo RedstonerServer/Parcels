@@ -1,6 +1,6 @@
 package io.dico.parcels2
 
-import io.dico.parcels2.util.math.ext.ceilDiv
+import io.dico.parcels2.util.math.ceilDiv
 import io.dico.parcels2.util.ext.getMaterialsWithWoodTypePrefix
 import org.bukkit.Material
 import java.util.EnumMap

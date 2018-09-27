@@ -9,12 +9,10 @@
 
 package io.dico.dicore;
 
-import gnu.trove.map.TCharObjectMap;
-import gnu.trove.map.hash.TCharObjectHashMap;
-
 public final class Formatting implements CharSequence {
     public static final char FORMAT_CHAR = '\u00a7';
-    private static final TCharObjectMap<Formatting> singleCharInstances = new TCharObjectHashMap<>(16, .5F, '\0');
+    private static final String CACHED_CHARS = "0123456789abcdefklmnor";
+    private static final Formatting[] singleCharInstances = new Formatting[CACHED_CHARS.length()];
     
     public static final Formatting
             BLACK = from('0'),
@@ -100,9 +98,12 @@ public final class Formatting implements CharSequence {
     public static Formatting from(char c) {
         if (isRecognizedChar(c)) {
             c = Character.toLowerCase(c);
-            Formatting res = singleCharInstances.get(c);
+            int index = CACHED_CHARS.indexOf(c);
+            if (index == -1) return EMPTY;
+
+            Formatting res = singleCharInstances[index];
             if (res == null) {
-                singleCharInstances.put(c, res = new Formatting(c));
+                singleCharInstances[index] = res = new Formatting(c);
             }
             return res;
         }
@@ -229,13 +230,13 @@ public final class Formatting implements CharSequence {
             previous = c;
         }
     }
-    
+
     private static boolean isRecognizedChar(char c) {
         return isColourChar(c) || isFormatChar(c) || isResetChar(c);
     }
     
     private static boolean isColourChar(char c) {
-        return "0123456789abcdefABCDEF".indexOf(c) > -1;
+        return "0123456789abcdefABCDEF".indexOf(c) >= 0;
     }
     
     private static boolean isResetChar(char c) {
@@ -243,7 +244,7 @@ public final class Formatting implements CharSequence {
     }
     
     private static boolean isFormatChar(char c) {
-        return "lmnokLMNOK".indexOf(c) > -1;
+        return "klmnoKLMNO".indexOf(c) >= 0;
     }
     
     private final String format;
