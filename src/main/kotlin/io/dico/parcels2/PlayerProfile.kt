@@ -121,6 +121,8 @@ interface PlayerProfile {
         override fun matches(player: OfflinePlayer, allowNameMatch: Boolean): Boolean {
             return true
         }
+
+        override fun toString() = "Star"
     }
 
     abstract class NameOnly(override val name: String) : BaseImpl() {
@@ -130,6 +132,8 @@ interface PlayerProfile {
         override fun matches(player: OfflinePlayer, allowNameMatch: Boolean): Boolean {
             return allowNameMatch && player.name == name
         }
+
+        override fun toString() = "${javaClass.simpleName}($name)"
     }
 
     class Fake(name: String) : NameOnly(name) {
@@ -166,7 +170,9 @@ interface PlayerProfile {
         }
     }
 
-    private class RealImpl(override val uuid: UUID, override val name: String?) : BaseImpl(), Real
+    private class RealImpl(override val uuid: UUID, override val name: String?) : BaseImpl(), Real {
+        override fun toString() = "Real($notNullName)"
+    }
 
 }
 

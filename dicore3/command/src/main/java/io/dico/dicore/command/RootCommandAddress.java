@@ -1,7 +1,6 @@
 package io.dico.dicore.command;
 
 import io.dico.dicore.command.parameter.ArgumentBuffer;
-import io.dico.dicore.command.predef.DefaultGroupCommand;
 import io.dico.dicore.command.registration.BukkitCommand;
 import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
@@ -197,7 +196,7 @@ public class RootCommandAddress extends ModifiableCommandAddress implements ICom
             if (targetAddress == null) {
                 targetAddress = this;
             }
-            targetAddress.getChatController().handleException(sender, context, t);
+            targetAddress.getChatHandler().handleException(sender, context, t);
         }
 
         return true;

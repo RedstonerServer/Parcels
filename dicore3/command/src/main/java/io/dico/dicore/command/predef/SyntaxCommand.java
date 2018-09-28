@@ -21,7 +21,7 @@ public class SyntaxCommand extends PredefinedCommand<SyntaxCommand> {
 
     @Override
     public String execute(CommandSender sender, ExecutionContext context) throws CommandException {
-        context.getAddress().getChatController().sendSyntaxMessage(sender, context, context.getAddress().getParent());
+        context.getAddress().getChatHandler().sendSyntaxMessage(sender, context, context.getAddress().getParent());
         return null;
     }
 

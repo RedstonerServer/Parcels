@@ -25,7 +25,7 @@ enum class Privilege(
     OWNER(-1, transient = true),
     ADMIN(-1, transient = true);
 
-    fun isDistanceGrEq(other: Privilege): Boolean =
+    fun implies(other: Privilege): Boolean =
         when {
             other > DEFAULT -> this >= other
             other == DEFAULT -> this == other
@@ -61,6 +61,7 @@ interface RawPrivileges {
 
     fun getRawStoredPrivilege(key: PrivilegeKey): Privilege
     fun setRawStoredPrivilege(key: PrivilegeKey, privilege: Privilege): Boolean
+    fun hasAnyDeclaredPrivileges(): Boolean
 }
 
 open class PrivilegesHolder(override var privilegeMap: MutablePrivilegeMap = EmptyPrivilegeMap) : RawPrivileges {
@@ -95,9 +96,30 @@ open class PrivilegesHolder(override var privilegeMap: MutablePrivilegeMap = Emp
         else privilegeMap.put(key, privilege) != privilege
     }
 
+    override fun hasAnyDeclaredPrivileges(): Boolean {
+        return privilegeMap.isNotEmpty() || privilegeOfStar != DEFAULT
+    }
+
     fun copyPrivilegesFrom(other: PrivilegesHolder) {
         privilegeMap = other.privilegeMap
         privilegeOfStar = other.privilegeOfStar
     }
+
 }
 
+private fun <K, V> MutableMap<K, V>.put(key: K, value: V, override: Boolean) {
+    if (override) this[key] = value
+    else putIfAbsent(key, value)
+}
+
+fun RawPrivileges.filterProfilesWithPrivilegeTo(map: MutableMap<PrivilegeKey, Privilege>, privilege: Privilege) {
+    if (privilegeOfStar.implies(privilege)) {
+        map.putIfAbsent(PlayerProfile.Star, privilegeOfStar)
+    }
+
+    for ((profile, declaredPrivilege) in privilegeMap) {
+        if (declaredPrivilege.implies(privilege)) {
+            map.putIfAbsent(profile, declaredPrivilege)
+        }
+    }
+}

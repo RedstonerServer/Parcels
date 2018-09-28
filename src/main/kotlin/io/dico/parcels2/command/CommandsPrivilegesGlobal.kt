@@ -9,6 +9,15 @@ import org.bukkit.entity.Player
 
 class CommandsPrivilegesGlobal(plugin: ParcelsPlugin,
                                val adminVersion: CommandsAdminPrivilegesGlobal) : AbstractParcelCommands(plugin) {
+    @Cmd("list", aliases = ["l"])
+    @Desc(
+        "List globally declared privileges, players you",
+        "allowed to build on or banned from all your parcels",
+        shortVersion = "lists globally declared privileges"
+    )
+    fun cmdList(sender: Player, context: ExecutionContext) =
+        adminVersion.cmdList(context, sender)
+
     @Cmd("entrust")
     @Desc(
         "Allows a player to manage globally",

@@ -106,8 +106,11 @@ class ParcelProviderImpl(val plugin: ParcelsPlugin) : ParcelProvider {
             val channel2 = plugin.storage.transmitAllGlobalPrivileges()
             while (true) {
                 val (profile, data) = channel2.receiveOrNull() ?: break
-                val key = profile as? PrivilegeKey ?: continue
-                (plugin.globalPrivileges[key] as PrivilegesHolder).copyPrivilegesFrom(data)
+                if (profile !is PrivilegeKey) {
+                    logger.error("Received profile that is not a privilege key: ${profile.javaClass}, $profile")
+                    continue
+                }
+                (plugin.globalPrivileges[profile] as PrivilegesHolder).copyPrivilegesFrom(data)
             }
 
             logger.info("Loading data completed")

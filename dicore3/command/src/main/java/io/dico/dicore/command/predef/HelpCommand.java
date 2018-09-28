@@ -33,7 +33,7 @@ public class HelpCommand extends PredefinedCommand<HelpCommand> {
             target = target.getParent();
         }
 
-        context.getAddress().getChatController().sendHelpMessage(sender, context, target, context.<Integer>get("page") - 1);
+        context.getAddress().getChatHandler().sendHelpMessage(sender, context, target, context.<Integer>get("page") - 1);
         return null;
     }
 

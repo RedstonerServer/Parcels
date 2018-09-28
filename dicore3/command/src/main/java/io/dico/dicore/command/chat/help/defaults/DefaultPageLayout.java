@@ -5,7 +5,7 @@ import io.dico.dicore.command.ExecutionContext;
 import io.dico.dicore.command.ICommandAddress;
 import io.dico.dicore.command.ModifiableCommandAddress;
 import io.dico.dicore.Formatting;
-import io.dico.dicore.command.chat.IChatController;
+import io.dico.dicore.command.chat.IChatHandler;
 import io.dico.dicore.command.chat.help.IPageBorder;
 import io.dico.dicore.command.chat.help.IPageLayout;
 import io.dico.dicore.command.chat.help.PageBorders;
@@ -15,7 +15,7 @@ public class DefaultPageLayout implements IPageLayout {
 
     @Override
     public PageBorders getPageBorders(ICommandAddress target, Permissible viewer, ExecutionContext context, int pageNum) {
-        IChatController c = context.getAddress().getChatController();
+        IChatHandler c = context.getAddress().getChatHandler();
         String prefix = c.getMessagePrefixForType(EMessageType.INFORMATIVE);
         Formatting informative = c.getChatFormatForType(EMessageType.INFORMATIVE);
         Formatting number = c.getChatFormatForType(EMessageType.NEUTRAL);

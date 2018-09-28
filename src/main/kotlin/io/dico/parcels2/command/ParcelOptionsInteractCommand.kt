@@ -3,7 +3,6 @@ package io.dico.parcels2.command
 import io.dico.dicore.command.*
 import io.dico.dicore.command.parameter.type.ParameterTypes
 import io.dico.parcels2.Interactables
-import io.dico.parcels2.ParcelProvider
 import io.dico.parcels2.ParcelsPlugin
 import io.dico.parcels2.Privilege
 import org.bukkit.command.CommandSender
@@ -33,9 +32,9 @@ class ParcelOptionsInteractCommand(val plugin: ParcelsPlugin) : Command() {
             val setting = parcel.interactableConfig.isInteractable(interactableClass)
             val default = setting == interactableClass.interactableByDefault
 
-            val canColor = context.address.chatController.getChatFormatForType(EMessageType.BAD_NEWS)
-            val cannotColor = context.address.chatController.getChatFormatForType(EMessageType.GOOD_NEWS)
-            val resetColor = context.address.chatController.getChatFormatForType(EMessageType.RESULT)
+            val canColor = context.address.chatHandler.getChatFormatForType(EMessageType.BAD_NEWS)
+            val cannotColor = context.address.chatHandler.getChatFormatForType(EMessageType.GOOD_NEWS)
+            val resetColor = context.address.chatHandler.getChatFormatForType(EMessageType.RESULT)
 
             val settingString = (if (setting) "${canColor}can" else "${cannotColor}cannot") + resetColor
             val defaultString = if (default) " (default)" else ""

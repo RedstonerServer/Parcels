@@ -30,7 +30,7 @@ public class DefaultGroupCommand extends PredefinedCommand<DefaultGroupCommand> 
 
     @Override
     public String execute(CommandSender sender, ExecutionContext context) throws CommandException {
-        context.getAddress().getChatController().sendHelpMessage(sender, context, context.getAddress(), 1);
+        context.getAddress().getChatHandler().sendHelpMessage(sender, context, context.getAddress(), 1);
         return null;
     }
 

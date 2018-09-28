@@ -139,7 +139,7 @@ public abstract class Command {
         try {
             executeWithContext(executionContext);
         } catch (Throwable t) {
-            caller.getChatController().handleException(sender, executionContext, t);
+            caller.getChatHandler().handleException(sender, executionContext, t);
         }
     }
 
@@ -159,7 +159,7 @@ public abstract class Command {
         //System.out.println("Post-contextfilters");
 
         String message = execute(context.getSender(), context);
-        context.getAddress().getChatController().sendMessage(context.getSender(), EMessageType.RESULT, message);
+        context.sendMessage(EMessageType.RESULT, message);
     }
 
     public abstract String execute(CommandSender sender, ExecutionContext context) throws CommandException;

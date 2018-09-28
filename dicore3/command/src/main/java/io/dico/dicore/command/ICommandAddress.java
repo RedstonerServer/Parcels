@@ -1,6 +1,6 @@
 package io.dico.dicore.command;
 
-import io.dico.dicore.command.chat.IChatController;
+import io.dico.dicore.command.chat.IChatHandler;
 import io.dico.dicore.command.parameter.ArgumentBuffer;
 import io.dico.dicore.command.predef.PredefinedCommand;
 import org.bukkit.command.CommandSender;
@@ -161,9 +161,9 @@ public interface ICommandAddress {
     ICommandDispatcher getDispatcherForTree();
 
     /**
-     * @return The desired chatcontroller for use by commands at this address and any sub-addresses, if they define no explicit chat controller.
+     * @return The desired chathandler for use by commands at this address and any sub-addresses, if they define no explicit chat handler.
      */
-    IChatController getChatController();
+    IChatHandler getChatHandler();
 
     static ICommandAddress newChild() {
         return new ChildCommandAddress();

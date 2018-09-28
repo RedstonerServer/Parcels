@@ -1,7 +1,7 @@
 package io.dico.dicore.command;
 
-import io.dico.dicore.command.chat.ChatControllers;
-import io.dico.dicore.command.chat.IChatController;
+import io.dico.dicore.command.chat.ChatHandlers;
+import io.dico.dicore.command.chat.IChatHandler;
 import io.dico.dicore.command.predef.DefaultGroupCommand;
 import io.dico.dicore.command.predef.HelpCommand;
 import io.dico.dicore.command.predef.PredefinedCommand;
@@ -12,10 +12,10 @@ public abstract class ModifiableCommandAddress implements ICommandAddress {
     Map<String, ChildCommandAddress> children;
     Collection<String> childrenMainKeys = Collections.emptyList();
 
-    // the chat controller as configured by the programmer
-    IChatController chatController;
-    // cache for the algorithm that finds the first chat controller going up the tree
-    transient IChatController chatControllerCache;
+    // the chat handler as configured by the programmer
+    IChatHandler chatHandler;
+    // cache for the algorithm that finds the first chat handler going up the tree
+    transient IChatHandler cachedChatHandlerFallback;
 
     ModifiableCommandAddress helpChild;
 
@@ -230,30 +230,30 @@ public abstract class ModifiableCommandAddress implements ICommandAddress {
     }
 
     @Override
-    public IChatController getChatController() {
-        if (chatControllerCache == null) {
-            if (chatController != null) {
-                chatControllerCache = chatController;
+    public IChatHandler getChatHandler() {
+        if (cachedChatHandlerFallback == null) {
+            if (chatHandler != null) {
+                cachedChatHandlerFallback = chatHandler;
             } else if (!hasParent()) {
-                chatControllerCache = ChatControllers.defaultChat();
+                cachedChatHandlerFallback = ChatHandlers.defaultChat();
             } else {
-                chatControllerCache = getParent().getChatController();
+                cachedChatHandlerFallback = getParent().getChatHandler();
             }
         }
-        return chatControllerCache;
+        return cachedChatHandlerFallback;
     }
 
-    public void setChatController(IChatController chatController) {
-        this.chatController = chatController;
-        resetChatControllerCache(new HashSet<>());
+    public void setChatHandler(IChatHandler chatHandler) {
+        this.chatHandler = chatHandler;
+        resetChatHandlerCache(new HashSet<>());
     }
 
-    void resetChatControllerCache(Set<ModifiableCommandAddress> dejaVu) {
+    void resetChatHandlerCache(Set<ModifiableCommandAddress> dejaVu) {
         if (dejaVu.add(this)) {
-            chatControllerCache = chatController;
+            cachedChatHandlerFallback = chatHandler;
             for (ChildCommandAddress address : children.values()) {
-                if (address.chatController == null) {
-                    address.resetChatControllerCache(dejaVu);
+                if (address.chatHandler == null) {
+                    address.resetChatHandlerCache(dejaVu);
                 }
             }
         }

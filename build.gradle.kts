@@ -46,6 +46,12 @@ allprojects {
     }
 }
 
+project(":dicore3:dicore3-core") {
+    dependencies {
+        compile("org.jetbrains:annotations:16.0.3")
+    }
+}
+
 project(":dicore3:dicore3-command") {
     apply<KotlinPlatformJvmPlugin>()
 

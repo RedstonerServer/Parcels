@@ -1,6 +1,6 @@
 package io.dico.dicore.command;
 
-import io.dico.dicore.command.chat.IChatController;
+import io.dico.dicore.command.chat.IChatHandler;
 import io.dico.dicore.command.parameter.type.IParameterTypeSelector;
 import io.dico.dicore.command.parameter.type.MapBasedParameterTypeSelector;
 import io.dico.dicore.command.parameter.type.ParameterType;
@@ -340,16 +340,16 @@ public final class CommandBuilder {
     }
 
     /**
-     * Configure the chat controller at this address. The chat controller
+     * Configure the chat handler at this address. The chat handler
      * is used for all children down the tree if they don't explicitly have
-     * their own chat controller configured. If this isn't configured,
-     * {@code ChatControllers.defaultChat()} is used.
+     * their own chat handler configured. If this isn't configured,
+     * {@code ChatHandlers.defaultChat()} is used.
      *
-     * @param chatController the chat controller
+     * @param chatHandler the chat handler
      * @return this
      */
-    public CommandBuilder setChatController(IChatController chatController) {
-        cur.setChatController(chatController);
+    public CommandBuilder setChatHandler(IChatHandler chatHandler) {
+        cur.setChatHandler(chatHandler);
         return this;
     }
 

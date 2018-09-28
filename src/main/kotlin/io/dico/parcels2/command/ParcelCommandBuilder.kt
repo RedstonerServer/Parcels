@@ -15,7 +15,7 @@ import java.util.Queue
 fun getParcelCommands(plugin: ParcelsPlugin): ICommandDispatcher = CommandBuilder().apply {
     val parcelsAddress = SpecialCommandAddress()
 
-    setChatController(ParcelsChatController())
+    setChatHandler(ParcelsChatHandler())
     addParameterType(false, ParcelParameterType(plugin.parcelProvider))
     addParameterType(false, ProfileParameterType())
     addParameterType(true, ParcelTarget.PType(plugin.parcelProvider, parcelsAddress))

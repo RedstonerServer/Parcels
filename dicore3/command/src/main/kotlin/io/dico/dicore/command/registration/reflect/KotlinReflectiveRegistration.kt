@@ -41,7 +41,7 @@ fun callAsCoroutine(
     }
 
     job.invokeOnCompletion {
-        val cc = context.address.chatController
+        val cc = context.address.chatHandler
         try {
             val result = job.getResult()
             cc.sendMessage(context.sender, EMessageType.RESULT, result)

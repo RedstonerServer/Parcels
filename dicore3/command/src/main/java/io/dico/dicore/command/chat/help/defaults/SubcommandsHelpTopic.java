@@ -7,7 +7,6 @@ import io.dico.dicore.Formatting;
 import io.dico.dicore.command.chat.help.IHelpComponent;
 import io.dico.dicore.command.chat.help.IHelpTopic;
 import io.dico.dicore.command.chat.help.SimpleHelpComponent;
-import io.dico.dicore.command.predef.PredefinedCommand;
 import org.bukkit.command.CommandSender;
 import org.bukkit.permissions.Permissible;
 
@@ -54,7 +53,7 @@ public class SubcommandsHelpTopic implements IHelpTopic {
     }
 
     private static Formatting colorOf(ExecutionContext context, EMessageType type) {
-        return context.getAddress().getChatController().getChatFormatForType(type);
+        return context.getAddress().getChatHandler().getChatFormatForType(type);
     }
 
 }

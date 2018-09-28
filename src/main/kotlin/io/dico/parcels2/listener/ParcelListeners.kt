@@ -237,7 +237,7 @@ class ParcelListeners(
 
                 if (bedTypes.contains(type)) {
                     val bed = clickedBlock.blockData as Bed
-                    val head = if (bed == Bed.Part.FOOT) clickedBlock.getRelative(bed.facing) else clickedBlock
+                    val head = if (bed.part == Bed.Part.FOOT) clickedBlock.getRelative(bed.facing) else clickedBlock
                     when (head.biome) {
                         Biome.NETHER, Biome.THE_END -> {
                             if (world.options.disableExplosions) {

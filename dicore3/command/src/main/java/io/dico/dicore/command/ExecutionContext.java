@@ -229,7 +229,7 @@ public class ExecutionContext {
     }
 
     public Formatting getFormat(EMessageType type) {
-        return address.getChatController().getChatFormatForType(type);
+        return address.getChatHandler().getChatFormatForType(type);
     }
 
     /**
@@ -345,7 +345,7 @@ public class ExecutionContext {
             if (translateColours) {
                 message = Formatting.translateChars('&', message);
             }
-            address.getChatController().sendMessage(this, messageType, message);
+            address.getChatHandler().sendMessage(this, messageType, message);
         }
     }
 
@@ -367,13 +367,13 @@ public class ExecutionContext {
 
     public void sendHelpMessage(int page) {
         if (!muted) {
-            address.getChatController().sendHelpMessage(sender, this, address, page);
+            address.getChatHandler().sendHelpMessage(sender, this, address, page);
         }
     }
 
     public void sendSyntaxMessage() {
         if (!muted) {
-            address.getChatController().sendSyntaxMessage(sender, this, address);
+            address.getChatHandler().sendSyntaxMessage(sender, this, address);
         }
     }
 

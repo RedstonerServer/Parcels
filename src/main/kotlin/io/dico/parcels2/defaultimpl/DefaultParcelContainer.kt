@@ -52,6 +52,7 @@ class DefaultParcelContainer(val world: ParcelWorld) : ParcelContainer {
     private fun walkInCircle(): Iterable<Parcel> = Iterable {
         iterator {
             val center = world.options.axisLimit
+            yield(parcels[center][center])
             for (radius in 0..center) {
                 var x = center - radius;
                 var z = center - radius

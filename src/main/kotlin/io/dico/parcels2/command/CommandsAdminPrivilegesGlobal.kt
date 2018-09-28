@@ -7,7 +7,10 @@ import io.dico.dicore.command.Validate
 import io.dico.dicore.command.annotation.Cmd
 import io.dico.dicore.command.annotation.Desc
 import io.dico.parcels2.*
+import io.dico.parcels2.Privilege.BANNED
+import io.dico.parcels2.Privilege.CAN_BUILD
 import io.dico.parcels2.PrivilegeChangeResult.*
+import io.dico.parcels2.defaultimpl.InfoBuilder
 import io.dico.parcels2.util.ext.PERM_ADMIN_MANAGE
 import org.bukkit.OfflinePlayer
 
@@ -15,13 +18,34 @@ class CommandsAdminPrivilegesGlobal(plugin: ParcelsPlugin) : AbstractParcelComma
     private val data
         inline get() = plugin.globalPrivileges
 
-    private fun checkContext(context: ExecutionContext, owner: OfflinePlayer): OfflinePlayer {
-        checkConnected("have privileges changed")
+    private fun checkContext(context: ExecutionContext, owner: OfflinePlayer, changing: Boolean = true): OfflinePlayer {
+        if (changing) {
+            checkConnected("have privileges changed")
+        }
         val sender = context.sender
         if (sender !== owner) {
             Validate.isAuthorized(sender, PERM_ADMIN_MANAGE)
         }
         return owner
+    }
+
+    @Cmd("list", aliases = ["l"])
+    @Desc(
+        "List globally declared privileges, players you",
+        "allowed to build on or banned from all your parcels",
+        shortVersion = "lists globally declared privileges"
+    )
+    fun cmdList(context: ExecutionContext, owner: OfflinePlayer): Any? {
+        checkContext(context, owner, changing = false)
+        val map = plugin.globalPrivileges[owner]
+        Validate.isTrue(map.hasAnyDeclaredPrivileges(), "This user has not declared any global privileges")
+
+        return StringBuilder().apply {
+            with(InfoBuilder) {
+                appendProfilesWithPrivilege("Globally Allowed", map, null, CAN_BUILD)
+                appendProfilesWithPrivilege("Globally Banned", map, null, BANNED)
+            }
+        }.toString()
     }
 
     @Cmd("entrust")

@@ -51,7 +51,7 @@ annotation class ProfileKind(val kind: Int) {
     companion object : ParameterConfig<ProfileKind, Int>(ProfileKind::class.java) {
         const val REAL = 1
         const val FAKE = 2
-        const val ANY = 4
+        const val ANY = REAL or FAKE
 
         override fun toParameterInfo(annotation: ProfileKind): Int {
             return annotation.kind
@@ -63,8 +63,8 @@ class ProfileParameterType : ParameterType<PlayerProfile, Int>(PlayerProfile::cl
 
     override fun parse(parameter: Parameter<PlayerProfile, Int>, sender: CommandSender, buffer: ArgumentBuffer): PlayerProfile {
         val info = parameter.paramInfo ?: REAL
-        val allowReal = info and REAL != 0
-        val allowFake = info and FAKE != 0
+        val allowReal = (info and REAL) != 0
+        val allowFake = (info and FAKE) != 0
 
         val input = buffer.next()
         return PlayerProfile.byName(input, allowReal, allowFake)

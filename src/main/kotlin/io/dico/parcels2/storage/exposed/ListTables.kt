@@ -4,13 +4,14 @@ package io.dico.parcels2.storage.exposed
 
 import io.dico.parcels2.*
 import io.dico.parcels2.Privilege.DEFAULT
+import io.dico.parcels2.util.ext.alsoIfTrue
 import kotlinx.coroutines.channels.SendChannel
 import org.jetbrains.exposed.sql.*
 
 object PrivilegesLocalT : PrivilegesTable<ParcelId>("parcels_privilege_local", ParcelsT)
 object PrivilegesGlobalT : PrivilegesTable<PlayerProfile>("parcels_privilege_global", ProfilesT)
 
-object ParcelOptionsT : Table("parcel_options") {
+object ParcelOptionsT : Table("parcels_options") {
     val parcel_id = integer("parcel_id").primaryKey().references(ParcelsT.id, ReferenceOption.CASCADE)
     val interact_bitmask = binary("interact_bitmask", 4)
 }
@@ -57,8 +58,8 @@ sealed class PrivilegesTable<AttachT>(name: String, val idTable: IdTransactionsT
         val iterator = selectAll().orderBy(attach_id).iterator()
 
         if (iterator.hasNext()) {
-            val firstRow = iterator.next()
-            var id: Int = firstRow[attach_id]
+            var row = iterator.next()
+            var id: Int = row[attach_id]
             var attach: AttachT? = null
             var map: PrivilegesHolder? = null
 
@@ -77,7 +78,7 @@ sealed class PrivilegesTable<AttachT>(name: String, val idTable: IdTransactionsT
 
             initAttachAndMap()
 
-            for (row in iterator) {
+            do {
                 val rowId = row[attach_id]
                 if (rowId != id) {
                     sendIfPresent()
@@ -89,10 +90,19 @@ sealed class PrivilegesTable<AttachT>(name: String, val idTable: IdTransactionsT
                     continue // owner not found for this owner id
                 }
 
-                val profile = ProfilesT.getRealItem(row[profile_id]) ?: continue
-                val privilege = Privilege.getByNumber(row[privilege]) ?: continue
+                val profile = ProfilesT.getRealItem(row[profile_id])
+                if (profile == null) {
+                    logger.error("Privilege from database is null, id ${row[profile_id]}")
+                    continue
+                }
+                val privilege = Privilege.getByNumber(row[privilege])
+                if (privilege == null) {
+                    logger.error("Privilege from database is null, number ${row[this.privilege]}")
+                    continue
+                }
                 map!!.setRawStoredPrivilege(profile, privilege)
-            }
+
+            } while (iterator.hasNext().alsoIfTrue { row = iterator.next() })
 
             sendIfPresent()
         }

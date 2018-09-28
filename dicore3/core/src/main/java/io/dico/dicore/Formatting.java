@@ -9,11 +9,14 @@
 
 package io.dico.dicore;
 
+import org.jetbrains.annotations.NotNull;
+
 public final class Formatting implements CharSequence {
     public static final char FORMAT_CHAR = '\u00a7';
     private static final String CACHED_CHARS = "0123456789abcdefklmnor";
     private static final Formatting[] singleCharInstances = new Formatting[CACHED_CHARS.length()];
-    
+
+    @NotNull
     public static final Formatting
             BLACK = from('0'),
             DARK_BLUE = from('1'),
