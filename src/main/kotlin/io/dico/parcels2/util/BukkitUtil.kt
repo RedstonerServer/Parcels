@@ -10,3 +10,5 @@ fun getPlayerName(uuid: UUID): String? = getOfflinePlayer(uuid)?.name
 fun getOfflinePlayer(uuid: UUID): OfflinePlayer? = Bukkit.getOfflinePlayer(uuid).takeIf { it.isValid }
 
 fun getOfflinePlayer(name: String): OfflinePlayer? = Bukkit.getOfflinePlayer(name).takeIf { it.isValid }
+
+fun isServerThread(): Boolean = Thread.currentThread().name == "Server thread"

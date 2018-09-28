@@ -18,4 +18,5 @@ private class PlotmeMigrationFactory : PolymorphicOptionsFactory<Migration> {
 }
 
 class PlotmeMigrationOptions(val worldsFromTo: Map<String, String> = mapOf("plotworld" to "parcels"),
-                             val storage: StorageOptions = StorageOptions(options = DataConnectionOptions(database = "plotme")))
+                             val storage: StorageOptions = StorageOptions(options = DataConnectionOptions(database = "plotme")),
+                             val tableNamesUppercase: Boolean = false)

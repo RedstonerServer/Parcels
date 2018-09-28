@@ -3,58 +3,83 @@ package io.dico.parcels2.defaultimpl
 import io.dico.parcels2.*
 import io.dico.parcels2.Privilege.*
 import io.dico.parcels2.util.ext.alsoIfTrue
+import io.dico.parcels2.util.isServerThread
 import io.dico.parcels2.util.math.Vec2i
 import org.bukkit.Material
 import org.joda.time.DateTime
-import java.util.concurrent.atomic.AtomicInteger
+import java.lang.IllegalStateException
 
-class ParcelImpl(
+class ParcelImpl (
     override val world: ParcelWorld,
     override val x: Int,
     override val z: Int
 ) : Parcel, ParcelId {
-    override val id: ParcelId = this
+    override val id: ParcelId get() = this
     override val pos get() = Vec2i(x, z)
-    override var data: ParcelDataHolder = ParcelDataHolder(); private set
-    override val hasBlockVisitors get() = blockVisitors.get() > 0
+    override var data = ParcelDataHolder(); private set
     override val worldId: ParcelWorldId get() = world.id
 
-    override fun copyDataIgnoringDatabase(data: ParcelData) {
-        this.data = ((data as? Parcel)?.data ?: data) as ParcelDataHolder
-    }
+    override fun copyData(newData: ParcelDataHolder, callerIsDatabase: Boolean) {
+        if (callerIsDatabase) {
+            data = newData
+            return
+        }
 
-    override fun copyData(data: ParcelData) {
-        copyDataIgnoringDatabase(data)
+        val ownerChanged = owner != newData.owner
+        if (ownerChanged) {
+            updateOwnerSign(true, false, true)
+        }
+
+
+        val ownerSignWasOutdated = if (callerIsDatabase) newData.isOwnerSignOutdated else isOwnerSignOutdated
+        val ownerChanged = owner != newData.owner
+
+        data = newData
+
+        if (ownerChanged && isServerThread()) {
+            updateOwnerSign(true, false, updateDatabase = callerIsDatabase)
+        } else {
+            newData.isOwnerSignOutdated = ownerChanged || ownerSignWasOutdated
+        }
+
         world.storage.setParcelData(this, data)
     }
-
-    override fun dispose() {
-        copyDataIgnoringDatabase(ParcelDataHolder())
-        world.storage.setParcelData(this, null)
-    }
-
 
     override var owner: PlayerProfile?
         get() = data.owner
         set(value) {
             if (data.owner != value) {
                 world.storage.setParcelOwner(this, value)
-                world.blockManager.setOwnerBlock(this, value)
                 data.owner = value
+                updateOwnerSign(true, false, true)
             }
         }
 
     override val lastClaimTime: DateTime?
         get() = data.lastClaimTime
 
-    override var ownerSignOutdated: Boolean
-        get() = data.ownerSignOutdated
+    override var isOwnerSignOutdated: Boolean
+        get() = data.isOwnerSignOutdated
         set(value) {
-            if (data.ownerSignOutdated != value) {
+            if (data.isOwnerSignOutdated != value) {
                 world.storage.setParcelOwnerSignOutdated(this, value)
-                data.ownerSignOutdated = value
+                data.isOwnerSignOutdated = value
             }
         }
+
+    override fun updateOwnerSign(force: Boolean) {
+        updateOwnerSign(false, force, true)
+    }
+
+    private fun updateOwnerSign(ownerChanged: Boolean, force: Boolean, updateDatabase: Boolean) {
+        if (!ownerChanged && !isOwnerSignOutdated && !force) return
+
+        val update = force || world.blockManager.isParcelInfoSectionLoaded(this)
+        if (update) world.blockManager.updateParcelInfo(this, owner)
+
+        if (updateDatabase) isOwnerSignOutdated = !update
+        else data.isOwnerSignOutdated = !update
+    }
 
 
     override val privilegeMap: PrivilegeMap
@@ -106,7 +131,24 @@ class ParcelImpl(
             }
         }
 
+    override val hasBlockVisitors: Boolean
+        get() = permit != null
 
+    private var permit: Permit? = null
+
+    fun acquireBlockVisitorPermit(with: Permit): Boolean {
+        if (permit === with) return true
+        if (permit != null) return false
+        permit = with
+        return true
+    }
+
+    fun releaseBlockVisitorPermit(with: Permit) {
+        if (permit !== with) throw IllegalStateException()
+        permit = null
+    }
+
+    /*
     private var blockVisitors = AtomicInteger(0)
 
     override suspend fun withBlockVisitorPermit(block: suspend () -> Unit) {
@@ -116,9 +158,9 @@ class ParcelImpl(
         } finally {
             blockVisitors.getAndDecrement()
         }
-    }
+    }*/
 
-    override fun toString() = toStringExt()
+    override fun toString() = parcelIdToString()
 
     override val infoString: String
         get() = getInfoString()

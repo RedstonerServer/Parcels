@@ -13,7 +13,7 @@ import org.joda.time.DateTime
 import java.util.UUID
 import kotlin.coroutines.CoroutineContext
 
-typealias DataPair = Pair<ParcelId, ParcelData?>
+typealias DataPair = Pair<ParcelId, ParcelDataHolder?>
 typealias PrivilegePair<TAttach> = Pair<TAttach, PrivilegesHolder>
 
 interface Storage {
@@ -33,7 +33,7 @@ interface Storage {
 
     fun updatePlayerName(uuid: UUID, name: String): Job
 
-    fun readParcelData(parcel: ParcelId): Deferred<ParcelData?>
+    fun readParcelData(parcel: ParcelId): Deferred<ParcelDataHolder?>
 
     fun transmitParcelData(parcels: Sequence<ParcelId>): ReceiveChannel<DataPair>
 
@@ -44,7 +44,7 @@ interface Storage {
     fun getNumParcels(user: PlayerProfile): Deferred<Int>
 
 
-    fun setParcelData(parcel: ParcelId, data: ParcelData?): Job
+    fun setParcelData(parcel: ParcelId, data: ParcelDataHolder?): Job
 
     fun setParcelOwner(parcel: ParcelId, owner: PlayerProfile?): Job
 
@@ -62,7 +62,7 @@ interface Storage {
     fun setGlobalPrivilege(owner: PlayerProfile, player: PlayerProfile, privilege: Privilege): Job
 
 
-    fun getChannelToUpdateParcelData(): SendChannel<Pair<ParcelId, ParcelData>>
+    fun getChannelToUpdateParcelData(): SendChannel<Pair<ParcelId, ParcelDataHolder>>
 }
 
 class BackedStorage internal constructor(val b: Backing) : Storage, CoroutineScope {
@@ -93,7 +93,7 @@ class BackedStorage internal constructor(val b: Backing) : Storage, CoroutineSco
 
     override fun getNumParcels(user: PlayerProfile) = b.launchFuture { b.getNumParcels(user) }
 
-    override fun setParcelData(parcel: ParcelId, data: ParcelData?) = b.launchJob { b.setParcelData(parcel, data) }
+    override fun setParcelData(parcel: ParcelId, data: ParcelDataHolder?) = b.launchJob { b.setParcelData(parcel, data) }
 
     override fun setParcelOwner(parcel: ParcelId, owner: PlayerProfile?) = b.launchJob { b.setParcelOwner(parcel, owner) }
 
@@ -110,5 +110,5 @@ class BackedStorage internal constructor(val b: Backing) : Storage, CoroutineSco
 
     override fun setGlobalPrivilege(owner: PlayerProfile, player: PlayerProfile, privilege: Privilege) = b.launchJob { b.setGlobalPrivilege(owner, player, privilege) }
 
-    override fun getChannelToUpdateParcelData(): SendChannel<Pair<ParcelId, ParcelData>> = b.openChannelForWriting { b.setParcelData(it.first, it.second) }
+    override fun getChannelToUpdateParcelData(): SendChannel<Pair<ParcelId, ParcelDataHolder>> = b.openChannelForWriting { b.setParcelData(it.first, it.second) }
 }

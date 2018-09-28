@@ -3,29 +3,26 @@
 package io.dico.parcels2.defaultimpl
 
 import io.dico.parcels2.*
-import io.dico.parcels2.blockvisitor.JobDispatcher
 import io.dico.parcels2.options.RuntimeWorldOptions
 import io.dico.parcels2.storage.Storage
 import kotlinx.coroutines.CoroutineScope
+import org.bukkit.GameRule
 import org.bukkit.World
 import org.joda.time.DateTime
 import java.util.UUID
 
-class ParcelWorldImpl(override val world: World,
-                      override val generator: ParcelGenerator,
-                      override var options: RuntimeWorldOptions,
-                      override val storage: Storage,
-                      override val globalPrivileges: GlobalPrivilegesManager,
-                      containerFactory: ParcelContainerFactory,
-                      coroutineScope: CoroutineScope,
-                      jobDispatcher: JobDispatcher)
-    : ParcelWorld,
-      ParcelWorldId,
-      ParcelContainer, /* missing delegation */
-      ParcelLocator /* missing delegation */ {
-
+class ParcelWorldImpl(
+    val plugin: ParcelsPlugin,
+    override val world: World,
+    override val generator: ParcelGenerator,
+    override var options: RuntimeWorldOptions,
+    containerFactory: ParcelContainerFactory
+) : ParcelWorld, ParcelWorldId, ParcelContainer, ParcelLocator {
     override val id: ParcelWorldId get() = this
     override val uid: UUID? get() = world.uid
+
+    override val storage get() = plugin.storage
+    override val globalPrivileges get() = plugin.globalPrivileges
 
     init {
         if (generator.world != world) {
@@ -39,52 +36,40 @@ class ParcelWorldImpl(override val world: World,
     override val blockManager: ParcelBlockManager
 
     init {
-        val pair = generator.makeParcelLocatorAndBlockManager(id, container, coroutineScope, jobDispatcher)
-        locator = pair.first
-        blockManager = pair.second
-
+        val (locator, blockManager) = generator.makeParcelLocatorAndBlockManager(plugin.parcelProvider, container, plugin, plugin.jobDispatcher)
+        this.locator = locator
+        this.blockManager = blockManager
         enforceOptions()
     }
 
     fun enforceOptions() {
         if (options.dayTime) {
-            world.setGameRuleValue("doDaylightCycle", "false")
+            world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false)
             world.setTime(6000)
         }
 
         if (options.noWeather) {
             world.setStorm(false)
             world.setThundering(false)
-            world.weatherDuration = Integer.MAX_VALUE
+            world.weatherDuration = Int.MAX_VALUE
         }
 
-        world.setGameRuleValue("doTileDrops", "${options.doTileDrops}")
+        world.setGameRule(GameRule.DO_TILE_DROPS, options.doTileDrops)
     }
 
-    // Updated by ParcelProviderImpl
+    // Accessed by ParcelProviderImpl
     override var creationTime: DateTime? = null
 
-    /*
-    Interface delegation needs to be implemented manually because JetBrains has yet to fix it.
-     */
 
-    // ParcelLocator interface
-    override fun getParcelAt(x: Int, z: Int): Parcel? {
-        return locator.getParcelAt(x, z)
-    }
+    override fun getParcelAt(x: Int, z: Int): Parcel? = locator.getParcelAt(x, z)
 
-    override fun getParcelIdAt(x: Int, z: Int): ParcelId? {
-        return locator.getParcelIdAt(x, z)
-    }
+    override fun getParcelIdAt(x: Int, z: Int): ParcelId? = locator.getParcelIdAt(x, z)
 
-    // ParcelContainer interface
-    override fun getParcelById(x: Int, z: Int): Parcel? {
-        return container.getParcelById(x, z)
-    }
+    override fun getParcelById(x: Int, z: Int): Parcel? = container.getParcelById(x, z)
 
-    override fun nextEmptyParcel(): Parcel? {
-        return container.nextEmptyParcel()
-    }
+    override fun getParcelById(id: ParcelId): Parcel? = container.getParcelById(id)
 
-    override fun toString() = toStringExt()
+    override fun nextEmptyParcel(): Parcel? = container.nextEmptyParcel()
+
+    override fun toString() = parcelWorldIdToString()
 }

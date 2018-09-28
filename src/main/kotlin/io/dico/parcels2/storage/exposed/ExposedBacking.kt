@@ -9,6 +9,7 @@ import io.dico.parcels2.storage.*
 import io.dico.parcels2.util.math.clampMax
 import io.dico.parcels2.util.ext.synchronized
 import kotlinx.coroutines.*
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.ArrayChannel
 import kotlinx.coroutines.channels.LinkedListChannel
 import kotlinx.coroutines.channels.ReceiveChannel
@@ -152,7 +153,7 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource, val poolSi
         channel.close()
     }
 
-    override fun readParcelData(parcel: ParcelId): ParcelData? {
+    override fun readParcelData(parcel: ParcelId): ParcelDataHolder? {
         val row = ParcelsT.getRow(parcel) ?: return null
         return rowToParcelData(row)
     }
@@ -165,7 +166,7 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource, val poolSi
             .toList()
     }
 
-    override fun setParcelData(parcel: ParcelId, data: ParcelData?) {
+    override fun setParcelData(parcel: ParcelId, data: ParcelDataHolder?) {
         if (data == null) {
             transaction {
                 ParcelsT.getId(parcel)?.let { id ->
@@ -262,7 +263,7 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource, val poolSi
     private fun rowToParcelData(row: ResultRow) = ParcelDataHolder().apply {
         owner = row[ParcelsT.owner_id]?.let { ProfilesT.getItem(it) }
         lastClaimTime = row[ParcelsT.claim_time]
-        ownerSignOutdated = row[ParcelsT.sign_oudated]
+        isOwnerSignOutdated = row[ParcelsT.sign_oudated]
 
         val id = row[ParcelsT.id]
         ParcelOptionsT.select { ParcelOptionsT.parcel_id eq id }.firstOrNull()?.let { optrow ->

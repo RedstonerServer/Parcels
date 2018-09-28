@@ -1,6 +1,6 @@
 package io.dico.parcels2.options
 
-import io.dico.parcels2.blockvisitor.TickJobtimeOptions
+import io.dico.parcels2.TickJobtimeOptions
 import org.bukkit.GameMode
 import org.bukkit.Material
 import java.io.Reader

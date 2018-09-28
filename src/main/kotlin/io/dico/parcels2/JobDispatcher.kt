@@ -1,7 +1,5 @@
-package io.dico.parcels2.blockvisitor
+package io.dico.parcels2
 
-import io.dico.parcels2.ParcelsPlugin
-import io.dico.parcels2.logger
 import io.dico.parcels2.util.math.clampMin
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -23,9 +21,9 @@ data class TickJobtimeOptions(var jobTime: Int, var tickInterval: Int)
 
 interface JobDispatcher {
     /**
-     * Submit a [task] that should be run synchronously, but limited such that it does not stall the server
+     * Submit a [function] that should be run synchronously, but limited such that it does not stall the server
      */
-    fun dispatch(task: JobFunction): Job
+    fun dispatch(function: JobFunction): Job
 
     /**
      * Get a list of all jobs
@@ -55,7 +53,7 @@ interface Job : JobAndScopeMembersUnion {
     /**
      * The coroutine associated with this job
      */
-    val job: CoroutineJob
+    val coroutine: CoroutineJob
 
     /**
      * true if this job has completed
@@ -147,8 +145,8 @@ class BukkitJobDispatcher(private val plugin: ParcelsPlugin, var options: TickJo
     private val _jobs = LinkedList<JobInternal>()
     override val jobs: List<Job> = _jobs
 
-    override fun dispatch(task: JobFunction): Job {
-        val job: JobInternal = JobImpl(plugin, task)
+    override fun dispatch(function: JobFunction): Job {
+        val job: JobInternal = JobImpl(plugin, function)
 
         if (bukkitTask == null) {
             val completed = job.resume(options.jobTime.toLong())
@@ -198,7 +196,7 @@ class BukkitJobDispatcher(private val plugin: ParcelsPlugin, var options: TickJo
 }
 
 private class JobImpl(scope: CoroutineScope, task: JobFunction) : JobInternal {
-    override val job: CoroutineJob = scope.launch(start = LAZY) { task() }
+    override val coroutine: CoroutineJob = scope.launch(start = LAZY) { task() }
 
     private var continuation: Continuation<Unit>? = null
     private var nextSuspensionTime: Long = 0L
@@ -207,10 +205,10 @@ private class JobImpl(scope: CoroutineScope, task: JobFunction) : JobInternal {
 
     override val elapsedTime
         get() =
-            if (job.isCompleted) startTimeOrElapsedTime
+            if (coroutine.isCompleted) startTimeOrElapsedTime
             else currentTimeMillis() - startTimeOrElapsedTime
 
-    override val isComplete get() = job.isCompleted
+    override val isComplete get() = coroutine.isCompleted
 
     private var _progress = 0.0
     override val progress get() = _progress
@@ -223,7 +221,7 @@ private class JobImpl(scope: CoroutineScope, task: JobFunction) : JobInternal {
     private var onCompleted: JobUpdateLister? = null
 
     init {
-        job.invokeOnCompletion { exception ->
+        coroutine.invokeOnCompletion { exception ->
             // report any error that occurred
             completionException = exception?.also {
                 if (it !is CancellationException)
@@ -306,13 +304,13 @@ private class JobImpl(scope: CoroutineScope, task: JobFunction) : JobInternal {
 
         isStarted = true
         startTimeOrElapsedTime = System.currentTimeMillis()
-        job.start()
+        coroutine.start()
 
         return continuation == null
     }
 
     override suspend fun awaitCompletion() {
-        job.join()
+        coroutine.join()
     }
 
     private fun delegateProgress(curPortion: Double, portion: Double): JobScope =

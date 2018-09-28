@@ -5,8 +5,7 @@ import org.jetbrains.exposed.sql.Function
 import org.jetbrains.exposed.sql.statements.InsertStatement
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 
-class UpsertStatement<Key : Any>(table: Table, conflictColumn: Column<*>? = null, conflictIndex: Index? = null)
-    : InsertStatement<Key>(table, false) {
+class UpsertStatement<Key : Any>(table: Table, conflictColumn: Column<*>? = null, conflictIndex: Index? = null) : InsertStatement<Key>(table, false) {
     val indexName: String
     val indexColumns: List<Column<*>>
 
@@ -66,9 +65,10 @@ class Abs<T : Int?>(val expr: Expression<T>) : Function<T>(IntegerColumnType()) 
     override fun toSQL(queryBuilder: QueryBuilder): String = "ABS(${expr.toSQL(queryBuilder)})"
 }
 
-fun <T : Comparable<T>> SqlExpressionBuilder.greater(col1: ExpressionWithColumnType<T>, col2: ExpressionWithColumnType<T>): Expression<T> {
-    return case(col1)
-        .When(col1.greater(col2), col1)
-        .Else(col2)
-}
+fun <T : Comparable<T>> greaterOf(col1: ExpressionWithColumnType<T>, col2: ExpressionWithColumnType<T>): Expression<T> =
+    with(SqlExpressionBuilder) {
+        case(col1)
+            .When(col1.greater(col2), col1)
+            .Else(col2)
+    }
 

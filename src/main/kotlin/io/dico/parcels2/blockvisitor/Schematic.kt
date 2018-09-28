@@ -1,5 +1,7 @@
 package io.dico.parcels2.blockvisitor
 
+import io.dico.parcels2.JobFunction
+import io.dico.parcels2.JobScope
 import io.dico.parcels2.util.math.Region
 import io.dico.parcels2.util.math.Vec3i
 import io.dico.parcels2.util.math.get

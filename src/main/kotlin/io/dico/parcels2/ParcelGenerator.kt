@@ -1,15 +1,18 @@
 package io.dico.parcels2
 
-import io.dico.parcels2.blockvisitor.*
+import io.dico.parcels2.blockvisitor.RegionTraverser
 import io.dico.parcels2.util.math.Region
 import io.dico.parcels2.util.math.Vec2i
+import io.dico.parcels2.util.math.Vec3i
 import io.dico.parcels2.util.math.get
 import kotlinx.coroutines.CoroutineScope
 import org.bukkit.Chunk
 import org.bukkit.Location
+import org.bukkit.Material
 import org.bukkit.World
 import org.bukkit.block.Biome
 import org.bukkit.block.Block
+import org.bukkit.block.BlockFace
 import org.bukkit.entity.Entity
 import org.bukkit.generator.BlockPopulator
 import org.bukkit.generator.ChunkGenerator
@@ -34,10 +37,12 @@ abstract class ParcelGenerator : ChunkGenerator() {
         })
     }
 
-    abstract fun makeParcelLocatorAndBlockManager(worldId: ParcelWorldId,
-                                                  container: ParcelContainer,
-                                                  coroutineScope: CoroutineScope,
-                                                  jobDispatcher: JobDispatcher): Pair<ParcelLocator, ParcelBlockManager>
+    abstract fun makeParcelLocatorAndBlockManager(
+        parcelProvider: ParcelProvider,
+        container: ParcelContainer,
+        coroutineScope: CoroutineScope,
+        jobDispatcher: JobDispatcher
+    ): Pair<ParcelLocator, ParcelBlockManager>
 }
 
 interface ParcelBlockManager {
@@ -45,7 +50,7 @@ interface ParcelBlockManager {
     val jobDispatcher: JobDispatcher
     val parcelTraverser: RegionTraverser
 
-    // fun getBottomBlock(parcel: ParcelId): Vec2i
+    fun getRegionOrigin(parcel: ParcelId) = getRegion(parcel).origin.toVec2i()
 
     fun getHomeLocation(parcel: ParcelId): Location
 
@@ -53,15 +58,15 @@ interface ParcelBlockManager {
 
     fun getEntities(parcel: ParcelId): Collection<Entity>
 
-    fun setOwnerBlock(parcel: ParcelId, owner: PlayerProfile?)
+    fun isParcelInfoSectionLoaded(parcel: ParcelId): Boolean
 
-    fun setBiome(parcel: ParcelId, biome: Biome): Job
+    fun updateParcelInfo(parcel: ParcelId, owner: PlayerProfile?)
 
-    fun clearParcel(parcel: ParcelId): Job
+    fun getParcelForInfoBlockInteraction(block: Vec3i, type: Material, face: BlockFace): Parcel?
 
-    fun swapParcels(parcel1: ParcelId, parcel2: ParcelId): Job
+    fun setBiome(parcel: ParcelId, biome: Biome): Job?
 
-    fun submitBlockVisitor(vararg parcelIds: ParcelId, task: JobFunction): Job
+    fun clearParcel(parcel: ParcelId): Job?
 
     /**
      * Used to update owner blocks in the corner of the parcel
@@ -69,9 +74,12 @@ interface ParcelBlockManager {
     fun getParcelsWithOwnerBlockIn(chunk: Chunk): Collection<Vec2i>
 }
 
-inline fun ParcelBlockManager.doBlockOperation(parcel: ParcelId,
-                                               traverser: RegionTraverser,
-                                               crossinline operation: suspend JobScope.(Block) -> Unit) = submitBlockVisitor(parcel) {
+inline fun ParcelBlockManager.tryDoBlockOperation(
+    parcelProvider: ParcelProvider,
+    parcel: ParcelId,
+    traverser: RegionTraverser,
+    crossinline operation: suspend JobScope.(Block) -> Unit
+) = parcelProvider.trySubmitBlockVisitor(Permit(), arrayOf(parcel)) {
     val region = getRegion(parcel)
     val blockCount = region.blockCount.toDouble()
     val blocks = traverser.traverseRegion(region)

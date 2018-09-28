@@ -64,7 +64,7 @@ class DefaultParcelContainer(val world: ParcelWorld) : ParcelContainer {
         }
     }
 
-    fun allParcels(): Sequence<Parcel> = sequence {
+    fun getAllParcels(): Iterator<Parcel> = iterator {
         for (array in parcels) {
             yieldAll(array.iterator())
         }

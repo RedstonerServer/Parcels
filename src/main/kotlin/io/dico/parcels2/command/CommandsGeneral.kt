@@ -127,7 +127,7 @@ class CommandsGeneral(plugin: ParcelsPlugin, parent: SpecialCommandAddress) : Ab
     fun ParcelScope.cmdClear(context: ExecutionContext, @Flag sure: Boolean): Any? {
         Validate.isTrue(!parcel.hasBlockVisitors, "A process is already running in this parcel")
         if (!sure) return areYouSureMessage(context)
-        world.blockManager.clearParcel(parcel.id).reportProgressUpdates(context, "Clear")
+        world.blockManager.clearParcel(parcel.id)?.reportProgressUpdates(context, "Clear")
         return null
     }
 
@@ -135,7 +135,7 @@ class CommandsGeneral(plugin: ParcelsPlugin, parent: SpecialCommandAddress) : Ab
     @RequireParcelPrivilege(Privilege.OWNER)
     fun ParcelScope.cmdSetbiome(context: ExecutionContext, biome: Biome): Any? {
         Validate.isTrue(!parcel.hasBlockVisitors, "A process is already running in this parcel")
-        world.blockManager.setBiome(parcel.id, biome).reportProgressUpdates(context, "Biome change")
+        world.blockManager.setBiome(parcel.id, biome)?.reportProgressUpdates(context, "Biome change")
         return null
     }
 

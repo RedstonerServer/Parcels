@@ -11,7 +11,9 @@ data class Vec3i(
     val z: Int
 ) {
     constructor(loc: Location) : this(loc.blockX, loc.blockY, loc.blockZ)
+    constructor(block: Block) : this(block.x, block.y, block.z)
 
+    fun toVec2i() = Vec2i(x, z)
     operator fun plus(o: Vec3i) = Vec3i(x + o.x, y + o.y, z + o.z)
     operator fun minus(o: Vec3i) = Vec3i(x - o.x, y - o.y, z - o.z)
     infix fun addX(o: Int) = Vec3i(x + o, y, z)

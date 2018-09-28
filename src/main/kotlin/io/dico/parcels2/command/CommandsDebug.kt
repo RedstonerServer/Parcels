@@ -1,5 +1,6 @@
 package io.dico.parcels2.command
 
+import io.dico.dicore.Formatting
 import io.dico.dicore.command.*
 import io.dico.dicore.command.IContextFilter.Priority.PERMISSION
 import io.dico.dicore.command.annotation.Cmd
@@ -54,9 +55,9 @@ class CommandsDebug(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
         )
         val random = Random()
 
-        world.blockManager.doBlockOperation(parcel.id, traverser = RegionTraverser.upward) { block ->
+        world.blockManager.tryDoBlockOperation(plugin.parcelProvider, parcel.id, traverser = RegionTraverser.upward) { block ->
             block.blockData = blockDatas[random.nextInt(7)]
-        }.onProgressUpdate(1000, 1000) { progress, elapsedTime ->
+        }?.onProgressUpdate(1000, 1000) { progress, elapsedTime ->
             context.sendMessage(
                 EMessageType.INFORMATIVE, "Mess progress: %.02f%%, %.2fs elapsed"
                     .format(progress * 100, elapsedTime / 1000.0)
@@ -82,7 +83,7 @@ class CommandsDebug(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
     @Cmd("jobs")
     fun cmdJobs(): Any? {
         val workers = plugin.jobDispatcher.jobs
-        println(workers.map { it.job }.joinToString(separator = "\n"))
+        println(workers.map { it.coroutine }.joinToString(separator = "\n"))
         return "Task count: ${workers.size}"
     }
 
@@ -95,7 +96,7 @@ class CommandsDebug(plugin: ParcelsPlugin) : AbstractParcelCommands(plugin) {
     @PreprocessArgs
     fun cmdMessage(sender: CommandSender, message: String): Any? {
         // testing @PreprocessArgs which merges "hello there" into a single argument
-        sender.sendMessage(message)
+        sender.sendMessage(Formatting.translate(message))
         return null
     }
 

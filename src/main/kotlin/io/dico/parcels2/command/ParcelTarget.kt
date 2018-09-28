@@ -92,8 +92,8 @@ sealed class ParcelTarget(val world: ParcelWorld, val parsedKind: Int, val isDef
 
         override fun parse(parameter: Parameter<ParcelTarget, Int>, sender: CommandSender, buffer: ArgumentBuffer): ParcelTarget {
             var input = buffer.next()
-            val worldString = input.substringBefore("->", missingDelimiterValue = "")
-            input = input.substringAfter("->")
+            val worldString = input.substringBefore("/", missingDelimiterValue = "")
+            input = input.substringAfter("/")
 
             val world = if (worldString.isEmpty()) {
                 val player = requirePlayer(sender, parameter, "the world")

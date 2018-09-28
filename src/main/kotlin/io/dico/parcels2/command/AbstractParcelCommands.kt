@@ -1,12 +1,12 @@
 package io.dico.parcels2.command
 
-import io.dico.dicore.command.*
-import io.dico.parcels2.ParcelWorld
-import io.dico.parcels2.ParcelsPlugin
-import io.dico.parcels2.PlayerProfile
-import io.dico.parcels2.PlayerProfile.*
-import io.dico.parcels2.PrivilegeKey
-import io.dico.parcels2.blockvisitor.Job
+import io.dico.dicore.command.CommandException
+import io.dico.dicore.command.EMessageType
+import io.dico.dicore.command.ExecutionContext
+import io.dico.dicore.command.ICommandReceiver
+import io.dico.parcels2.*
+import io.dico.parcels2.PlayerProfile.Real
+import io.dico.parcels2.PlayerProfile.Unresolved
 import io.dico.parcels2.util.ext.hasPermAdminManage
 import io.dico.parcels2.util.ext.parcelLimit
 import org.bukkit.entity.Player
@@ -42,15 +42,13 @@ abstract class AbstractParcelCommands(val plugin: ParcelsPlugin) : ICommandRecei
         else -> throw CommandException()
     }
 
-    protected fun areYouSureMessage(context: ExecutionContext) = "Are you sure? You cannot undo this action!\n" +
-        "Run \"/${context.route.joinToString(" ")} -sure\" if you want to go through with this."
-
-    protected fun ParcelScope.clearWithProgressUpdates(context: ExecutionContext, action: String) {
-        Validate.isTrue(!parcel.hasBlockVisitors, "A process is already running in this parcel")
-        world.blockManager.clearParcel(parcel.id)
+    protected fun areYouSureMessage(context: ExecutionContext): String {
+        val command = (context.route + context.original).joinToString(" ") + " -sure"
+        return "Are you sure? You cannot undo this action!\n" +
+            "Run \"/$command\" if you want to go through with this."
     }
 
-    protected fun Job.reportProgressUpdates(context: ExecutionContext, action: String) {
+    protected fun Job.reportProgressUpdates(context: ExecutionContext, action: String): Job =
         onProgressUpdate(1000, 1000) { progress, elapsedTime ->
             val alt = context.getFormat(EMessageType.NUMBER)
             val main = context.getFormat(EMessageType.INFORMATIVE)
@@ -59,7 +57,6 @@ abstract class AbstractParcelCommands(val plugin: ParcelsPlugin) : ICommandRecei
                     .format(progress * 100, elapsedTime / 1000.0)
             )
         }
-    }
 
     override fun getCoroutineContext() = plugin.coroutineContext
 }

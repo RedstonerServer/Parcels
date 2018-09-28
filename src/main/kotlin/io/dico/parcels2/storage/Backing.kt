@@ -43,14 +43,14 @@ interface Backing {
 
     fun transmitAllParcelData(channel: SendChannel<DataPair>)
 
-    fun readParcelData(parcel: ParcelId): ParcelData?
+    fun readParcelData(parcel: ParcelId): ParcelDataHolder?
 
     fun getOwnedParcels(user: PlayerProfile): List<ParcelId>
 
     fun getNumParcels(user: PlayerProfile): Int = getOwnedParcels(user).size
 
 
-    fun setParcelData(parcel: ParcelId, data: ParcelData?)
+    fun setParcelData(parcel: ParcelId, data: ParcelDataHolder?)
 
     fun setParcelOwner(parcel: ParcelId, owner: PlayerProfile?)
 

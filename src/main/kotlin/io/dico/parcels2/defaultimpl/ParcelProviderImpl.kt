@@ -1,8 +1,10 @@
 package io.dico.parcels2.defaultimpl
 
 import io.dico.parcels2.*
+import io.dico.parcels2.blockvisitor.Schematic
 import io.dico.parcels2.util.schedule
-import kotlinx.coroutines.Unconfined
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.bukkit.Bukkit
 import org.bukkit.WorldCreator
@@ -44,10 +46,11 @@ class ParcelProviderImpl(val plugin: ParcelsPlugin) : ParcelProvider {
     private fun loadWorlds0() {
         if (Bukkit.getWorlds().isEmpty()) {
             plugin.schedule(::loadWorlds0)
-            plugin.logger.warning("Scheduling to load worlds in the next tick, \nbecause no bukkit worlds are loaded yet")
+            plugin.logger.warning("Scheduling to load worlds in the next tick because no bukkit worlds are loaded yet")
             return
         }
 
+        val newlyCreatedWorlds = mutableListOf<ParcelWorld>()
         for ((worldName, worldOptions) in options.worlds.entries) {
             var parcelWorld = _worlds[worldName]
             if (parcelWorld != null) continue
@@ -56,19 +59,20 @@ class ParcelProviderImpl(val plugin: ParcelsPlugin) : ParcelProvider {
             val worldExists = Bukkit.getWorld(worldName) != null
             val bukkitWorld =
                 if (worldExists) Bukkit.getWorld(worldName)!!
-                else WorldCreator(worldName).generator(generator).createWorld().also { logger.info("Creating world $worldName") }
+                else {
+                    logger.info("Creating world $worldName")
+                    WorldCreator(worldName).generator(generator).createWorld()
+                }
 
-            parcelWorld = ParcelWorldImpl(
-                bukkitWorld, generator, worldOptions.runtime, plugin.storage,
-                plugin.globalPrivileges, ::DefaultParcelContainer, plugin, plugin.jobDispatcher
-            )
+            parcelWorld = ParcelWorldImpl(plugin, bukkitWorld, generator, worldOptions.runtime,::DefaultParcelContainer)
 
             if (!worldExists) {
                 val time = DateTime.now()
                 plugin.storage.setWorldCreationTime(parcelWorld.id, time)
                 parcelWorld.creationTime = time
+                newlyCreatedWorlds.add(parcelWorld)
             } else {
-                launch(context = Unconfined) {
+                GlobalScope.launch(context = Dispatchers.Unconfined) {
                     parcelWorld.creationTime = plugin.storage.getWorldCreationTime(parcelWorld.id).await() ?: DateTime.now()
                 }
             }
@@ -76,11 +80,11 @@ class ParcelProviderImpl(val plugin: ParcelsPlugin) : ParcelProvider {
             _worlds[worldName] = parcelWorld
         }
 
-        loadStoredData()
+        loadStoredData(newlyCreatedWorlds.toSet())
     }
 
-    private fun loadStoredData() {
-        plugin.launch {
+    private fun loadStoredData(newlyCreatedWorlds: Collection<ParcelWorld> = emptyList()) {
+        plugin.launch(Dispatchers.Default) {
             val migration = plugin.options.migration
             if (migration.enabled) {
                 migration.instance?.newInstance()?.apply {
@@ -96,11 +100,14 @@ class ParcelProviderImpl(val plugin: ParcelsPlugin) : ParcelProvider {
             }
 
             logger.info("Loading all parcel data...")
-            val channel = plugin.storage.transmitAllParcelData()
-            while (true) {
-                val (id, data) = channel.receiveOrNull() ?: break
-                val parcel = getParcelById(id) ?: continue
-                data?.let { parcel.copyDataIgnoringDatabase(it) }
+
+            val job1 = launch {
+                val channel = plugin.storage.transmitAllParcelData()
+                while (true) {
+                    val (id, data) = channel.receiveOrNull() ?: break
+                    val parcel = getParcelById(id) ?: continue
+                    data?.let { parcel.copyData(it, callerIsDatabase = true) }
+                }
             }
 
             val channel2 = plugin.storage.transmitAllGlobalPrivileges()
@@ -113,8 +120,58 @@ class ParcelProviderImpl(val plugin: ParcelsPlugin) : ParcelProvider {
                 (plugin.globalPrivileges[profile] as PrivilegesHolder).copyPrivilegesFrom(data)
             }
 
+            job1.join()
+
             logger.info("Loading data completed")
             _dataIsLoaded = true
+        }
+    }
+
+    override fun acquireBlockVisitorPermit(parcelId: ParcelId, with: Permit): Boolean {
+        val parcel = getParcelById(parcelId) as? ParcelImpl ?: return true
+        return parcel.acquireBlockVisitorPermit(with)
+    }
+
+    override fun releaseBlockVisitorPermit(parcelId: ParcelId, with: Permit) {
+        val parcel = getParcelById(parcelId) as? ParcelImpl ?: return
+        parcel.releaseBlockVisitorPermit(with)
+    }
+
+    override fun trySubmitBlockVisitor(permit: Permit, vararg parcelIds: ParcelId, function: JobFunction): Job? {
+        val withPermit = parcelIds.filter { acquireBlockVisitorPermit(it, permit) }
+        if (withPermit.size != parcelIds.size) {
+            withPermit.forEach { releaseBlockVisitorPermit(it, permit) }
+            return null
+        }
+
+        val job = plugin.jobDispatcher.dispatch(function)
+
+        plugin.launch {
+            job.awaitCompletion()
+            withPermit.forEach { releaseBlockVisitorPermit(it, permit) }
+        }
+
+        return job
+    }
+
+    override fun swapParcels(parcelId1: ParcelId, parcelId2: ParcelId): Job? {
+        val blockManager1 = getWorldById(parcelId1.worldId)?.blockManager ?: return null
+        val blockManager2 = getWorldById(parcelId2.worldId)?.blockManager ?: return null
+
+        return trySubmitBlockVisitor(Permit(), parcelId1, parcelId2) {
+            var region1 = blockManager1.getRegion(parcelId1)
+            var region2 = blockManager2.getRegion(parcelId2)
+
+            val size = region1.size.clampMax(region2.size)
+            if (size != region1.size) {
+                region1 = region1.withSize(size)
+                region2 = region2.withSize(size)
+            }
+
+            val schematicOf1 = delegateWork(0.25) { Schematic().apply { load(blockManager1.world, region1) } }
+            val schematicOf2 = delegateWork(0.25) { Schematic().apply { load(blockManager2.world, region2) } }
+            delegateWork(0.25) { with(schematicOf1) { paste(blockManager2.world, region2.origin) } }
+            delegateWork(0.25) { with(schematicOf2) { paste(blockManager1.world, region1.origin) } }
         }
     }
 

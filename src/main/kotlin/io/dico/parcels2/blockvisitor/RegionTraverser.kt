@@ -6,27 +6,89 @@ import io.dico.parcels2.util.math.Vec3i
 import io.dico.parcels2.util.math.clampMax
 
 private typealias Scope = SequenceScope<Vec3i>
+/*
+class ParcelTraverser(
+    val parcelProvider: ParcelProvider,
+    val delegate: RegionTraverser,
+    scope: CoroutineScope
+) : RegionTraverser(), CoroutineScope by scope {
 
-sealed class RegionTraverser {
-    fun traverseRegion(region: Region, worldHeight: Int = 256): Iterable<Vec3i> =
-        Iterable { iterator<Vec3i> { build(validify(region, worldHeight)) } }
+    class OccupiedException(parcelId: ParcelId) : Exception("Parcel $parcelId is occupied")
 
-    private fun validify(region: Region, worldHeight: Int): Region {
-        if (region.origin.y < 0) {
-            val origin = region.origin withY 0
-            val size = region.size.withY((region.size.y + region.origin.y).clampMax(worldHeight))
-            return Region(origin, size)
+    /**
+     * Traverse the blocks of parcel's land
+     * The iterator must be exhausted, else the permit to traverse it will not be reclaimed.
+     *
+     * @throws OccupiedException if a parcel is maintained with the given parcel id and an
+     *   iterator exists for it that has not been exhausted
+     */
+    fun traverseParcel(parcelId: ParcelId): Iterator<Vec3i> {
+        val world = parcelProvider.getWorldById(parcelId.worldId)
+            ?: throw IllegalArgumentException()
+        val parcel = parcelProvider.getParcelById(parcelId)
+
+        val medium = if (parcel != null) {
+            if (parcel.hasBlockVisitors || parcel !is ParcelImpl) {
+                throw OccupiedException(parcelId)
+            }
+            parcel.hasBlockVisitors = true
+            TraverserMedium { parcel.hasBlockVisitors = false }
+        } else {
+            TraverserMedium.DoNothing
         }
 
-        if (region.origin.y + region.size.y > worldHeight) {
-            val size = region.size.withY(worldHeight - region.origin.y)
-            return Region(region.origin, size)
-        }
-
-        return region
+        val region = world.blockManager.getRegion(parcelId)
+        return traverseRegion(region, world.world.maxHeight, medium)
     }
 
-    protected abstract suspend fun Scope.build(region: Region)
+    override suspend fun Scope.build(region: Region, medium: TraverserMedium) {
+        with(delegate) {
+            return build(region, medium)
+        }
+    }
+
+}
+
+@Suppress("FunctionName")
+inline fun TraverserMedium(crossinline whenComplete: () -> Unit) =
+    object : TraverserMedium {
+        override fun iterationCompleted() {
+            whenComplete()
+        }
+    }
+
+/**
+ * An object that is able to communicate with an iterator returned by [RegionTraverser]
+ *
+ */
+interface TraverserMedium {
+
+    /**
+     * Called by the traverser during first [Iterator.hasNext] call that returns false
+     */
+    fun iterationCompleted()
+
+    /**
+     * The default [TraverserMedium], which does nothing.
+     */
+    object DoNothing : TraverserMedium {
+        override fun iterationCompleted() {}
+    }
+}*/
+
+sealed class RegionTraverser {
+
+    /**
+     * Get an iterator traversing [region] using this traverser.
+     * Depending on the implementation, [region] might be traversed in a specific order and direction.
+     */
+    fun traverseRegion(
+        region: Region,
+        worldHeight: Int = 256/*,
+        medium: TraverserMedium = TraverserMedium.DoNothing*/
+    ): Iterator<Vec3i> = iterator { build(validify(region, worldHeight)/*, medium*/) }
+
+    abstract suspend fun Scope.build(region: Region/*, medium: TraverserMedium = TraverserMedium.DoNothing*/)
 
     companion object {
         val upward = Directional(TraverseDirection(1, 1, 1), TraverseOrderFactory.createWith(Dimension.Y, Dimension.X))
@@ -34,9 +96,35 @@ sealed class RegionTraverser {
         val toClear get() = downward
         val toFill get() = upward
 
+        /**
+         * The returned [RegionTraverser] will traverse the regions
+         * * below and including absolute level [y] first, in [upward] direction.
+         * * above absolute level [y] last, in [downward] direction.
+         */
         fun convergingTo(y: Int) = Slicing(y, upward, downward, true)
 
+        /**
+         * The returned [RegionTraverser] will traverse the regions
+         * * above absolute level [y] first, in [upward] direction.
+         * * below and including absolute level [y] second, in [downward] direction.
+         */
         fun separatingFrom(y: Int) = Slicing(y, downward, upward, false)
+
+        private fun validify(region: Region, worldHeight: Int): Region {
+            if (region.origin.y < 0) {
+                val origin = region.origin withY 0
+                val size = region.size.withY((region.size.y + region.origin.y).clampMax(worldHeight))
+                return Region(origin, size)
+            }
+
+            if (region.origin.y + region.size.y > worldHeight) {
+                val size = region.size.withY(worldHeight - region.origin.y)
+                return Region(region.origin, size)
+            }
+
+            return region
+        }
+
     }
 
     class Directional(
@@ -50,7 +138,7 @@ sealed class RegionTraverser {
             }
         }
 
-        override suspend fun Scope.build(region: Region) {
+        override suspend fun Scope.build(region: Region/*, medium: TraverserMedium*/) {
             val order = order
             val (primary, secondary, tertiary) = order.toArray()
             val (origin, size) = region
@@ -71,6 +159,7 @@ sealed class RegionTraverser {
                 }
             }
 
+            /*medium.iterationCompleted()*/
         }
 
     }
@@ -91,7 +180,7 @@ sealed class RegionTraverser {
             return region to null
         }
 
-        override suspend fun Scope.build(region: Region) {
+        override suspend fun Scope.build(region: Region/*, medium: TraverserMedium*/) {
             val (bottom, top) = slice(region, bottomSectionMaxY)
 
             if (bottomFirst) {
@@ -101,15 +190,22 @@ sealed class RegionTraverser {
                 top?.let { with(topTraverser) { build(it) } }
                 with(bottomTraverser) { build(bottom) }
             }
+
+            /*medium.iterationCompleted()*/
         }
     }
 
+    /**
+     * Returns [Directional] instance that would be responsible for
+     * emitting the given position if it is contained in a region.
+     * [Directional] instance has a set order and direction
+     */
     fun childForPosition(position: Vec3i): Directional {
         var cur = this
         while (true) {
             when (cur) {
-                is Directional ->
-                    return cur
+                /*is ParcelTraverser -> cur = cur.delegate*/
+                is Directional -> return cur
                 is Slicing ->
                     cur =
                         if (position.y <= cur.bottomSectionMaxY) cur.bottomTraverser
@@ -118,10 +214,17 @@ sealed class RegionTraverser {
         }
     }
 
+    /**
+     * Returns true if and only if this traverser would visit the given
+     * [block] position before the given [current] position.
+     * If at least one of [block] and [current] is not contained in a
+     * region being traversed the result is undefined.
+     */
     fun comesFirst(current: Vec3i, block: Vec3i): Boolean {
         var cur = this
         while (true) {
             when (cur) {
+                /*is ParcelTraverser -> cur = cur.delegate*/
                 is Directional -> return cur.direction.comesFirst(current, block)
                 is Slicing -> {
                     val border = cur.bottomSectionMaxY

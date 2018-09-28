@@ -1,3 +1,5 @@
+@file:Suppress("FunctionName")
+
 package io.dico.parcels2
 
 import io.dico.parcels2.util.math.Vec2i
@@ -15,14 +17,12 @@ interface ParcelWorldId {
     fun equals(id: ParcelWorldId): Boolean = name == id.name || (uid != null && uid == id.uid)
 
     val bukkitWorld: World? get() = Bukkit.getWorld(name) ?: uid?.let { Bukkit.getWorld(it) }
-
-    companion object {
-        operator fun invoke(worldName: String, worldUid: UUID?): ParcelWorldId = ParcelWorldIdImpl(worldName, worldUid)
-        operator fun invoke(worldName: String): ParcelWorldId = ParcelWorldIdImpl(worldName, null)
-    }
 }
 
-fun ParcelWorldId.toStringExt() = "ParcelWorld($name)"
+fun ParcelWorldId.parcelWorldIdToString() = "ParcelWorld($name)"
+
+fun ParcelWorldId(worldName: String, worldUid: UUID? = null): ParcelWorldId = ParcelWorldIdImpl(worldName, worldUid)
+fun ParcelWorldId(world: World) = ParcelWorldId(world.name, world.uid)
 
 /**
  * Used by storage backing options to encompass the location of a parcel
@@ -35,24 +35,22 @@ interface ParcelId {
     val pos: Vec2i get() = Vec2i(x, z)
     val idString get() = "$x,$z"
     fun equals(id: ParcelId): Boolean = x == id.x && z == id.z && worldId.equals(id.worldId)
-
-    companion object {
-        operator fun invoke(worldId: ParcelWorldId, pos: Vec2i) = invoke(worldId, pos.x, pos.z)
-        operator fun invoke(worldName: String, worldUid: UUID?, pos: Vec2i) = invoke(worldName, worldUid, pos.x, pos.z)
-        operator fun invoke(worldName: String, worldUid: UUID?, x: Int, z: Int) = invoke(ParcelWorldId(worldName, worldUid), x, z)
-        operator fun invoke(worldId: ParcelWorldId, x: Int, z: Int): ParcelId = ParcelIdImpl(worldId, x, z)
-    }
 }
 
-fun ParcelId.toStringExt() = "Parcel(${worldId.name},$idString)"
+fun ParcelId.parcelIdToString() = "Parcel(${worldId.name},$idString)"
+
+fun ParcelId(worldId: ParcelWorldId, pos: Vec2i) = ParcelId(worldId, pos.x, pos.z)
+fun ParcelId(worldName: String, worldUid: UUID?, pos: Vec2i) = ParcelId(worldName, worldUid, pos.x, pos.z)
+fun ParcelId(worldName: String, worldUid: UUID?, x: Int, z: Int) = ParcelId(ParcelWorldId(worldName, worldUid), x, z)
+fun ParcelId(worldId: ParcelWorldId, x: Int, z: Int): ParcelId = ParcelIdImpl(worldId, x, z)
 
 private class ParcelWorldIdImpl(override val name: String,
                                 override val uid: UUID?) : ParcelWorldId {
-    override fun toString() = toStringExt()
+    override fun toString() = parcelWorldIdToString()
 }
 
 private class ParcelIdImpl(override val worldId: ParcelWorldId,
                            override val x: Int,
                            override val z: Int) : ParcelId {
-    override fun toString() = toStringExt()
+    override fun toString() = parcelIdToString()
 }

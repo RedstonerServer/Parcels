@@ -1,22 +1,14 @@
 package io.dico.parcels2.defaultimpl
 
 import io.dico.parcels2.*
-import io.dico.parcels2.blockvisitor.*
+import io.dico.parcels2.blockvisitor.RegionTraverser
 import io.dico.parcels2.options.DefaultGeneratorOptions
-import io.dico.parcels2.util.math.Region
-import io.dico.parcels2.util.math.Vec2i
-import io.dico.parcels2.util.math.Vec3i
-import io.dico.parcels2.util.math.even
-import io.dico.parcels2.util.math.umod
-import io.dico.parcels2.util.math.get
+import io.dico.parcels2.util.math.*
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.CoroutineStart.UNDISPATCHED
-import kotlinx.coroutines.launch
 import org.bukkit.*
 import org.bukkit.block.Biome
 import org.bukkit.block.BlockFace
 import org.bukkit.block.Skull
-import org.bukkit.block.data.BlockData
 import org.bukkit.block.data.type.Slab
 import org.bukkit.block.data.type.WallSign
 import java.util.Random
@@ -118,12 +110,13 @@ class DefaultParcelGenerator(
     }
 
     override fun makeParcelLocatorAndBlockManager(
-        worldId: ParcelWorldId,
+        parcelProvider: ParcelProvider,
         container: ParcelContainer,
         coroutineScope: CoroutineScope,
         jobDispatcher: JobDispatcher
     ): Pair<ParcelLocator, ParcelBlockManager> {
-        return ParcelLocatorImpl(worldId, container) to ParcelBlockManagerImpl(worldId, coroutineScope, jobDispatcher)
+        val impl = ParcelLocatorAndBlockManagerImpl(parcelProvider, container, coroutineScope, jobDispatcher)
+        return impl to impl
     }
 
     private inline fun <T> convertBlockLocationToId(x: Int, z: Int, mapper: (Int, Int) -> T): T? {
@@ -139,11 +132,25 @@ class DefaultParcelGenerator(
         return null
     }
 
-    private inner class ParcelLocatorImpl(
-        val worldId: ParcelWorldId,
-        val container: ParcelContainer
-    ) : ParcelLocator {
-        override val world: World = this@DefaultParcelGenerator.world
+    @Suppress("DEPRECATION")
+    private inner class ParcelLocatorAndBlockManagerImpl(
+        val parcelProvider: ParcelProvider,
+        val container: ParcelContainer,
+        coroutineScope: CoroutineScope,
+        override val jobDispatcher: JobDispatcher
+    ) : ParcelBlockManagerBase(), ParcelLocator, CoroutineScope by coroutineScope {
+
+        override val world: World get() = this@DefaultParcelGenerator.world
+        val worldId = parcelProvider.getWorld(world)?.id ?: ParcelWorldId(world)
+        override val parcelTraverser: RegionTraverser = RegionTraverser.convergingTo(o.floorHeight)
+
+        private val cornerWallType = when {
+            o.wallType is Slab -> (o.wallType.clone() as Slab).apply { type = Slab.Type.DOUBLE }
+            o.wallType.material.name.endsWith("CARPET") -> {
+                Bukkit.createBlockData(Material.getMaterial(o.wallType.material.name.substringBefore("CARPET") + "WOOL"))
+            }
+            else -> null
+        }
 
         override fun getParcelAt(x: Int, z: Int): Parcel? {
             return convertBlockLocationToId(x, z, container::getParcelById)
@@ -152,112 +159,113 @@ class DefaultParcelGenerator(
         override fun getParcelIdAt(x: Int, z: Int): ParcelId? {
             return convertBlockLocationToId(x, z) { idx, idz -> ParcelId(worldId, idx, idz) }
         }
-    }
 
-    @Suppress("DEPRECATION")
-    private inner class ParcelBlockManagerImpl(
-        val worldId: ParcelWorldId,
-        coroutineScope: CoroutineScope,
-        override val jobDispatcher: JobDispatcher
-    ) : ParcelBlockManagerBase(), CoroutineScope by coroutineScope {
-        override val world: World = this@DefaultParcelGenerator.world
-        override val parcelTraverser: RegionTraverser = RegionTraverser.convergingTo(o.floorHeight)
 
-        /*override*/ fun getBottomBlock(parcel: ParcelId): Vec2i = Vec2i(
-            sectionSize * (parcel.x - 1) + pathOffset + o.offsetX,
-            sectionSize * (parcel.z - 1) + pathOffset + o.offsetZ
-        )
+        private fun checkParcelId(parcel: ParcelId): ParcelId {
+            if (!parcel.worldId.equals(worldId)) {
+                throw IllegalArgumentException()
+            }
+            return parcel
+        }
 
-        override fun getHomeLocation(parcel: ParcelId): Location {
-            val bottom = getBottomBlock(parcel)
-            val x = bottom.x + (o.parcelSize - 1) / 2.0
-            val z = bottom.z - 2
-            return Location(world, x + 0.5, o.floorHeight + 1.0, z + 0.5, 0F, 0F)
+        override fun getRegionOrigin(parcel: ParcelId): Vec2i {
+            checkParcelId(parcel)
+            return Vec2i(
+                sectionSize * (parcel.x - 1) + pathOffset + o.offsetX,
+                sectionSize * (parcel.z - 1) + pathOffset + o.offsetZ
+            )
         }
 
         override fun getRegion(parcel: ParcelId): Region {
-            val bottom = getBottomBlock(parcel)
+            val origin = getRegionOrigin(parcel)
             return Region(
-                Vec3i(bottom.x, 0, bottom.z),
+                Vec3i(origin.x, 0, origin.z),
                 Vec3i(o.parcelSize, maxHeight, o.parcelSize)
             )
         }
 
-        private fun getRegionConsideringWorld(parcel: ParcelId): Region {
-            if (parcel.worldId != worldId) {
-                (parcel.worldId as? ParcelWorld)?.let {
-                    return it.blockManager.getRegion(parcel)
-                }
-                throw IllegalArgumentException()
-            }
-            return getRegion(parcel)
+        override fun getHomeLocation(parcel: ParcelId): Location {
+            val origin = getRegionOrigin(parcel)
+            val x = origin.x + (o.parcelSize - 1) / 2.0
+            val z = origin.z - 2
+            return Location(world, x + 0.5, o.floorHeight + 1.0, z + 0.5, 0F, 0F)
         }
 
-        override fun setOwnerBlock(parcel: ParcelId, owner: PlayerProfile?) {
-            val b = getBottomBlock(parcel)
+        override fun getParcelForInfoBlockInteraction(block: Vec3i, type: Material, face: BlockFace): Parcel? {
+            if (block.y != o.floorHeight + 1) return null
+
+            val expectedParcelOrigin = when (type) {
+                Material.WALL_SIGN -> Vec2i(block.x + 1, block.z + 2)
+                o.wallType.material, cornerWallType?.material -> {
+                    if (face != BlockFace.NORTH || world[block + Vec3i.convert(BlockFace.NORTH)].type == Material.WALL_SIGN) {
+                        return null
+                    }
+
+                    Vec2i(block.x + 1, block.z + 1)
+                }
+                else -> return null
+            }
+
+            return getParcelAt(expectedParcelOrigin.x, expectedParcelOrigin.z)
+                ?.takeIf { expectedParcelOrigin == getRegionOrigin(it.id) }
+                ?.also { parcel ->
+                    if (type != Material.WALL_SIGN && parcel.owner != null) {
+                        updateParcelInfo(parcel.id, parcel.owner)
+                        parcel.isOwnerSignOutdated = false
+                    }
+                }
+        }
+
+        override fun isParcelInfoSectionLoaded(parcel: ParcelId): Boolean {
+            val wallBlockChunk = getRegionOrigin(parcel).add(-1, -1).toChunk()
+            return world.isChunkLoaded(wallBlockChunk.x, wallBlockChunk.z)
+        }
+
+        override fun updateParcelInfo(parcel: ParcelId, owner: PlayerProfile?) {
+            val b = getRegionOrigin(parcel)
 
             val wallBlock = world.getBlockAt(b.x - 1, o.floorHeight + 1, b.z - 1)
-            val signBlock = world.getBlockAt(b.x - 2, o.floorHeight + 1, b.z - 1)
+            val signBlock = world.getBlockAt(b.x - 1, o.floorHeight + 1, b.z - 2)
             val skullBlock = world.getBlockAt(b.x - 1, o.floorHeight + 2, b.z - 1)
 
             if (owner == null) {
                 wallBlock.blockData = o.wallType
                 signBlock.type = Material.AIR
                 skullBlock.type = Material.AIR
+
             } else {
-
-                val wallBlockType: BlockData = if (o.wallType is Slab)
-                    (o.wallType.clone() as Slab).apply { type = Slab.Type.DOUBLE }
-                else
-                    o.wallType
-
-                wallBlock.blockData = wallBlockType
+                cornerWallType?.let { wallBlock.blockData = it }
                 signBlock.blockData = (Bukkit.createBlockData(Material.WALL_SIGN) as WallSign).apply { facing = BlockFace.NORTH }
 
                 val sign = signBlock.state as org.bukkit.block.Sign
                 sign.setLine(0, "${parcel.x},${parcel.z}")
-                sign.setLine(2, owner.name)
+                sign.setLine(2, owner.name ?: "")
                 sign.update()
 
+                skullBlock.type = Material.AIR
                 skullBlock.type = Material.PLAYER_HEAD
                 val skull = skullBlock.state as Skull
                 if (owner is PlayerProfile.Real) {
                     skull.owningPlayer = Bukkit.getOfflinePlayer(owner.uuid)
-                } else {
-                    skull.owner = owner.name
+
+                } else if (!skull.setOwner(owner.name)) {
+                    skullBlock.type = Material.AIR
+                    return
                 }
-                skull.rotation = BlockFace.WEST
+
+                skull.rotation = BlockFace.SOUTH
                 skull.update()
             }
         }
 
-        private fun getParcel(parcelId: ParcelId): Parcel? {
-            // todo dont rely on this cast
-            val world = worldId as? ParcelWorld ?: return null
-            return world.getParcelById(parcelId)
+        private fun trySubmitBlockVisitor(vararg parcels: ParcelId, function: JobFunction): Job? {
+            parcels.forEach { checkParcelId(it) }
+            return parcelProvider.trySubmitBlockVisitor(Permit(), parcels, function)
         }
 
-        override fun submitBlockVisitor(vararg parcelIds: ParcelId, task: JobFunction): Job {
-            val parcels = parcelIds.mapNotNull { getParcel(it) }
-            if (parcels.isEmpty()) return jobDispatcher.dispatch(task)
-            if (parcels.any { it.hasBlockVisitors }) throw IllegalArgumentException("This parcel already has a block visitor")
-
-            val worker = jobDispatcher.dispatch(task)
-
-            for (parcel in parcels) {
-                launch(start = UNDISPATCHED) {
-                    parcel.withBlockVisitorPermit {
-                        worker.awaitCompletion()
-                    }
-                }
-            }
-
-            return worker
-        }
-
-        override fun setBiome(parcel: ParcelId, biome: Biome): Job = submitBlockVisitor(parcel) {
+        override fun setBiome(parcel: ParcelId, biome: Biome) = trySubmitBlockVisitor(checkParcelId(parcel)) {
             val world = world
-            val b = getBottomBlock(parcel)
+            val b = getRegionOrigin(parcel)
             val parcelSize = o.parcelSize
             for (x in b.x until b.x + parcelSize) {
                 for (z in b.z until b.z + parcelSize) {
@@ -267,7 +275,7 @@ class DefaultParcelGenerator(
             }
         }
 
-        override fun clearParcel(parcel: ParcelId): Job = submitBlockVisitor(parcel) {
+        override fun clearParcel(parcel: ParcelId) = trySubmitBlockVisitor(checkParcelId(parcel)) {
             val region = getRegion(parcel)
             val blocks = parcelTraverser.traverseRegion(region)
             val blockCount = region.blockCount.toDouble()
@@ -289,22 +297,6 @@ class DefaultParcelGenerator(
                 world[vec].blockData = blockType
                 setProgress((index + 1) / blockCount)
             }
-        }
-
-        override fun swapParcels(parcel1: ParcelId, parcel2: ParcelId): Job = submitBlockVisitor(parcel1, parcel2) {
-            var region1 = getRegionConsideringWorld(parcel1)
-            var region2 = getRegionConsideringWorld(parcel2)
-
-            val size = region1.size.clampMax(region2.size)
-            if (size != region1.size) {
-                region1 = region1.withSize(size)
-                region2 = region2.withSize(size)
-            }
-
-            val schematicOf1 = delegateWork(0.25) { Schematic().apply { load(world, region1) } }
-            val schematicOf2 = delegateWork(0.25) { Schematic().apply { load(world, region2) } }
-            delegateWork(0.25) { with(schematicOf1) { paste(world, region2.origin) } }
-            delegateWork(0.25) { with(schematicOf2) { paste(world, region1.origin) } }
         }
 
         override fun getParcelsWithOwnerBlockIn(chunk: Chunk): Collection<Vec2i> {

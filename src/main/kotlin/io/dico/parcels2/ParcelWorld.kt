@@ -9,7 +9,10 @@ import org.bukkit.World
 import org.bukkit.block.Block
 import org.bukkit.entity.Entity
 import org.joda.time.DateTime
+import java.lang.IllegalStateException
 import java.util.UUID
+
+class Permit
 
 interface ParcelProvider {
     val worlds: Map<String, ParcelWorld>
@@ -43,6 +46,15 @@ interface ParcelProvider {
     fun getWorldGenerator(worldName: String): ParcelGenerator?
 
     fun loadWorlds()
+
+    fun acquireBlockVisitorPermit(parcelId: ParcelId, with: Permit): Boolean
+
+    @Throws(IllegalStateException::class)
+    fun releaseBlockVisitorPermit(parcelId: ParcelId, with: Permit)
+
+    fun trySubmitBlockVisitor(permit: Permit, parcelIds: Array<out ParcelId>, function: JobFunction): Job?
+
+    fun swapParcels(parcelId1: ParcelId, parcelId2: ParcelId): Job?
 }
 
 interface ParcelLocator {
@@ -69,7 +81,7 @@ interface ParcelContainer {
 
     fun getParcelById(id: Vec2i): Parcel? = getParcelById(id.x, id.z)
 
-    fun getParcelById(id: ParcelId): Parcel? = getParcelById(id.x, id.z)
+    fun getParcelById(id: ParcelId): Parcel?
 
     fun nextEmptyParcel(): Parcel?
 
@@ -88,5 +100,4 @@ interface ParcelWorld : ParcelLocator, ParcelContainer {
     val globalPrivileges: GlobalPrivilegesManager
 
     val creationTime: DateTime?
-
 }

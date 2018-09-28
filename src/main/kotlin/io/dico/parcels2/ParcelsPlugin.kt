@@ -3,8 +3,6 @@ package io.dico.parcels2
 import io.dico.dicore.Registrator
 import io.dico.dicore.command.EOverridePolicy
 import io.dico.dicore.command.ICommandDispatcher
-import io.dico.parcels2.blockvisitor.BukkitJobDispatcher
-import io.dico.parcels2.blockvisitor.JobDispatcher
 import io.dico.parcels2.command.getParcelCommands
 import io.dico.parcels2.defaultimpl.GlobalPrivilegesManagerImpl
 import io.dico.parcels2.defaultimpl.ParcelProviderImpl
@@ -17,6 +15,7 @@ import io.dico.parcels2.storage.Storage
 import io.dico.parcels2.util.MainThreadDispatcher
 import io.dico.parcels2.util.PluginScheduler
 import io.dico.parcels2.util.ext.tryCreate
+import io.dico.parcels2.util.isServerThread
 import kotlinx.coroutines.CoroutineScope
 import org.bukkit.Bukkit
 import org.bukkit.generator.ChunkGenerator
@@ -47,6 +46,7 @@ class ParcelsPlugin : JavaPlugin(), CoroutineScope, PluginScheduler {
     val jobDispatcher: JobDispatcher by lazy { BukkitJobDispatcher(this, options.tickJobtime) }
 
     override fun onEnable() {
+        plogger.info("Is server thread: ${isServerThread()}")
         plogger.info("Debug enabled: ${plogger.isDebugEnabled}")
         plogger.debug(System.getProperty("user.dir"))
         if (!init()) {

@@ -2,16 +2,13 @@ package io.dico.parcels2.listener
 
 import gnu.trove.TLongCollection
 import gnu.trove.set.hash.TLongHashSet
+import io.dico.dicore.Formatting
 import io.dico.dicore.ListenerMarker
 import io.dico.dicore.RegistratorListener
 import io.dico.parcels2.*
 import io.dico.parcels2.storage.Storage
 import io.dico.parcels2.util.ext.*
-import io.dico.parcels2.util.math.Dimension
-import io.dico.parcels2.util.math.Vec3d
-import io.dico.parcels2.util.math.Vec3i
-import io.dico.parcels2.util.math.clampMax
-import io.dico.parcels2.util.math.clampMin
+import io.dico.parcels2.util.math.*
 import org.bukkit.Location
 import org.bukkit.Material.*
 import org.bukkit.World
@@ -128,6 +125,8 @@ class ParcelListeners(
         if (!canBuildOnArea(event.player, area)) {
             event.isCancelled = true
         }
+
+        area?.updateOwnerSign()
     }
 
     /*
@@ -253,10 +252,15 @@ class ParcelListeners(
                     }
                 }
 
-                onPlayerInteractEvent_RightClick(event, world, parcel)
+                onPlayerRightClick(event, world, parcel)
+
+                if (!event.isCancelled && parcel == null) {
+                    world.blockManager.getParcelForInfoBlockInteraction(Vec3i(clickedBlock), type, event.blockFace)
+                        ?.apply { user.sendMessage(Formatting.GREEN + infoString) }
+                }
             }
 
-            Action.RIGHT_CLICK_AIR -> onPlayerInteractEvent_RightClick(event, world, parcel)
+            Action.RIGHT_CLICK_AIR -> onPlayerRightClick(event, world, parcel)
             Action.PHYSICAL -> if (!canBuildOnArea(user, parcel) && !(parcel != null && parcel.interactableConfig("pressure_plates"))) {
                 user.sendParcelMessage(nopermit = true, message = "You cannot use inputs in this parcel")
                 event.isCancelled = true; return@l
@@ -265,7 +269,7 @@ class ParcelListeners(
     }
 
     @Suppress("NON_EXHAUSTIVE_WHEN")
-    private fun onPlayerInteractEvent_RightClick(event: PlayerInteractEvent, world: ParcelWorld, parcel: Parcel?) {
+    private fun onPlayerRightClick(event: PlayerInteractEvent, world: ParcelWorld, parcel: Parcel?) {
         if (event.hasItem()) {
             val item = event.item.type
             if (world.options.blockedItems.contains(item)) {
@@ -275,7 +279,9 @@ class ParcelListeners(
 
             if (!canBuildOnArea(event.player, parcel)) {
                 when (item) {
-                    LAVA_BUCKET, WATER_BUCKET, BUCKET, FLINT_AND_STEEL -> event.isCancelled = true
+                    LAVA_BUCKET, WATER_BUCKET, BUCKET, FLINT_AND_STEEL -> {
+                        event.isCancelled = true
+                    }
                 }
             }
         }
@@ -614,9 +620,9 @@ class ParcelListeners(
         if (parcels.isEmpty()) return@l
 
         parcels.forEach { id ->
-            val parcel = world.getParcelById(id)?.takeIf { it.ownerSignOutdated } ?: return@forEach
-            world.blockManager.setOwnerBlock(parcel.id, parcel.owner)
-            parcel.ownerSignOutdated = false
+            val parcel = world.getParcelById(id)?.takeIf { it.isOwnerSignOutdated } ?: return@forEach
+            world.blockManager.updateParcelInfo(parcel.id, parcel.owner)
+            parcel.isOwnerSignOutdated = false
         }
 
     }
