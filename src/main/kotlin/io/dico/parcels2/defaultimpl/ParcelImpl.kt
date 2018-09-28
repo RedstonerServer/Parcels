@@ -26,20 +26,10 @@ class ParcelImpl (
         }
 
         val ownerChanged = owner != newData.owner
-        if (ownerChanged) {
-            updateOwnerSign(true, false, true)
-        }
-
-
-        val ownerSignWasOutdated = if (callerIsDatabase) newData.isOwnerSignOutdated else isOwnerSignOutdated
-        val ownerChanged = owner != newData.owner
-
         data = newData
 
-        if (ownerChanged && isServerThread()) {
-            updateOwnerSign(true, false, updateDatabase = callerIsDatabase)
-        } else {
-            newData.isOwnerSignOutdated = ownerChanged || ownerSignWasOutdated
+        if (ownerChanged) {
+            updateOwnerSign(true, false, false)
         }
 
         world.storage.setParcelData(this, data)
