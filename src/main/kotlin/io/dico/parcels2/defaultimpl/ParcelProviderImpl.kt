@@ -50,7 +50,7 @@ class ParcelProviderImpl(val plugin: ParcelsPlugin) : ParcelProvider {
             return
         }
 
-        val newlyCreatedWorlds = mutableListOf<ParcelWorld>()
+        //val newlyCreatedWorlds = mutableListOf<ParcelWorld>()
         for ((worldName, worldOptions) in options.worlds.entries) {
             var parcelWorld = _worlds[worldName]
             if (parcelWorld != null) continue
@@ -70,7 +70,7 @@ class ParcelProviderImpl(val plugin: ParcelsPlugin) : ParcelProvider {
                 val time = DateTime.now()
                 plugin.storage.setWorldCreationTime(parcelWorld.id, time)
                 parcelWorld.creationTime = time
-                newlyCreatedWorlds.add(parcelWorld)
+                //newlyCreatedWorlds.add(parcelWorld)
             } else {
                 GlobalScope.launch(context = Dispatchers.Unconfined) {
                     parcelWorld.creationTime = plugin.storage.getWorldCreationTime(parcelWorld.id).await() ?: DateTime.now()
@@ -80,10 +80,10 @@ class ParcelProviderImpl(val plugin: ParcelsPlugin) : ParcelProvider {
             _worlds[worldName] = parcelWorld
         }
 
-        loadStoredData(newlyCreatedWorlds.toSet())
+        loadStoredData()
     }
 
-    private fun loadStoredData(newlyCreatedWorlds: Collection<ParcelWorld> = emptyList()) {
+    private fun loadStoredData() {
         plugin.launch(Dispatchers.Default) {
             val migration = plugin.options.migration
             if (migration.enabled) {
@@ -105,8 +105,9 @@ class ParcelProviderImpl(val plugin: ParcelsPlugin) : ParcelProvider {
                 val channel = plugin.storage.transmitAllParcelData()
                 while (true) {
                     val (id, data) = channel.receiveOrNull() ?: break
+                    if (data == null) continue
                     val parcel = getParcelById(id) ?: continue
-                    data?.let { parcel.copyData(it, callerIsDatabase = true) }
+                    parcel.copyData(data, callerIsDatabase = true)
                 }
             }
 
