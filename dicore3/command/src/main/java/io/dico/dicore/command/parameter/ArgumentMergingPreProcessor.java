@@ -11,39 +11,44 @@ public class ArgumentMergingPreProcessor implements IArgumentPreProcessor {
     }
 
     @Override
-    public String[] process(int argStart, String[] args) {
-        if (!(0 <= argStart && argStart <= args.length)) {
-            throw new IndexOutOfBoundsException();
-        }
-
-        Parser parser = new Parser(argStart, args.clone());
-        return parser.doProcess();
+    public ArgumentBuffer process(ArgumentBuffer buffer, int count) {
+        Parser parser = new Parser(buffer.getArray().clone(), buffer.getCursor(), count);
+        String[] array = parser.doProcess();
+        ArgumentBuffer result = new ArgumentBuffer(array);
+        parser.updateBuffer(result);
+        return result;
     }
 
     private class Parser {
-        private final int argStart;
         private final String[] args;
+        private final int start;
+        private final int count;
 
+        private int foundSectionCount;
         private int currentIndex;
         private int sectionStart;
         private char closingToken;
         private int sectionEnd;
         private int removeCount;
 
-        Parser(int argStart, String[] args) {
-            this.argStart = argStart;
+        Parser(String[] args, int start, int count) {
+            this.start = start;
             this.args = args;
+            this.count = count;
         }
 
         private void reset() {
-            removeCount = 0;
-            closingToken = 0;
+            foundSectionCount = 0;
+            currentIndex = start;
             sectionStart = -1;
+            closingToken = 0;
             sectionEnd = -1;
-            currentIndex = argStart;
+            removeCount = 0;
         }
 
         private boolean findNextSectionStart() {
+            if (count >= 0 && foundSectionCount >= count) return false;
+
             while (currentIndex < args.length) {
                 String arg = args[currentIndex];
                 if (arg == null) {
@@ -127,9 +132,11 @@ public class ArgumentMergingPreProcessor implements IArgumentPreProcessor {
 
             sectionStart = -1;
             sectionEnd = -1;
+
+            ++foundSectionCount;
         }
 
-        public String[] doProcess() {
+        String[] doProcess() {
             reset();
 
             while (findNextSectionStart()) {
@@ -153,6 +160,14 @@ public class ArgumentMergingPreProcessor implements IArgumentPreProcessor {
             }
 
             return result;
+        }
+
+        void updateBuffer(ArgumentBuffer buffer) {
+            if (count < 0) {
+                buffer.setCursor(start);
+            } else {
+                buffer.setCursor(currentIndex);
+            }
         }
 
     }

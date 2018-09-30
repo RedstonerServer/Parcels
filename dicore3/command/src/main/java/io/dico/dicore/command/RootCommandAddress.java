@@ -85,7 +85,8 @@ public class RootCommandAddress extends ModifiableCommandAddress implements ICom
         }
     }
 
-    private static void registerMember(Map<String, org.bukkit.command.Command> map, String key, org.bukkit.command.Command value, boolean override) {
+    private static void registerMember(Map<String, org.bukkit.command.Command> map,
+                                       String key, org.bukkit.command.Command value, boolean override) {
         if (override) {
             map.put(key, value);
         } else {
@@ -147,15 +148,25 @@ public class RootCommandAddress extends ModifiableCommandAddress implements ICom
         ModifiableCommandAddress cur = this;
         ChildCommandAddress child;
         while (buffer.hasNext()) {
-            child = cur.getChild(buffer.next(), context);
+            int cursor = buffer.getCursor();
+
+            child = cur.getChild(context, buffer);
+
             if (child == null
+                || (context.isTabComplete() && !buffer.hasNext())
                 || (child.hasCommand() && !child.getCommand().isVisibleTo(sender))
                 || (cur.hasCommand() && cur.getCommand().takePrecedenceOverSubcommand(buffer.peekPrevious(), buffer.getUnaffectingCopy()))) {
-                buffer.rewind();
+                buffer.setCursor(cursor);
                 break;
             }
 
             cur = child;
+
+            context.setAddress(child);
+            if (child.hasCommand() && child.isCommandTrailing()) {
+                child.getCommand().initializeAndFilterContext(context);
+                child.getCommand().execute(context.getSender(), context);
+            }
         }
 
         return cur;
@@ -173,7 +184,7 @@ public class RootCommandAddress extends ModifiableCommandAddress implements ICom
 
     @Override
     public boolean dispatchCommand(CommandSender sender, ArgumentBuffer buffer) {
-        ExecutionContext context = new ExecutionContext(sender, false);
+        ExecutionContext context = new ExecutionContext(sender, buffer, false);
 
         ModifiableCommandAddress targetAddress = null;
 
@@ -189,8 +200,15 @@ public class RootCommandAddress extends ModifiableCommandAddress implements ICom
                 }
             }
 
-            context.targetAcquired(targetAddress, target, buffer);
-            target.executeWithContext(context);
+            context.setCommand(target);
+
+            if (!targetAddress.isCommandTrailing()) {
+                target.initializeAndFilterContext(context);
+                String message = target.execute(sender, context);
+                if (message != null && !message.isEmpty()) {
+                    context.sendMessage(EMessageType.RESULT, message);
+                }
+            }
 
         } catch (Throwable t) {
             if (targetAddress == null) {
@@ -214,15 +232,16 @@ public class RootCommandAddress extends ModifiableCommandAddress implements ICom
 
     @Override
     public List<String> getTabCompletions(CommandSender sender, Location location, ArgumentBuffer buffer) {
-        ExecutionContext context = new ExecutionContext(sender, true);
+        ExecutionContext context = new ExecutionContext(sender, buffer, true);
 
         try {
             ICommandAddress target = getCommandTarget(context, buffer);
 
             List<String> out;
             if (target.hasCommand()) {
-                context.targetAcquired(target, target.getCommand(), buffer);
-                out = target.getCommand().tabCompleteWithContext(context, location);
+                context.setCommand(target.getCommand());
+                target.getCommand().initializeAndFilterContext(context);
+                out = target.getCommand().tabComplete(sender, context, location);
             } else {
                 out = Collections.emptyList();
             }

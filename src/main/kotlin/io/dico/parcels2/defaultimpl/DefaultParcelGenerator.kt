@@ -279,7 +279,6 @@ class DefaultParcelGenerator(
             val region = getRegion(parcel)
             val blocks = parcelTraverser.traverseRegion(region)
             val blockCount = region.blockCount.toDouble()
-
             val world = world
             val floorHeight = o.floorHeight
             val airType = airType

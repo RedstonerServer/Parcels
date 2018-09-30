@@ -19,7 +19,7 @@ public class HelpComponentInserter extends HelpTopicModifier {
 
     @Override
     protected List<IHelpComponent> modify(List<IHelpComponent> components, ICommandAddress target, Permissible viewer, ExecutionContext context) {
-        int componentCount = components.size();
+        // int componentCount = components.size();
 
         for (int i = insertions.size() - 1; i >= 0; i--) {
             IInsertion insertion = insertions.get(i);

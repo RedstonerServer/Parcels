@@ -3,19 +3,26 @@ package io.dico.dicore.command.parameter;
 /**
  * An interface to process tokens such as quotes
  */
+@Deprecated
 public interface IArgumentPreProcessor {
 
     /**
-     * Preprocess the arguments without modifying the array.
-     * Might return the same array (in which case no changes were made).
+     * Preprocess the arguments contained within the given ArgumentBuffer.
+     * If no changes are made, this might return the same buffer.
+     * Any arguments preceding {@code buffer.getCursor()} will not be affected.
      *
-     * @param argStart the index within the array where the given arguments start (the part before that identifies the command)
-     * @param args     the arguments
+     * <p>
+     *     If {@code count} is non-negative, it declares a limit on the number of arguments after preprocessing.
+     *     In that case, the buffer's cursor is set to the index of the first argument following processed arguments.
+     * </p>
+     *
+     * @param buffer  the argument buffer
+     * @param count the maximum number of (processed) arguments
      * @return the arguments after preprocessing
      */
-    String[] process(int argStart, String[] args);
+    ArgumentBuffer process(ArgumentBuffer buffer, int count);
 
-    IArgumentPreProcessor NONE = (argStart, args) -> args;
+    IArgumentPreProcessor NONE = (buffer, count) -> buffer;
 
     /**
      * Get an IArgumentPreProcessor that merges arguments between any two tokens
@@ -31,3 +38,4 @@ public interface IArgumentPreProcessor {
     }
 
 }
+

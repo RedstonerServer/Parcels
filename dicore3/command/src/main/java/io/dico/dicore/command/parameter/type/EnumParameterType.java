@@ -20,7 +20,8 @@ public class EnumParameterType<E extends Enum> extends SimpleParameterType<E, Vo
         }
     }
 
-    @Override protected E parse(Parameter<E, Void> parameter, CommandSender sender, String input) throws CommandException {
+    @Override
+    protected E parse(Parameter<E, Void> parameter, CommandSender sender, String input) throws CommandException {
         for (E constant : universe) {
             if (constant.name().equalsIgnoreCase(input)) {
                 return constant;
@@ -30,7 +31,8 @@ public class EnumParameterType<E extends Enum> extends SimpleParameterType<E, Vo
         throw CommandException.invalidArgument(parameter.getName(), "the enum value does not exist");
     }
 
-    @Override public List<String> complete(Parameter<E, Void> parameter, CommandSender sender, Location location, ArgumentBuffer buffer) {
+    @Override
+    public List<String> complete(Parameter<E, Void> parameter, CommandSender sender, Location location, ArgumentBuffer buffer) {
         String input = buffer.next().toUpperCase();
         List<String> result = new ArrayList<>();
         for (E constant : universe) {

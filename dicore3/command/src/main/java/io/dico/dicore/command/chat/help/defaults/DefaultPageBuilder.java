@@ -13,7 +13,8 @@ import java.util.ListIterator;
 public class DefaultPageBuilder implements IPageBuilder {
 
     @Override
-    public String getPage(List<IHelpTopic> helpTopics, IPageLayout pageLayout, ICommandAddress target, Permissible viewer, ExecutionContext context, int pageNum, int pageLen) {
+    public String getPage(List<IHelpTopic> helpTopics, IPageLayout pageLayout, ICommandAddress target,
+                          Permissible viewer, ExecutionContext context, int pageNum, int pageLen) {
         if (pageLen <= 0 || pageNum < 0) {
             throw new IllegalArgumentException();
         }

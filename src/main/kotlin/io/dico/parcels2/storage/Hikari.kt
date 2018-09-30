@@ -32,7 +32,7 @@ fun getHikariConfig(dialectName: String,
     username = dco.username
     password = dco.password
     connectionTimeout = 15000
-    leakDetectionThreshold = 30000
+    leakDetectionThreshold = 10000
     connectionTestQuery = "SELECT 1"
 
 

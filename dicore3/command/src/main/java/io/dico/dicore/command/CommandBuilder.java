@@ -265,8 +265,17 @@ public final class CommandBuilder {
      * @return this
      * @throws IllegalStateException if the current group has no command
      */
-    public CommandBuilder addRequiredPermission(String permission) {
+    public CommandBuilder addPermission(String permission) {
         return addContextFilter(IContextFilter.permission(permission));
+    }
+
+    /**
+     * Add a required permission to the command of the current group, which can be inherited
+     * @return this
+     * @throws IllegalStateException if the current group has no command
+     */
+    public CommandBuilder addInheritablePermission(String permission) {
+        return addContextFilter(IContextFilter.inheritablePermission(permission));
     }
 
     /**

@@ -17,27 +17,32 @@ import java.util.*;
  * It is also responsible for keeping track of the parameter to complete in the case of a tab completion.
  */
 public class ExecutionContext {
-    private CommandSender sender;
+    // Sender of the command
+    private final CommandSender sender;
+    // Address while parsing parameters with ContextParser
     private ICommandAddress address;
+    // Command to execute
     private Command command;
-    private ArgumentBuffer originalBuffer;
-    private ArgumentBuffer processedBuffer;
+    // if this flag is set, this execution is only for completion purposes.
+    private boolean tabComplete;
+
+    private final ArgumentBuffer buffer;
+    // private ArgumentBuffer processedBuffer;
 
     // caches the buffer's cursor before parsing. This is needed to provide the original input of the player.
     private int cursorStart;
 
     // when the context starts parsing parameters, this flag is set, and any subsequent calls to #parseParameters() throw an IllegalStateException.
-    private boolean attemptedToParse;
+    //private boolean attemptedToParse;
 
 
     // The parsed parameter values, mapped by parameter name.
     // This also includes default values. All parameters from the parameter list are present if parsing was successful.
-    private Map<String, Object> parameterValueMap;
+    private Map<String, Object> parameterValueMap = new HashMap<>();
     // this set contains the names of the parameters that were present in the command, and not given a default value.
-    private Set<String> parsedParameters;
+    private Set<String> parsedParameters = new HashSet<>();
 
-    // if this flag is set, this execution is only for completion purposes.
-    private boolean tabComplete;
+
     // these fields store information required to provide completions.
     // the parameter to complete is the parameter that threw an exception when it was parsing.
     // the exception's message was discarded because it is a completion.
@@ -48,37 +53,11 @@ public class ExecutionContext {
     // if this flag is set, any messages sent through the sendMessage methods are discarded.
     private boolean muted;
 
-    public ExecutionContext(CommandSender sender, boolean tabComplete) {
+    public ExecutionContext(CommandSender sender, ArgumentBuffer buffer, boolean tabComplete) {
         this.sender = Objects.requireNonNull(sender);
+        this.buffer = Objects.requireNonNull(buffer);
         this.muted = tabComplete;
         this.tabComplete = tabComplete;
-    }
-
-    /**
-     * Construct an execution context that is ready to parse the parameter values.
-     *
-     * @param sender      the sender
-     * @param address     the address
-     * @param buffer      the arguments
-     * @param tabComplete true if this execution is a tab-completion
-     */
-    public ExecutionContext(CommandSender sender, ICommandAddress address, Command command, ArgumentBuffer buffer, boolean tabComplete) {
-        this(sender, tabComplete);
-        targetAcquired(address, command, buffer);
-    }
-
-    void requireAddressPresent(boolean present) {
-        //noinspection DoubleNegation
-        if ((address != null) != present) {
-            throw new IllegalStateException();
-        }
-    }
-
-    void targetAcquired(ICommandAddress address, Command command, ArgumentBuffer buffer) {
-        requireAddressPresent(false);
-
-        this.address = Objects.requireNonNull(address);
-        this.command = Objects.requireNonNull(command);
 
         // If its tab completing, keep the empty element that might be at the end of the buffer
         // due to a space at the end of the command.
@@ -86,65 +65,21 @@ public class ExecutionContext {
         if (!tabComplete) {
             buffer.dropTrailingEmptyElements();
         }
-
-        this.originalBuffer = buffer;
-        this.processedBuffer = buffer.preprocessArguments(getParameterList().getArgumentPreProcessor());
-        this.cursorStart = buffer.getCursor();
     }
 
     /**
-     * Parse the parameters. If no exception is thrown, they were parsed successfully, and the command may continue post-parameter execution.
+     * Construct an execution context that is ready to parse the parameter values.
      *
-     * @throws CommandException if an error occurs while parsing the parameters.
+     * @param sender      the sender
+     * @param address     the address
+     * @param command     the command
+     * @param buffer      the arguments
+     * @param tabComplete true if this execution is a tab-completion
      */
-    synchronized void parseParameters() throws CommandException {
-        requireAddressPresent(true);
-        if (attemptedToParse) {
-            throw new IllegalStateException();
-        }
-
-        attemptedToParse = true;
-
-        ContextParser parser = new ContextParser(this);
-
-        parameterValueMap = parser.getValueMap();
-        parsedParameters = parser.getParsedKeys();
-
-        parser.parse();
-    }
-
-
-    /**
-     * Attempts to parse parameters, without throwing an exception or sending any message.
-     * This method is typically used by tab completions.
-     * After calling this method, the context is ready to provide completions.
-     */
-    synchronized void parseParametersQuietly() {
-        requireAddressPresent(true);
-        if (attemptedToParse) {
-            throw new IllegalStateException();
-        }
-
-        attemptedToParse = true;
-
-        boolean before = muted;
-        muted = true;
-        try {
-            ContextParser parser = new ContextParser(this);
-
-            parameterValueMap = parser.getValueMap();
-            parsedParameters = parser.getParsedKeys();
-
-            parser.parse();
-
-            parameterToComplete = parser.getCompletionTarget();
-            parameterToCompleteCursor = parser.getCompletionCursor();
-
-        } catch (CommandException ignored) {
-
-        } finally {
-            muted = before;
-        }
+    public ExecutionContext(CommandSender sender, ICommandAddress address, Command command, ArgumentBuffer buffer, boolean tabComplete) {
+        this(sender, buffer, tabComplete);
+        setAddress(address);
+        setCommand(command);
     }
 
     /**
@@ -157,12 +92,28 @@ public class ExecutionContext {
     }
 
     /**
+     * @return the buffer of arguments
+     */
+    public ArgumentBuffer getBuffer() {
+        return buffer;
+    }
+
+    /**
      * Command's address
      *
      * @return the command's address
      */
     public ICommandAddress getAddress() {
         return address;
+    }
+
+    /**
+     * Set the address
+     *
+     * @param address the new address
+     */
+    public void setAddress(ICommandAddress address) {
+        this.address = address;
     }
 
     /**
@@ -175,12 +126,59 @@ public class ExecutionContext {
     }
 
     /**
+     * Set the command
+     *
+     * @param command the new command
+     */
+    public void setCommand(Command command) {
+        this.command = command;
+    }
+
+    /**
+     * @return true if this context is for a tab completion.
+     */
+    public boolean isTabComplete() {
+        return tabComplete;
+    }
+
+    /**
+     * @return true if this context is muted.
+     */
+    public boolean isMuted() {
+        return muted;
+    }
+
+    /**
+     * Parse parameters from the given parameter list,
+     * adding their values to the cache of this context.
+     *
+     * @param parameterList the parameterList
+     * @throws CommandException if the arguments are not valid
+     */
+    public void parse(ParameterList parameterList) throws CommandException {
+        cursorStart = buffer.getCursor();
+
+        ContextParser parser = new ContextParser(this, parameterList, parameterValueMap, parsedParameters);
+
+        try {
+            parser.parse();
+        } finally {
+            if (tabComplete) {
+                parameterToComplete = parser.getCompletionTarget();
+                parameterToCompleteCursor = parser.getCompletionCursor();
+            }
+        }
+
+    }
+
+    /**
      * The command's parameter definition.
      *
      * @return the parameter list
      */
+    @Deprecated
     public ParameterList getParameterList() {
-        return command.getParameterList();
+        return null;//command.getParameterList();
     }
 
     /**
@@ -188,8 +186,9 @@ public class ExecutionContext {
      *
      * @return the original buffer
      */
+    @Deprecated
     public ArgumentBuffer getOriginalBuffer() {
-        return originalBuffer;
+        return buffer;
     }
 
     /**
@@ -197,8 +196,9 @@ public class ExecutionContext {
      *
      * @return the argument buffer
      */
+    @Deprecated
     public ArgumentBuffer getProcessedBuffer() {
-        return processedBuffer;
+        return buffer;
     }
 
     /**
@@ -216,7 +216,7 @@ public class ExecutionContext {
      * @return original arguments.
      */
     public String[] getOriginal() {
-        return originalBuffer.getArrayFromIndex(cursorStart);
+        return buffer.getArrayFromIndex(cursorStart);
     }
 
     /**
@@ -225,7 +225,7 @@ public class ExecutionContext {
      * @return the path used to access this address.
      */
     public String[] getRoute() {
-        return Arrays.copyOf(originalBuffer.toArray(), address.getDepth());
+        return Arrays.copyOf(buffer.toArray(), address.getDepth());
     }
 
     public Formatting getFormat(EMessageType type) {
@@ -238,9 +238,16 @@ public class ExecutionContext {
      * @return the full command
      */
     public String getRawInput() {
-        return originalBuffer.getRawInput();
+        return buffer.getRawInput();
     }
 
+    /**
+     * Get the value of the parameter with the given name
+     *
+     * @param name the parameter's name
+     * @param <T> expected type
+     * @return the parsed value or the default value
+     */
     @SuppressWarnings("unchecked")
     public <T> T get(String name) {
         if (!parameterValueMap.containsKey(name)) {
@@ -254,13 +261,21 @@ public class ExecutionContext {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    public <T> T get(int index) {
-        return get(getParameterList().getIndexedParameterName(index));
-    }
-
+    /**
+     * Get the value of the flag with the given name
+     *
+     * @param flag the flag's name, without preceding "-"
+     * @param <T> expected type
+     * @return the parsed value or the default value
+     */
     public <T> T getFlag(String flag) {
         return get("-" + flag);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Deprecated
+    public <T> T get(int index) {
+        return null;//get(getParameterList().getIndexedParameterName(index));
     }
 
     /**
@@ -279,8 +294,9 @@ public class ExecutionContext {
      * @param index the parameter index
      * @return true if it was provided
      */
+    @Deprecated
     public boolean isProvided(int index) {
-        return isProvided(getParameterList().getIndexedParameterName(index));
+        return false;//isProvided(getParameterList().getIndexedParameterName(index));
     }
 
     /**
@@ -294,20 +310,6 @@ public class ExecutionContext {
     }
 
     /**
-     * @return true if this context is muted.
-     */
-    public boolean isMuted() {
-        return muted;
-    }
-
-    /**
-     * @return true if this context is for a tab completion.
-     */
-    public boolean isTabComplete() {
-        return tabComplete;
-    }
-
-    /**
      * Get suggested completions.
      *
      * @param location The location as passed to {link org.bukkit.command.Command#tabComplete(CommandSender, String, String[], Location)}, or null if requested in another way.
@@ -315,18 +317,21 @@ public class ExecutionContext {
      */
     public List<String> getSuggestedCompletions(Location location) {
         if (parameterToComplete != null) {
-            return parameterToComplete.complete(this, location, processedBuffer.getUnaffectingCopy().setCursor(parameterToCompleteCursor));
+            return parameterToComplete.complete(this, location, buffer.getUnaffectingCopy().setCursor(parameterToCompleteCursor));
         }
 
-        ParameterList parameterList = getParameterList();
         List<String> result = new ArrayList<>();
         for (String name : parameterValueMap.keySet()) {
-            if (parameterList.getParameterByName(name).isFlag() && !parsedParameters.contains(name)) {
+            if (name.startsWith("-") && !parsedParameters.contains(name)) {
                 result.add(name);
             }
         }
         return result;
     }
+
+    /*
+    Chat handling
+     */
 
     public void sendMessage(String message) {
         sendMessage(true, message);

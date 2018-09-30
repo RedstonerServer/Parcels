@@ -1,9 +1,8 @@
 package io.dico.parcels2.command
 
-import io.dico.dicore.command.CommandException
-import io.dico.dicore.command.EMessageType
-import io.dico.dicore.command.ExecutionContext
-import io.dico.dicore.command.ICommandReceiver
+import io.dico.dicore.command.*
+import io.dico.dicore.command.registration.reflect.ICommandInterceptor
+import io.dico.dicore.command.registration.reflect.ICommandReceiver
 import io.dico.parcels2.*
 import io.dico.parcels2.PlayerProfile.Real
 import io.dico.parcels2.PlayerProfile.Unresolved
@@ -13,11 +12,14 @@ import org.bukkit.entity.Player
 import org.bukkit.plugin.Plugin
 import java.lang.reflect.Method
 
-abstract class AbstractParcelCommands(val plugin: ParcelsPlugin) : ICommandReceiver.Factory {
-    override fun getPlugin(): Plugin = plugin
+abstract class AbstractParcelCommands(val plugin: ParcelsPlugin) : ICommandInterceptor {
 
     override fun getReceiver(context: ExecutionContext, target: Method, cmdName: String): ICommandReceiver {
         return getParcelCommandReceiver(plugin.parcelProvider, context, target, cmdName)
+    }
+
+    override fun getCoroutineContext(context: ExecutionContext?, target: Method?, cmdName: String?): Any {
+        return plugin.coroutineContext
     }
 
     protected fun checkConnected(action: String) {
@@ -57,8 +59,6 @@ abstract class AbstractParcelCommands(val plugin: ParcelsPlugin) : ICommandRecei
                     .format(progress * 100, elapsedTime / 1000.0)
             )
         }
-
-    override fun getCoroutineContext() = plugin.coroutineContext
 }
 
 fun err(message: String): Nothing = throw CommandException(message)

@@ -1,5 +1,6 @@
 package io.dico.dicore.command;
 
+import java.util.List;
 import java.util.Objects;
 
 public class PermissionContextFilter implements IContextFilter {
@@ -105,5 +106,31 @@ public class PermissionContextFilter implements IContextFilter {
     public String getFailMessage() {
         return failMessage;
     }
+
+    /*
+    private fun getPermissionsOf(address: ICommandAddress) = getPermissionsOf(address, emptyArray(), mutableListOf())
+
+    private fun getPermissionsOf(address: ICommandAddress, path: Array<String>, result: MutableList<String>): List<String> {
+        val command = address.command ?: return result
+
+        var inherited = false
+        for (filter in command.contextFilters) {
+            when (filter) {
+                is PermissionContextFilter -> {
+                    if (path.isEmpty()) result.add(filter.permission)
+                    else if (filter.isInheritable) result.add(filter.getInheritedPermission(path))
+                }
+                is InheritingContextFilter -> {
+                    if (filter.priority == PERMISSION && address.hasParent() && !inherited) {
+                        inherited = true
+                        getPermissionsOf(address.parent, arrayOf(address.mainKey, *path), result)
+                    }
+                }
+            }
+        }
+
+        return result
+    }
+     */
 
 }

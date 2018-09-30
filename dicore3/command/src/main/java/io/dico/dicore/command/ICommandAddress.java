@@ -2,6 +2,7 @@ package io.dico.dicore.command;
 
 import io.dico.dicore.command.chat.IChatHandler;
 import io.dico.dicore.command.parameter.ArgumentBuffer;
+import io.dico.dicore.command.parameter.ParameterList;
 import io.dico.dicore.command.predef.PredefinedCommand;
 import org.bukkit.command.CommandSender;
 
@@ -131,6 +132,16 @@ public interface ICommandAddress {
      * Get an unmodifiable view of the children of this address.
      * Values might be duplicated for aliases.
      *
+     * <p>
+     * To iterate children without duplicates, you can do something like this:
+     * <pre>{@code
+     *     for (String key : address.getChildrenMainKeys()) {
+     *         ICommandAddress child = address.getChild(key);
+     *         // do stuff with child
+     *     }
+     *     }</pre>
+     * </p>
+     *
      * @return the children of this address.
      */
     Map<String, ? extends ICommandAddress> getChildren();
@@ -144,14 +155,19 @@ public interface ICommandAddress {
     ICommandAddress getChild(String key);
 
     /**
-     * Query for a child at the given key, with the given context for reference.
-     * Can be used to override behaviour of the tree.
+     * Query for a child using the given buffer, with the given context for reference.
+     * Can be used to override behaviour of the address tree.
+     * <p>
+     * The default implementation is as follows:
+     * <pre>{@code
+     * return buffer.hasNext() ? getChild(buffer.next()) : null;
+     * }</pre>
      *
-     * @param key the key. The name or alias of a command.
      * @param context context of a command being executed
+     * @param buffer  the buffer. The name or alias of a command.
      * @return the child, or null if it's not found, altered freely by the implementation
      */
-    ICommandAddress getChild(String key, ExecutionContext context) throws CommandException;
+    ICommandAddress getChild(ExecutionContext context, ArgumentBuffer buffer) throws CommandException;
 
     /**
      * Get the command dispatcher for this tree
@@ -164,6 +180,15 @@ public interface ICommandAddress {
      * @return The desired chathandler for use by commands at this address and any sub-addresses, if they define no explicit chat handler.
      */
     IChatHandler getChatHandler();
+
+    /**
+     * Returns if the command attached to this address should be treated as trailing.
+     * A trailing command is executed whenever the address is scanned for children.
+     * Its parameters are parsed and added to the context.
+     *
+     * @return true if the command attached to this address should be treated as trailing.
+     */
+    boolean isCommandTrailing();
 
     static ICommandAddress newChild() {
         return new ChildCommandAddress();

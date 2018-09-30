@@ -13,21 +13,27 @@ public class ContextParser {
     private final Parameter<?, ?> m_repeatedParam;
     private final List<Parameter<?, ?>> m_indexedParams;
     private final int m_maxIndex;
-    private final int m_requiredIndex;
+    private final int m_maxRequiredIndex;
 
-    private Map<String, Object> m_valueMap = new HashMap<>();
-    private Set<String> m_parsedKeys = new HashSet<>();
+    private Map<String, Object> m_valueMap;
+    private Set<String> m_parsedKeys;
     private int m_completionCursor = -1;
     private Parameter<?, ?> m_completionTarget = null;
 
-    public ContextParser(ExecutionContext context) {
-        this.m_context = context;
-        this.m_buffer = context.getProcessedBuffer();
-        this.m_paramList = context.getParameterList();
-        this.m_repeatedParam = m_paramList.getRepeatedParameter();
-        this.m_indexedParams = m_paramList.getIndexedParameters();
-        this.m_maxIndex = m_indexedParams.size() - 1;
-        this.m_requiredIndex = m_paramList.getRequiredCount() - 1;
+    public ContextParser(ExecutionContext context,
+                         ParameterList parameterList,
+                         Map<String, Object> valueMap,
+                         Set<String> keySet) {
+        m_context = context;
+        m_paramList = parameterList;
+        m_valueMap = valueMap;
+        m_parsedKeys = keySet;
+
+        m_buffer = context.getBuffer();
+        m_repeatedParam = m_paramList.getRepeatedParameter();
+        m_indexedParams = m_paramList.getIndexedParameters();
+        m_maxIndex = m_indexedParams.size() - 1;
+        m_maxRequiredIndex = m_paramList.getRequiredCount() - 1;
     }
 
     public ExecutionContext getContext() {
@@ -102,7 +108,7 @@ public class ContextParser {
             m_curParamIndex++;
             m_curParam = m_indexedParams.get(m_curParamIndex);
             prepareRepeatedParameterIfSet();
-            requireInput = m_curParamIndex <= m_requiredIndex;
+            requireInput = m_curParamIndex <= m_maxRequiredIndex;
 
         } else if (m_buffer.hasNext()) {
             throw new CommandException("Too many arguments for /" + m_context.getAddress().getAddress());
@@ -146,7 +152,7 @@ public class ContextParser {
     private void prepareRepeatedParameterIfSet() throws CommandException {
         if (m_curParam != null && m_curParam == m_repeatedParam) {
 
-            if (m_curParam.isFlag() && m_curParamIndex < m_requiredIndex) {
+            if (m_curParam.isFlag() && m_curParamIndex < m_maxRequiredIndex) {
                 Parameter<?, ?> requiredParam = m_indexedParams.get(m_curParamIndex + 1);
                 reportParameterRequired(requiredParam);
             }

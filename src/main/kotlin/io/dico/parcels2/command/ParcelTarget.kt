@@ -91,7 +91,7 @@ sealed class ParcelTarget(val world: ParcelWorld, val parsedKind: Int, val isDef
         ParameterType<ParcelTarget, Int>(ParcelTarget::class.java, TargetKind) {
 
         override fun parse(parameter: Parameter<ParcelTarget, Int>, sender: CommandSender, buffer: ArgumentBuffer): ParcelTarget {
-            var input = buffer.next()
+            var input = buffer.next()!!
             val worldString = input.substringBefore("/", missingDelimiterValue = "")
             input = input.substringAfter("/")
 

@@ -1,6 +1,8 @@
 package io.dico.dicore.command.parameter;
 
 import io.dico.dicore.command.CommandException;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -23,7 +25,7 @@ public class ArgumentBuffer extends AbstractList<String> implements Iterator<Str
         //    // drop the last element of args if it is empty
         //    result = args;
         //} else {
-            result = new String[args.length + 1];
+        result = new String[args.length + 1];
         //}
         System.arraycopy(args, 0, result, 1, result.length - 1);
         result[0] = Objects.requireNonNull(label);
@@ -35,16 +37,21 @@ public class ArgumentBuffer extends AbstractList<String> implements Iterator<Str
      * None of the array its elements should be empty.
      *
      * @param array the array
+     * @throws NullPointerException if the array or any of its elements are null
      */
     public ArgumentBuffer(String[] array) {
-        this.array = Objects.requireNonNull(array);
+        for (String elem : array) {
+            if (elem == null) throw new NullPointerException("ArgumentBuffer array element");
+        }
+        this.array = array;
+
     }
 
     public int getCursor() {
         return cursor;
     }
 
-    public ArgumentBuffer setCursor(int cursor) {
+    public @NotNull ArgumentBuffer setCursor(int cursor) {
         if (cursor <= 0) {
             cursor = 0;
         } else if (size() <= cursor) {
@@ -60,7 +67,7 @@ public class ArgumentBuffer extends AbstractList<String> implements Iterator<Str
     }
 
     @Override
-    public String get(int index) {
+    public @NotNull String get(int index) {
         return array[index];
     }
 
@@ -91,11 +98,11 @@ public class ArgumentBuffer extends AbstractList<String> implements Iterator<Str
      * @return the next value, or null
      */
     @Override
-    public String next() {
+    public @Nullable String next() {
         return hasNext() ? get(cursor++) : null;
     }
 
-    public String requireNext(String parameterName) throws CommandException {
+    public @NotNull String requireNext(String parameterName) throws CommandException {
         String next = next();
         if (next == null) {
             throw CommandException.missingArgument(parameterName);
@@ -104,7 +111,7 @@ public class ArgumentBuffer extends AbstractList<String> implements Iterator<Str
     }
 
     // useful for completion code
-    public String nextOrEmpty() {
+    public @NotNull String nextOrEmpty() {
         return hasNext() ? get(cursor++) : "";
     }
 
@@ -113,62 +120,62 @@ public class ArgumentBuffer extends AbstractList<String> implements Iterator<Str
      *
      * @return the previous value, or null
      */
-    public String previous() {
+    public @Nullable String previous() {
         return hasPrevious() ? get(--cursor) : null;
     }
 
-    public String peekNext() {
+    public @Nullable String peekNext() {
         return hasNext() ? get(cursor) : null;
     }
 
-    public String peekPrevious() {
+    public @Nullable String peekPrevious() {
         return hasPrevious() ? get(cursor - 1) : null;
     }
 
-    public ArgumentBuffer advance() {
+    public @NotNull ArgumentBuffer advance() {
         return advance(1);
     }
 
-    public ArgumentBuffer advance(int amount) {
+    public @NotNull ArgumentBuffer advance(int amount) {
         cursor = Math.min(Math.max(0, cursor + amount), size());
         return this;
     }
 
-    public ArgumentBuffer rewind() {
+    public @NotNull ArgumentBuffer rewind() {
         return rewind(1);
     }
 
-    public ArgumentBuffer rewind(int amount) {
+    public @NotNull ArgumentBuffer rewind(int amount) {
         return advance(-amount);
     }
 
-    String[] getArray() {
+    @NotNull String[] getArray() {
         return array;
     }
 
-    public String[] getArrayFromCursor() {
+    public @NotNull String[] getArrayFromCursor() {
         return getArrayFromIndex(cursor);
     }
 
-    public String[] getArrayFromIndex(int index) {
+    public @NotNull String[] getArrayFromIndex(int index) {
         return Arrays.copyOfRange(array, index, array.length);
     }
 
-    public String getRawInput() {
+    public @NotNull String getRawInput() {
         return String.join(" ", array);
     }
 
-    public String[] toArray() {
+    public @NotNull String[] toArray() {
         return array.clone();
     }
 
     @Override
-    public Iterator<String> iterator() {
+    public @NotNull Iterator<String> iterator() {
         return this;
     }
 
     @Override
-    public ListIterator<String> listIterator() {
+    public @NotNull ListIterator<String> listIterator() {
         return new ListIterator<String>() {
             @Override
             public boolean hasNext() {
@@ -243,13 +250,14 @@ public class ArgumentBuffer extends AbstractList<String> implements Iterator<Str
         }
     }
 
-    public ArgumentBuffer preprocessArguments(IArgumentPreProcessor preProcessor) {
-        String[] array = this.array;
-        // processor shouldn't touch any items prior to the cursor
-        if (array != (array = preProcessor.process(cursor, array))) {
-            return new ArgumentBuffer(array).setCursor(cursor);
-        }
-        return this;
+    /**
+     * Preprocess this argument buffer with the given preprocessor
+     *
+     * @param preProcessor preprocessor
+     * @return a new ArgumentBuffer with processed contents. Might be this buffer if nothing changed.
+     */
+    public @NotNull ArgumentBuffer preprocessArguments(IArgumentPreProcessor preProcessor) {
+        return preProcessor.process(this, -1);
     }
 
     /**
@@ -273,10 +281,15 @@ public class ArgumentBuffer extends AbstractList<String> implements Iterator<Str
     }
 
     @SuppressWarnings("MethodDoesntCallSuperMethod")
-    public ArgumentBuffer clone() {
+    public @NotNull ArgumentBuffer clone() {
         ArgumentBuffer result = getUnaffectingCopy();
         this.unaffectingCopy = null;
         return result;
+    }
+
+    @Override
+    public String toString() {
+        return String.format("ArgumentBuffer(size = %d, cursor = %d)", size(), getCursor());
     }
 
 }

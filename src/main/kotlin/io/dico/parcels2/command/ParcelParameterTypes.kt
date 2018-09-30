@@ -30,7 +30,7 @@ class ParcelParameterType(val parcelProvider: ParcelProvider) : ParameterType<Pa
     val regex = Regex.fromLiteral("((.+)->)?([0-9]+):([0-9]+)")
 
     override fun parse(parameter: Parameter<Parcel, Void>, sender: CommandSender, buffer: ArgumentBuffer): Parcel {
-        val matchResult = regex.matchEntire(buffer.next())
+        val matchResult = regex.matchEntire(buffer.next()!!)
             ?: invalidInput(parameter, "must match (w->)?a:b (/${regex.pattern}/)")
 
         val world = parcelProvider.getTargetWorld(matchResult.groupValues[2], sender, parameter)
@@ -66,7 +66,7 @@ class ProfileParameterType : ParameterType<PlayerProfile, Int>(PlayerProfile::cl
         val allowReal = (info and REAL) != 0
         val allowFake = (info and FAKE) != 0
 
-        val input = buffer.next()
+        val input = buffer.next()!!
         return PlayerProfile.byName(input, allowReal, allowFake)
     }
 

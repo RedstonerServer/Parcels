@@ -1,9 +1,6 @@
 package io.dico.dicore.command.registration.reflect
 
-import io.dico.dicore.command.CommandException
-import io.dico.dicore.command.EMessageType
-import io.dico.dicore.command.ExecutionContext
-import io.dico.dicore.command.ICommandReceiver
+import io.dico.dicore.command.*
 import kotlinx.coroutines.CoroutineStart.UNDISPATCHED
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.GlobalScope
@@ -22,15 +19,16 @@ fun isSuspendFunction(method: Method): Boolean {
 
 fun callAsCoroutine(
     command: ReflectiveCommand,
-    factory: ICommandReceiver.Factory,
+    factory: ICommandInterceptor,
     context: ExecutionContext,
     args: Array<Any?>
 ): String? {
+    val coroutineContext = factory.getCoroutineContext(context, command.method, command.cmdName) as CoroutineContext
 
     // UNDISPATCHED causes the handler to run until the first suspension point on the current thread,
     // meaning command handlers that don't have suspension points will run completely synchronously.
     // Tasks that take time to compute should suspend the coroutine and resume on another thread.
-    val job = GlobalScope.async(context = factory.coroutineContext as CoroutineContext, start = UNDISPATCHED) {
+    val job = GlobalScope.async(context = coroutineContext, start = UNDISPATCHED) {
         suspendCoroutineUninterceptedOrReturn<Any?> { cont ->
             command.method.invoke(command.instance, *args, cont.intercepted())
         }
@@ -41,12 +39,12 @@ fun callAsCoroutine(
     }
 
     job.invokeOnCompletion {
-        val cc = context.address.chatHandler
+        val chatHandler = context.address.chatHandler
         try {
             val result = job.getResult()
-            cc.sendMessage(context.sender, EMessageType.RESULT, result)
+            chatHandler.sendMessage(context.sender, EMessageType.RESULT, result)
         } catch (ex: Throwable) {
-            cc.handleException(context.sender, context, ex)
+            chatHandler.handleException(context.sender, context, ex)
         }
     }
 

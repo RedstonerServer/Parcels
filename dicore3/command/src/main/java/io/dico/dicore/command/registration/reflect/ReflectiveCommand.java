@@ -15,6 +15,8 @@ public final class ReflectiveCommand extends Command {
     private final Method method;
     private final Object instance;
     private String[] parameterOrder;
+
+    // hasContinuation | hasContext | hasSender | hasReceiver
     private final int flags;
 
     ReflectiveCommand(IParameterTypeSelector selector, Method method, Object instance) throws CommandParseException {
@@ -56,6 +58,8 @@ public final class ReflectiveCommand extends Command {
         return instance;
     }
 
+    public String getCmdName() { return cmdAnnotation.value(); }
+
     void setParameterOrder(String[] parameterOrder) {
         this.parameterOrder = parameterOrder;
     }
@@ -86,18 +90,24 @@ public final class ReflectiveCommand extends Command {
         Object[] args = new Object[parameterOrder.length + start];
 
         int i = 0;
-        if ((flags & 1) != 0) {
+
+        int mask = 1;
+        if ((flags & mask) != 0) {
             try {
-                args[i++] = ((ICommandReceiver.Factory) instance).getReceiver(context, method, cmdAnnotation.value());
+                args[i++] = ((ICommandInterceptor) instance).getReceiver(context, method, getCmdName());
             } catch (Exception ex) {
                 handleException(ex);
                 return null; // unreachable
             }
         }
-        if ((flags & 2) != 0) {
+
+        mask <<= 1;
+        if ((flags & mask) != 0) {
             args[i++] = sender;
         }
-        if ((flags & 4) != 0) {
+
+        mask <<= 1;
+        if ((flags & mask) != 0) {
             args[i++] = context;
         }
 
@@ -105,11 +115,12 @@ public final class ReflectiveCommand extends Command {
             args[i] = context.get(parameterOrder[i - start]);
         }
 
-        if (!isSuspendFunction()) {
-            return callSynchronously(args);
+        mask <<= 1;
+        if ((flags & mask) != 0) {
+            return callAsCoroutine(context, args);
         }
 
-        return callAsCoroutine(context, args);
+        return callSynchronously(args);
     }
 
     private boolean isSuspendFunction() {
@@ -137,9 +148,6 @@ public final class ReflectiveCommand extends Command {
         if (returned instanceof String) {
             return (String) returned;
         }
-        if (returned instanceof CommandResult) {
-            return ((CommandResult) returned).getMessage();
-        }
         return null;
     }
 
@@ -160,7 +168,7 @@ public final class ReflectiveCommand extends Command {
     }
 
     private String callAsCoroutine(ExecutionContext context, Object[] args) {
-        return KotlinReflectiveRegistrationKt.callAsCoroutine(this, (ICommandReceiver.Factory) instance, context, args);
+        return KotlinReflectiveRegistrationKt.callAsCoroutine(this, (ICommandInterceptor) instance, context, args);
     }
 
 }

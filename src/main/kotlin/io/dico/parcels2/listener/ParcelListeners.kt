@@ -85,8 +85,6 @@ class ParcelListeners(
                     newTo = newTo.add(it, delta * 100 * if (it == Dimension.Y) 0.5 else speed)
                 }
 
-
-
                 event.to = Location(
                     toLoc.world,
                     newTo.x, newTo.y.clampMin(0.0).clampMax(255.0), newTo.z,

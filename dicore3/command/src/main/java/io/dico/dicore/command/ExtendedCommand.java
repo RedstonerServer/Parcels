@@ -55,9 +55,10 @@ public abstract class ExtendedCommand<T extends ExtendedCommand<T>> extends Comm
         return modifiable ? (T) super.setShortDescription(shortDescription) : newModifiableInstance().setShortDescription(shortDescription);
     }
 
+    /*
     @Override
     public T preprocessArguments(IArgumentPreProcessor processor) {
         return modifiable ? (T) super.preprocessArguments(processor) : newModifiableInstance().preprocessArguments(processor);
-    }
+    }*/
 
 }

@@ -5,10 +5,12 @@ import java.util.*;
 /**
  * IParameter definition for a command
  */
+@SuppressWarnings("UnusedReturnValue")
 public class ParameterList {
+    //private ParameterList parent;
     private List<Parameter<?, ?>> indexedParameters;
     private Map<String, Parameter<?, ?>> byName;
-    private IArgumentPreProcessor argumentPreProcessor = IArgumentPreProcessor.NONE;
+    //private IArgumentPreProcessor argumentPreProcessor = IArgumentPreProcessor.NONE;
     private int requiredCount = -1;
     private boolean repeatFinalParameter;
 
@@ -18,12 +20,22 @@ public class ParameterList {
     // parameter is taken for repeating
     private boolean finalParameterMayBeFlag;
 
+    /*
+    public ParameterList(ParameterList parent) {
+        this();
+        if (parent.repeatFinalParameter) {
+            throw new IllegalArgumentException("Parent may not have repeating parameters");
+        }
+        this.parent = parent;
+    }*/
+
     public ParameterList() {
         this.indexedParameters = new ArrayList<>();
         this.byName = new LinkedHashMap<>();
         this.repeatFinalParameter = false;
     }
 
+    /*
     public IArgumentPreProcessor getArgumentPreProcessor() {
         return argumentPreProcessor;
     }
@@ -31,7 +43,7 @@ public class ParameterList {
     public ParameterList setArgumentPreProcessor(IArgumentPreProcessor argumentPreProcessor) {
         this.argumentPreProcessor = argumentPreProcessor == null ? IArgumentPreProcessor.NONE : argumentPreProcessor;
         return this;
-    }
+    }*/
 
     public boolean repeatFinalParameter() {
         return repeatFinalParameter;

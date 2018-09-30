@@ -38,9 +38,9 @@ public class DefaultGroupCommand extends PredefinedCommand<DefaultGroupCommand> 
         noArgumentFilter = new IContextFilter() {
             @Override
             public void filterContext(ExecutionContext context) throws CommandException {
-                if (context.getProcessedBuffer().hasNext()) {
+                if (context.getBuffer().hasNext()) {
                     throw new CommandException("No such command: /" + context.getAddress().getAddress()
-                        + " " + context.getProcessedBuffer().next());
+                        + " " + context.getBuffer().next());
                 }
             }
 

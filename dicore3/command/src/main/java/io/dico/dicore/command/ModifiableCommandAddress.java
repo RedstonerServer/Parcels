@@ -2,6 +2,8 @@ package io.dico.dicore.command;
 
 import io.dico.dicore.command.chat.ChatHandlers;
 import io.dico.dicore.command.chat.IChatHandler;
+import io.dico.dicore.command.parameter.ArgumentBuffer;
+import io.dico.dicore.command.parameter.ParameterList;
 import io.dico.dicore.command.predef.DefaultGroupCommand;
 import io.dico.dicore.command.predef.HelpCommand;
 import io.dico.dicore.command.predef.PredefinedCommand;
@@ -36,7 +38,7 @@ public abstract class ModifiableCommandAddress implements ICommandAddress {
     @Override
     public boolean hasUserDeclaredCommand() {
         Command command = getCommand();
-        return command != null && !(command instanceof PredefinedCommand) && !(command instanceof DefaultGroupCommand);
+        return command != null && !(command instanceof PredefinedCommand);
     }
 
     @Override
@@ -139,8 +141,8 @@ public abstract class ModifiableCommandAddress implements ICommandAddress {
     }
 
     @Override
-    public ChildCommandAddress getChild(String key, ExecutionContext context) throws CommandException {
-        return getChild(key);
+    public ChildCommandAddress getChild(ExecutionContext context, ArgumentBuffer buffer) throws CommandException {
+        return buffer.hasNext() ? getChild(buffer.next()) : null;
     }
 
     public void addChild(ICommandAddress child) {
@@ -262,6 +264,15 @@ public abstract class ModifiableCommandAddress implements ICommandAddress {
     @Override
     public ICommandDispatcher getDispatcherForTree() {
         return getRoot();
+    }
+
+    @Override
+    public boolean isCommandTrailing() {
+        return false;
+    }
+
+    public void setCommandTrailing(boolean trailing) {
+        throw new UnsupportedOperationException();
     }
 
     void appendDebugInformation(StringBuilder target, String linePrefix, Set<ICommandAddress> seen) {

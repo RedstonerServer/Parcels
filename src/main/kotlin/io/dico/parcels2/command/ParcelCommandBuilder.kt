@@ -1,6 +1,7 @@
 package io.dico.parcels2.command
 
 import io.dico.dicore.command.*
+import io.dico.dicore.command.parameter.ArgumentBuffer
 import io.dico.dicore.command.predef.DefaultGroupCommand
 import io.dico.dicore.command.registration.reflect.ReflectiveRegistration
 import io.dico.parcels2.Interactables
@@ -107,10 +108,12 @@ class SpecialCommandAddress : ChildCommandAddress() {
         }
     }
 
+    // h:1
     @Throws(CommandException::class)
-    override fun getChild(key: String, context: ExecutionContext): ChildCommandAddress? {
+    override fun getChild(context: ExecutionContext, buffer: ArgumentBuffer): ChildCommandAddress? {
         speciallyParsedIndex = null
 
+        val key = buffer.next() ?: return null
         for (specialKey in speciallyTreatedKeys) {
             if (key.startsWith(specialKey)) {
                 val result = getChild(specialKey.substring(0, specialKey.length - 1))

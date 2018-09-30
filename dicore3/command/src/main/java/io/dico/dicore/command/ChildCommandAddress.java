@@ -10,6 +10,7 @@ public class ChildCommandAddress extends ModifiableCommandAddress {
     final List<String> namesModifiable = new ArrayList<>(4);
     List<String> names = namesModifiable;
     Command command;
+    boolean isCommandTrailing;
 
     public ChildCommandAddress() {
     }
@@ -89,7 +90,7 @@ public class ChildCommandAddress extends ModifiableCommandAddress {
     }
 
     public void finalizeNames() {
-        if (names instanceof ArrayList) {
+        if (names == namesModifiable) {
             names = Collections.unmodifiableList(namesModifiable);
         }
     }
@@ -101,6 +102,19 @@ public class ChildCommandAddress extends ModifiableCommandAddress {
     void setParent(ModifiableCommandAddress parent) {
         finalizeNames();
         this.parent = parent;
+    }
+
+    @Override
+    public boolean isCommandTrailing() {
+        return isCommandTrailing;
+    }
+
+    @Override
+    public void setCommandTrailing(boolean trailing) {
+        if (hasChildren()) {
+            throw new IllegalStateException("Address already has children, this property can't be modified");
+        }
+        isCommandTrailing = trailing;
     }
 
 }

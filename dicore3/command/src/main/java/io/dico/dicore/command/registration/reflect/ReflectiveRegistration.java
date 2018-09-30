@@ -3,7 +3,6 @@ package io.dico.dicore.command.registration.reflect;
 import io.dico.dicore.command.*;
 import io.dico.dicore.command.annotation.*;
 import io.dico.dicore.command.annotation.GroupMatchedCommands.GroupEntry;
-import io.dico.dicore.command.parameter.IArgumentPreProcessor;
 import io.dico.dicore.command.parameter.Parameter;
 import io.dico.dicore.command.parameter.ParameterList;
 import io.dico.dicore.command.parameter.type.IParameterTypeSelector;
@@ -199,15 +198,20 @@ public class ReflectiveRegistration {
 
     static int parseCommandAttributes(IParameterTypeSelector selector, Method method, ReflectiveCommand command, java.lang.reflect.Parameter[] parameters) throws CommandParseException {
         ParameterList list = command.getParameterList();
+
         boolean hasReceiverParameter = false;
         boolean hasSenderParameter = false;
+        boolean hasContextParameter = false;
+        boolean hasContinuationParameter = false;
+
         int start = 0;
-        Class<?> firstParameterType = null;
+        int end = parameters.length;
+
         Class<?> senderParameterType = null;
 
         if (parameters.length > start
-            && command.getInstance() instanceof ICommandReceiver.Factory
-            && ICommandReceiver.class.isAssignableFrom(firstParameterType = parameters[start].getType())) {
+            && command.getInstance() instanceof ICommandInterceptor
+            && ICommandReceiver.class.isAssignableFrom(parameters[start].getType())) {
             hasReceiverParameter = true;
             start++;
         }
@@ -217,20 +221,18 @@ public class ReflectiveRegistration {
             start++;
         }
 
-        boolean hasContextParameter = false;
         if (parameters.length > start && parameters[start].getType() == ExecutionContext.class) {
             hasContextParameter = true;
             start++;
         }
 
+        if (parameters.length > start && parameters[end - 1].getType().getName().equals("kotlin.coroutines.Continuation")) {
+            hasContinuationParameter = true;
+            end--;
+        }
+
         String[] parameterNames = lookupParameterNames(method, parameters, start);
-        for (int i = start, n = parameters.length; i < n; i++) {
-            if (parameters[i].getType().getName().equals("kotlin.coroutines.Continuation")) {
-                List<String> temp = new ArrayList<>(Arrays.asList(parameterNames));
-                temp.remove(i - start);
-                parameterNames = temp.toArray(new String[0]);
-                continue;
-            }
+        for (int i = start, n = end; i < n; i++) {
             Parameter<?, ?> parameter = parseParameter(selector, method, parameters[i], parameterNames[i - start]);
             list.addParameter(parameter);
         }
@@ -256,11 +258,12 @@ public class ReflectiveRegistration {
             list.setRequiredCount(list.getIndexedParameters().size());
         }
 
+        /*
         PreprocessArgs preprocessArgs = method.getAnnotation(PreprocessArgs.class);
         if (preprocessArgs != null) {
             IArgumentPreProcessor preProcessor = IArgumentPreProcessor.mergeOnTokens(preprocessArgs.tokens(), preprocessArgs.escapeChar());
             list.setArgumentPreProcessor(preProcessor);
-        }
+        }*/
 
         Desc desc = method.getAnnotation(Desc.class);
         if (desc != null) {
@@ -286,7 +289,16 @@ public class ReflectiveRegistration {
 
         list.setRepeatFinalParameter(parameters.length > start && parameters[parameters.length - 1].isVarArgs());
         list.setFinalParameterMayBeFlag(true);
-        return (hasSenderParameter ? 2 : 0) | (hasContextParameter ? 4 : 0) | (hasReceiverParameter ? 1 : 0);
+
+        int flags = 0;
+        if (hasContinuationParameter) flags |= 1;
+        flags <<= 1;
+        if (hasContextParameter) flags |= 1;
+        flags <<= 1;
+        if (hasSenderParameter) flags |= 1;
+        flags <<= 1;
+        if (hasReceiverParameter) flags |= 1;
+        return flags;
     }
 
     public static int parseCommandAttributes(IParameterTypeSelector selector, Method method, ReflectiveCommand command) throws CommandParseException {
@@ -373,7 +385,7 @@ public class ReflectiveRegistration {
     
     @Cmd({"tp", "tpto"})
     @RequirePermissions("teleport.self")
-    public (static) String|void|CommandResult onCommand(Player sender, Player target, @Flag("force", permission = "teleport.self.force") boolean force) {
+    public (static) String|void onCommand(Player sender, Player target, @Flag("force", permission = "teleport.self.force") boolean force) {
         Validate.isTrue(force || !hasTpToggledOff(target), "Target has teleportation disabled. Use -force to ignore");
         sender.teleport(target);
         //return
