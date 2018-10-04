@@ -11,6 +11,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
 public final class ReflectiveCommand extends Command {
+    private static final int continuationMask = 1 << 3;
     private final Cmd cmdAnnotation;
     private final Method method;
     private final Object instance;
@@ -86,13 +87,16 @@ public final class ReflectiveCommand extends Command {
     @Override
     public String execute(CommandSender sender, ExecutionContext context) throws CommandException {
         String[] parameterOrder = this.parameterOrder;
-        int start = Integer.bitCount(flags);
-        Object[] args = new Object[parameterOrder.length + start];
+        int extraArgumentCount = Integer.bitCount(flags);
+        int parameterStartIndex = Integer.bitCount(flags & ~continuationMask);
+
+        Object[] args = new Object[parameterOrder.length + extraArgumentCount];
 
         int i = 0;
 
         int mask = 1;
         if ((flags & mask) != 0) {
+            // Has receiver
             try {
                 args[i++] = ((ICommandInterceptor) instance).getReceiver(context, method, getCmdName());
             } catch (Exception ex) {
@@ -103,20 +107,29 @@ public final class ReflectiveCommand extends Command {
 
         mask <<= 1;
         if ((flags & mask) != 0) {
+            // Has sender
             args[i++] = sender;
         }
 
         mask <<= 1;
         if ((flags & mask) != 0) {
+            // Has context
             args[i++] = context;
-        }
-
-        for (int n = args.length; i < n; i++) {
-            args[i] = context.get(parameterOrder[i - start]);
         }
 
         mask <<= 1;
         if ((flags & mask) != 0) {
+            // Has continuation
+
+            extraArgumentCount--;
+        }
+
+        for (int n = args.length; i < n; i++) {
+            args[i] = context.get(parameterOrder[i - extraArgumentCount]);
+        }
+
+        if ((flags & mask) != 0) {
+            // Since it has continuation, call as coroutine
             return callAsCoroutine(context, args);
         }
 

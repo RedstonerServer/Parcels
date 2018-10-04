@@ -236,7 +236,7 @@ public class ReflectiveRegistration {
             Parameter<?, ?> parameter = parseParameter(selector, method, parameters[i], parameterNames[i - start]);
             list.addParameter(parameter);
         }
-        command.setParameterOrder(parameterNames);
+        command.setParameterOrder(hasContinuationParameter ? Arrays.copyOfRange(parameterNames, 0, parameterNames.length - 1) : parameterNames);
 
         RequirePermissions cmdPermissions = method.getAnnotation(RequirePermissions.class);
         if (cmdPermissions != null) {

@@ -266,6 +266,8 @@ class ParcelListeners(
         }
     }
 
+    // private val blockPlaceInteractItems = EnumSet.of(LAVA_BUCKET, WATER_BUCKET, BUCKET, FLINT_AND_STEEL)
+
     @Suppress("NON_EXHAUSTIVE_WHEN")
     private fun onPlayerRightClick(event: PlayerInteractEvent, world: ParcelWorld, parcel: Parcel?) {
         if (event.hasItem()) {
@@ -275,9 +277,11 @@ class ParcelListeners(
                 event.isCancelled = true; return
             }
 
-            if (!canBuildOnArea(event.player, parcel)) {
-                when (item) {
-                    LAVA_BUCKET, WATER_BUCKET, BUCKET, FLINT_AND_STEEL -> {
+            when (item) {
+                LAVA_BUCKET, WATER_BUCKET, BUCKET, FLINT_AND_STEEL -> {
+                    val block = event.clickedBlock.getRelative(event.blockFace)
+                    val otherParcel = world.getParcelAt(block)
+                    if (!canBuildOnArea(event.player, otherParcel)) {
                         event.isCancelled = true
                     }
                 }

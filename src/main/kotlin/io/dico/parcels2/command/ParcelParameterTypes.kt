@@ -9,6 +9,7 @@ import io.dico.parcels2.*
 import io.dico.parcels2.command.ProfileKind.Companion.ANY
 import io.dico.parcels2.command.ProfileKind.Companion.FAKE
 import io.dico.parcels2.command.ProfileKind.Companion.REAL
+import org.bukkit.Location
 import org.bukkit.command.CommandSender
 import org.bukkit.entity.Player
 
@@ -70,4 +71,13 @@ class ProfileParameterType : ParameterType<PlayerProfile, Int>(PlayerProfile::cl
         return PlayerProfile.byName(input, allowReal, allowFake)
     }
 
+    override fun complete(
+        parameter: Parameter<PlayerProfile, Int>,
+        sender: CommandSender,
+        location: Location?,
+        buffer: ArgumentBuffer
+    ): MutableList<String> {
+        logger.info("Completing PlayerProfile: ${buffer.next()}")
+        return super.complete(parameter, sender, location, buffer)
+    }
 }
