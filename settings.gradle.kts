@@ -1,5 +1,6 @@
 pluginManagement.repositories {
-    maven("http://dl.bintray.com/kotlin/kotlin-eap")
+    maven("https://dl.bintray.com/kotlin/kotlin-eap/")
+    maven("https://dl.bintray.com/kotlin/kotlin-dev/")
     mavenCentral()
     maven("https://plugins.gradle.org/m2/")
 }

@@ -13,10 +13,9 @@ version = "0.2"
 
 plugins {
     java
-    kotlin("jvm") version "1.3.0-rc-57"
+    kotlin("jvm") version "1.3.0-rc-146"
     id("com.github.johnrengelman.plugin-shadow") version "2.0.3"
 }
-
 
 
 allprojects {
@@ -25,10 +24,11 @@ allprojects {
 
     repositories {
         mavenCentral()
-        maven("https://hub.spigotmc.org/nexus/content/repositories/snapshots")
-        maven("https://hub.spigotmc.org/nexus/content/repositories/sonatype-nexus-snapshots")
-        maven("https://dl.bintray.com/kotlin/exposed")
-        maven("https://dl.bintray.com/kotlin/kotlin-eap")
+        maven("https://hub.spigotmc.org/nexus/content/repositories/snapshots/")
+        maven("https://hub.spigotmc.org/nexus/content/repositories/sonatype-nexus-snapshots/")
+        maven("https://dl.bintray.com/kotlin/exposed/")
+        maven("https://dl.bintray.com/kotlin/kotlin-dev/")
+        maven("https://dl.bintray.com/kotlin/kotlin-eap/")
         maven("https://dl.bintray.com/kotlin/kotlinx/")
     }
 
@@ -146,11 +146,6 @@ tasks {
 
         val jarUrl = URL("https://yivesmirror.com/files/spigot/spigot-latest.jar")
         val serverJarFile = file("$serverDir/lib/spigot.jar")
-
-
-        doFirst {
-
-        }
     }
 }
 
@@ -171,5 +166,8 @@ val ConfigurationContainer.`provided`: Configuration
 val ConfigurationContainer.`kotlinStd`: Configuration
     get() = findByName("kotlinStd") ?: create("kotlinStd").let { compileClasspath.extendsFrom(it) }
 
-fun Jar.fromFiles(files: Iterable<File>) =
+fun Jar.fromFiles(files: Iterable<File>) {
+    return
     afterEvaluate { from(*files.map { if (it.isDirectory) it else zipTree(it) }.toTypedArray()) }
+}
+
