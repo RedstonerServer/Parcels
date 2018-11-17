@@ -13,7 +13,7 @@ version = "0.2"
 
 plugins {
     java
-    kotlin("jvm") version "1.3.0-rc-146"
+    kotlin("jvm") version "1.3.0"
     id("com.github.johnrengelman.plugin-shadow") version "2.0.3"
 }
 
@@ -30,10 +30,11 @@ allprojects {
         maven("https://dl.bintray.com/kotlin/kotlin-dev/")
         maven("https://dl.bintray.com/kotlin/kotlin-eap/")
         maven("https://dl.bintray.com/kotlin/kotlinx/")
+        maven("http://maven.sk89q.com/repo")
     }
 
     dependencies {
-        val spigotVersion = "1.13.1-R0.1-SNAPSHOT"
+        val spigotVersion = "1.13.2-R0.1-SNAPSHOT"
         c.provided("org.bukkit:bukkit:$spigotVersion") { isTransitive = false }
         c.provided("org.spigotmc:spigot-api:$spigotVersion") { isTransitive = false }
 
@@ -52,13 +53,15 @@ project(":dicore3:dicore3-core") {
     }
 }
 
+val coroutinesCore = kotlinx("coroutines-core:0.26.1-eap13")
+
 project(":dicore3:dicore3-command") {
     apply<KotlinPlatformJvmPlugin>()
 
     dependencies {
         c.kotlinStd(kotlin("stdlib-jdk8"))
         c.kotlinStd(kotlin("reflect"))
-        c.kotlinStd(kotlinx("coroutines-core:0.26.1-eap13"))
+        c.kotlinStd(coroutinesCore)
 
         compile(project(":dicore3:dicore3-core"))
         compile("com.thoughtworks.paranamer:paranamer:2.8")
@@ -72,12 +75,13 @@ dependencies {
 
     c.kotlinStd(kotlin("stdlib-jdk8"))
     c.kotlinStd(kotlin("reflect"))
-    c.kotlinStd(kotlinx("coroutines-core:0.26.1-eap13"))
-    c.kotlinStd("org.jetbrains.kotlinx:atomicfu-common:0.11.7-eap13")
+    c.kotlinStd(coroutinesCore)
+    c.kotlinStd("org.jetbrains.kotlinx:atomicfu-common:0.11.12")
 
     // not on sk89q maven repo yet
-    compileClasspath(files("$rootDir/debug/plugins/worldedit-bukkit-7.0.0-beta-01.jar"))
-    compileClasspath(files("$rootDir/debug/lib/spigot-1.13.1.jar"))
+    //compileClasspath(files("$rootDir/debug/plugins/worldedit-bukkit-7.0.0-beta-01.jar"))
+    // compileClasspath(files("$rootDir/debug/lib/spigot-1.13.2.jar"))
+    compileClasspath("com.sk89q.worldedit:worldedit-bukkit:7.0.0-SNAPSHOT")
 
     compile("org.jetbrains.exposed:exposed:0.10.5") { isTransitive = false }
     compile("joda-time:joda-time:2.10")
@@ -167,7 +171,6 @@ val ConfigurationContainer.`kotlinStd`: Configuration
     get() = findByName("kotlinStd") ?: create("kotlinStd").let { compileClasspath.extendsFrom(it) }
 
 fun Jar.fromFiles(files: Iterable<File>) {
-    return
     afterEvaluate { from(*files.map { if (it.isDirectory) it else zipTree(it) }.toTypedArray()) }
 }
 

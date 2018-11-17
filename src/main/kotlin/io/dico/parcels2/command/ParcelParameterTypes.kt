@@ -6,7 +6,6 @@ import io.dico.dicore.command.parameter.Parameter
 import io.dico.dicore.command.parameter.type.ParameterConfig
 import io.dico.dicore.command.parameter.type.ParameterType
 import io.dico.parcels2.*
-import io.dico.parcels2.command.ProfileKind.Companion.ANY
 import io.dico.parcels2.command.ProfileKind.Companion.FAKE
 import io.dico.parcels2.command.ProfileKind.Companion.REAL
 import org.bukkit.Location
@@ -53,6 +52,7 @@ annotation class ProfileKind(val kind: Int) {
         const val REAL = 1
         const val FAKE = 2
         const val ANY = REAL or FAKE
+        const val ALLOW_INVALID = 4
 
         override fun toParameterInfo(annotation: ProfileKind): Int {
             return annotation.kind
@@ -62,13 +62,20 @@ annotation class ProfileKind(val kind: Int) {
 
 class ProfileParameterType : ParameterType<PlayerProfile, Int>(PlayerProfile::class.java, ProfileKind) {
 
-    override fun parse(parameter: Parameter<PlayerProfile, Int>, sender: CommandSender, buffer: ArgumentBuffer): PlayerProfile {
+    override fun parse(parameter: Parameter<PlayerProfile, Int>, sender: CommandSender, buffer: ArgumentBuffer): PlayerProfile? {
         val info = parameter.paramInfo ?: REAL
         val allowReal = (info and REAL) != 0
         val allowFake = (info and FAKE) != 0
 
         val input = buffer.next()!!
-        return PlayerProfile.byName(input, allowReal, allowFake)
+
+        val profile = PlayerProfile.byName(input, allowReal, allowFake)
+
+        if (profile == null && (info and ProfileKind.ALLOW_INVALID) == 0) {
+            invalidInput(parameter, "\'$input\' is not a valid player name")
+        }
+
+        return profile
     }
 
     override fun complete(

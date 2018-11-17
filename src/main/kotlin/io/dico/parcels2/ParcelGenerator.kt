@@ -56,7 +56,7 @@ interface ParcelBlockManager {
 
     fun getRegion(parcel: ParcelId): Region
 
-    fun getEntities(parcel: ParcelId): Collection<Entity>
+    fun getEntities(region: Region): Collection<Entity>
 
     fun isParcelInfoSectionLoaded(parcel: ParcelId): Boolean
 
@@ -92,8 +92,7 @@ inline fun ParcelBlockManager.tryDoBlockOperation(
 
 abstract class ParcelBlockManagerBase : ParcelBlockManager {
 
-    override fun getEntities(parcel: ParcelId): Collection<Entity> {
-        val region = getRegion(parcel)
+    override fun getEntities(region: Region): Collection<Entity> {
         val center = region.center
         val centerLoc = Location(world, center.x, center.y, center.z)
         val centerDist = (center - region.origin).add(0.2, 0.2, 0.2)

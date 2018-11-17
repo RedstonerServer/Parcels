@@ -71,8 +71,8 @@ Database
 -
 Find and patch ways to add new useless entries (for regular players at least)
 
-Prevent invalid player names from being saved to the database. 
-Here, invalid player names mean names that contain invalid characters.
+~~Prevent invalid player names from being saved to the database. 
+Here, invalid player names mean names that contain invalid characters.~~
 
 Use an atomic GET OR INSERT query so that parallel execution doesn't cause problems
 (as is currently the case when migrating).
@@ -87,7 +87,7 @@ Implement a container that doesn't require loading all parcel data on startup (C
 After testing on Redstoner
 -
 
-Clear (and swap) entities on /p clear etc  
+~~Clear (and swap) entities on /p clear etc~~
 Fix command lag  
 Chorus fruit can grow outside plots  
 Vines can grow outside plots  

@@ -17,20 +17,23 @@ fun isSuspendFunction(method: Method): Boolean {
     return func.isSuspend
 }
 
-fun callAsCoroutine(
-    command: ReflectiveCommand,
-    factory: ICommandInterceptor,
-    context: ExecutionContext,
+@Throws(CommandException::class)
+fun callCommandAsCoroutine(
+    executionContext: ExecutionContext,
+    coroutineContext: CoroutineContext,
+    continuationIndex: Int,
+    method: Method,
+    instance: Any?,
     args: Array<Any?>
 ): String? {
-    val coroutineContext = factory.getCoroutineContext(context, command.method, command.cmdName) as CoroutineContext
 
     // UNDISPATCHED causes the handler to run until the first suspension point on the current thread,
     // meaning command handlers that don't have suspension points will run completely synchronously.
     // Tasks that take time to compute should suspend the coroutine and resume on another thread.
     val job = GlobalScope.async(context = coroutineContext, start = UNDISPATCHED) {
         suspendCoroutineUninterceptedOrReturn<Any?> { cont ->
-            command.method.invoke(command.instance, *args, cont.intercepted())
+            args[continuationIndex] = cont.intercepted()
+            method.invoke(instance, *args)
         }
     }
 
@@ -39,12 +42,12 @@ fun callAsCoroutine(
     }
 
     job.invokeOnCompletion {
-        val chatHandler = context.address.chatHandler
+        val chatHandler = executionContext.address.chatHandler
         try {
             val result = job.getResult()
-            chatHandler.sendMessage(context.sender, EMessageType.RESULT, result)
+            chatHandler.sendMessage(executionContext.sender, EMessageType.RESULT, result)
         } catch (ex: Throwable) {
-            chatHandler.handleException(context.sender, context, ex)
+            chatHandler.handleException(executionContext.sender, executionContext, ex)
         }
     }
 

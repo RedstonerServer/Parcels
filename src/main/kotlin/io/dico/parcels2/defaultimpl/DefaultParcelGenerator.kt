@@ -11,6 +11,7 @@ import org.bukkit.block.BlockFace
 import org.bukkit.block.Skull
 import org.bukkit.block.data.type.Slab
 import org.bukkit.block.data.type.WallSign
+import org.bukkit.entity.Player
 import java.util.Random
 
 private val airType = Bukkit.createBlockData(Material.AIR)
@@ -285,17 +286,29 @@ class DefaultParcelGenerator(
             val floorType = o.floorType
             val fillType = o.fillType
 
-            for ((index, vec) in blocks.withIndex()) {
-                markSuspensionPoint()
-                val y = vec.y
-                val blockType = when {
-                    y > floorHeight -> airType
-                    y == floorHeight -> floorType
-                    else -> fillType
+            delegateWork(0.95) {
+                for ((index, vec) in blocks.withIndex()) {
+                    markSuspensionPoint()
+                    val y = vec.y
+                    val blockType = when {
+                        y > floorHeight -> airType
+                        y == floorHeight -> floorType
+                        else -> fillType
+                    }
+                    world[vec].blockData = blockType
+                    setProgress((index + 1) / blockCount)
                 }
-                world[vec].blockData = blockType
-                setProgress((index + 1) / blockCount)
             }
+
+            delegateWork {
+                val entities = getEntities(region)
+                for ((index, entity) in entities.withIndex()) {
+                    if (entity is Player) continue
+                    entity.remove()
+                    setProgress((index + 1) / entities.size.toDouble())
+                }
+            }
+
         }
 
         override fun getParcelsWithOwnerBlockIn(chunk: Chunk): Collection<Vec2i> {

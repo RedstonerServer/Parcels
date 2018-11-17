@@ -233,6 +233,7 @@ public class RootCommandAddress extends ModifiableCommandAddress implements ICom
     @Override
     public List<String> getTabCompletions(CommandSender sender, Location location, ArgumentBuffer buffer) {
         ExecutionContext context = new ExecutionContext(sender, buffer, true);
+        long start = System.currentTimeMillis();
 
         try {
             ICommandAddress target = getCommandTarget(context, buffer);
@@ -269,6 +270,11 @@ public class RootCommandAddress extends ModifiableCommandAddress implements ICom
 
         } catch (CommandException ex) {
             return Collections.emptyList();
+        } finally {
+            long duration = System.currentTimeMillis() - start;
+            if (duration > 2) {
+                System.out.println(String.format("Complete took %.3f seconds", duration / 1000.0));
+            }
         }
 
     }
