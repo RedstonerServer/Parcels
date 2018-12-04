@@ -2,7 +2,7 @@
 
 Plot management and world generator plugin inspired by [PlotMe](https://github.com/WorldCretornica/PlotMe-Core).
 
-Newer version of discontinued [Parcels](https://github.com/RedstonerServer/Parcels-Java).
+Newer version of discontinued [Parcels](https://github.com/Dico200/Parcels-Java).
 
 Written in Kotlin.
 This project is WIP. 
