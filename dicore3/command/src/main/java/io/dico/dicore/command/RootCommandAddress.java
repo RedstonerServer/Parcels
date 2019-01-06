@@ -76,7 +76,7 @@ public class RootCommandAddress extends ModifiableCommandAddress implements ICom
 
     }
 
-    private static void debugChildren(ModifiableCommandAddress address) {
+    public static void debugChildren(ModifiableCommandAddress address) {
         Collection<String> keys = address.getChildrenMainKeys();
         for (String key : keys) {
             ChildCommandAddress child = address.getChild(key);
