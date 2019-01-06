@@ -9,7 +9,7 @@ import java.net.URL
 val stdout = PrintWriter("gradle-output.txt")
 
 group = "io.dico"
-version = "0.2"
+version = "0.3"
 
 plugins {
     java
@@ -141,7 +141,7 @@ tasks {
         // spigot ships a later version in the root, so we must relocate ours
         relocate("org.yaml.snakeyaml.", "io.dico.parcels2.lib.org.yaml.snakeyaml.")
 
-        manifest.attributes["Class-Path"] = "../lib/kotlin-stdlib.jar"
+        manifest.attributes["Class-Path"] = "../lib/kotlin-stdlib.jar ../lib/mariadb-java-client-2.2.6.jar"
         dependsOn(kotlinStdlibJar)
     }
 
