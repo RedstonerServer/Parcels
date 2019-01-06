@@ -88,16 +88,16 @@ After testing on Redstoner
 -
 
 ~~Clear (and swap) entities on /p clear etc~~
-Fix command lag  
-Chorus fruit can grow outside plots  
-Vines can grow outside plots  
-Ghasts, bats, phantoms and magma cubes can be spawned with eggs  
-ParcelTarget doesn't report a world that wasn't found correctly  
-Jumping on turtle eggs is considered as interacting with pressure plates  
+~~Fix command lag~~  
+Chorus fruit can grow outside plots -- not detectable?  
+~~Vines can grow outside plots~~  
+~~Ghasts, bats, phantoms and magma cubes can be spawned with eggs~~  
+ParcelTarget doesn't report a world that wasn't found correctly -- ??  
+~~Jumping on turtle eggs is considered as interacting with pressure plates~~  
 Setbiome internal error when progress reporting is attached  
-Unclaim doesn't clear the plot. It probably should.  
-Players can shoot boats and minecarts.  
-You can use disabled items by rightclicking air.  
-Tab complete isn't working correctly.  
+~~Unclaim doesn't clear the plot. It probably should.~~ removed    
+Players can shoot boats and minecarts. -- ??   
+~~You can use disabled items by rightclicking air.~~  
+Tab complete isn't working correctly. -- disabled much of it now 
 ~~Bed use in nether and end might not have to be blocked.~~
 

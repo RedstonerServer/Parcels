@@ -106,7 +106,8 @@ sealed class ParcelTarget(val world: ParcelWorld, val parsedKind: Int, val isDef
                 parcelProvider.getWorld(player.world)
                     ?: invalidInput(parameter, "You cannot omit the world if you're not in a parcel world")
             } else {
-                parcelProvider.getWorld(worldString) ?: invalidInput(parameter, "$worldString is not a parcel world")
+                parcelProvider.getWorld(worldString)
+                    ?: invalidInput(parameter, "$worldString is not a parcel world")
             }
 
             val kind = parameter.paramInfo ?: DEFAULT_KIND

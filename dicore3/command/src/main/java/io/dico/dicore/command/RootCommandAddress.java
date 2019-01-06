@@ -238,14 +238,14 @@ public class RootCommandAddress extends ModifiableCommandAddress implements ICom
         try {
             ICommandAddress target = getCommandTarget(context, buffer);
 
-            List<String> out;
-            if (target.hasCommand()) {
+            List<String> out = Collections.emptyList();
+            /*if (target.hasCommand()) {
                 context.setCommand(target.getCommand());
                 target.getCommand().initializeAndFilterContext(context);
                 out = target.getCommand().tabComplete(sender, context, location);
             } else {
                 out = Collections.emptyList();
-            }
+            }*/
 
             int cursor = buffer.getCursor();
             String input;

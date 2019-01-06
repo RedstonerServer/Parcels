@@ -10,6 +10,7 @@ import io.dico.parcels2.storage.Storage
 import io.dico.parcels2.util.ext.*
 import io.dico.parcels2.util.math.*
 import org.bukkit.Location
+import org.bukkit.Material
 import org.bukkit.Material.*
 import org.bukkit.World
 import org.bukkit.block.Biome
@@ -209,7 +210,7 @@ class ParcelListeners(
      * Prevents player from using beds in HELL or SKY biomes if explosions are disabled.
      */
     @Suppress("NON_EXHAUSTIVE_WHEN")
-    @field:ListenerMarker(priority = NORMAL)
+    @field:ListenerMarker(priority = NORMAL, ignoreCancelled = false)
     val onPlayerInteractEvent = RegistratorListener<PlayerInteractEvent> l@{ event ->
         val user = event.player
         val world = parcelProvider.getWorld(user.world) ?: return@l
@@ -223,6 +224,7 @@ class ParcelListeners(
 
         when (event.action) {
             Action.RIGHT_CLICK_BLOCK -> run {
+                if (event.isCancelled) return@l
                 val type = clickedBlock.type
 
                 val interactableClass = Interactables[type]
@@ -259,9 +261,15 @@ class ParcelListeners(
             }
 
             Action.RIGHT_CLICK_AIR -> onPlayerRightClick(event, world, parcel)
-            Action.PHYSICAL -> if (!canBuildOnArea(user, parcel) && !(parcel != null && parcel.interactableConfig("pressure_plates"))) {
-                user.sendParcelMessage(nopermit = true, message = "You cannot use inputs in this parcel")
-                event.isCancelled = true; return@l
+            Action.PHYSICAL -> if (!event.isCancelled && !canBuildOnArea(user, parcel)) {
+                if (clickedBlock.type == Material.TURTLE_EGG) {
+                    event.isCancelled = true; return@l
+                }
+
+                if (!(parcel != null && parcel.interactableConfig("pressure_plates"))) {
+                    user.sendParcelMessage(nopermit = true, message = "You cannot use inputs in this parcel")
+                    event.isCancelled = true; return@l
+                }
             }
         }
     }
@@ -437,12 +445,14 @@ class ParcelListeners(
     @field:ListenerMarker(priority = NORMAL)
     val onEntitySpawnEvent = RegistratorListener<EntitySpawnEvent> l@{ event ->
         val world = parcelProvider.getWorld(event.entity.world) ?: return@l
-        if (event.entity is Creature && world.options.blockMobSpawning) {
+        if (event.entity is Mob && world.options.blockMobSpawning) {
             event.isCancelled = true
         } else if (world.getParcelAt(event.entity).let { it != null && it.hasBlockVisitors }) {
             event.isCancelled = true
         }
     }
+
+
 
     /*
      * Prevents minecarts/boats from moving outside a plot
@@ -471,7 +481,7 @@ class ParcelListeners(
     @field:ListenerMarker(priority = NORMAL)
     val onEntityDamageByEntityEvent = RegistratorListener<EntityDamageByEntityEvent> l@{ event ->
         val world = parcelProvider.getWorld(event.entity.world) ?: return@l
-        if (world.options.disableExplosions && event.damager is ExplosiveMinecart || event.damager is Creeper) {
+        if (world.options.disableExplosions && (event.damager is ExplosiveMinecart || event.damager is Creeper)) {
             event.isCancelled = true; return@l
         }
 
@@ -536,6 +546,14 @@ class ParcelListeners(
         }
 
         event.blocks.removeIf { world.getParcelAt(it.block) !== area }
+    }
+
+    @field:ListenerMarker(priority = NORMAL)
+    val onBlockGrowEvent = RegistratorListener<BlockGrowEvent> l@{ event ->
+        val (world, area) = getWorldAndArea(event.block) ?: return@l
+        if (area == null) {
+            event.isCancelled = true
+        }
     }
 
     /*

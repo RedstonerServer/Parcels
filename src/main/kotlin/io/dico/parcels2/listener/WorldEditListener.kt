@@ -1,13 +1,13 @@
 package io.dico.parcels2.listener
 
 import com.sk89q.worldedit.EditSession.Stage.BEFORE_REORDER
-import com.sk89q.worldedit.Vector
-import com.sk89q.worldedit.Vector2D
 import com.sk89q.worldedit.WorldEdit
 import com.sk89q.worldedit.bukkit.WorldEditPlugin
 import com.sk89q.worldedit.event.extent.EditSessionEvent
 import com.sk89q.worldedit.extent.AbstractDelegateExtent
 import com.sk89q.worldedit.extent.Extent
+import com.sk89q.worldedit.math.BlockVector2
+import com.sk89q.worldedit.math.BlockVector3
 import com.sk89q.worldedit.util.eventbus.EventHandler.Priority.VERY_EARLY
 import com.sk89q.worldedit.util.eventbus.Subscribe
 import com.sk89q.worldedit.world.biome.BaseBiome
@@ -57,14 +57,13 @@ class WorldEditListener(val parcels: ParcelsPlugin, val worldEdit: WorldEdit) {
             return false
         }
 
-        override fun setBlock(location: Vector, block: BlockStateHolder<*>): Boolean {
-            return canBuild(location.blockX, location.blockZ) && super.setBlock(location, block)
-        }
-
-        override fun setBiome(coord: Vector2D, biome: BaseBiome): Boolean {
+        override fun setBiome(coord: BlockVector2, biome: BaseBiome): Boolean {
             return canBuild(coord.blockX, coord.blockZ) && super.setBiome(coord, biome)
         }
 
+        override fun <T : BlockStateHolder<T>> setBlock(location: BlockVector3, block: T): Boolean {
+            return canBuild(location.blockX, location.blockZ) && super.setBlock(location, block)
+        }
     }
 
     companion object {

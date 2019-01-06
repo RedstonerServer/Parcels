@@ -45,7 +45,7 @@ class DefaultParcelContainer(val world: ParcelWorld) : ParcelContainer {
         }
     }
 
-    override fun nextEmptyParcel(): Parcel? {
+    override suspend fun nextEmptyParcel(): Parcel? {
         return walkInCircle().find { it.owner == null }
     }
 

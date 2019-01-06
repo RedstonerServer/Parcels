@@ -1,3 +1,5 @@
+@file:Suppress("RedundantLambdaArrow")
+
 package io.dico.parcels2.util
 
 import org.bukkit.plugin.Plugin
@@ -8,11 +10,10 @@ interface PluginAware {
 }
 
 inline fun PluginAware.schedule(delay: Int = 0, crossinline task: () -> Unit): BukkitTask {
-    return plugin.server.scheduler.runTaskLater(plugin, { task() }, delay.toLong())
+    return plugin.server.scheduler.runTaskLater(plugin, { -> task() }, delay.toLong())
 }
 
 inline fun PluginAware.scheduleRepeating(interval: Int, delay: Int = 0, crossinline task: () -> Unit): BukkitTask {
-    return plugin.server.scheduler.runTaskTimer(plugin, { task() }, delay.toLong(), interval.toLong())
+    return plugin.server.scheduler.runTaskTimer(plugin, { -> task() }, delay.toLong(), interval.toLong())
 }
-
 
