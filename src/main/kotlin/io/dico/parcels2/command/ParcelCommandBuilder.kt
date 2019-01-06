@@ -64,9 +64,7 @@ fun getParcelCommands(plugin: ParcelsPlugin): ICommandDispatcher = CommandBuilde
     }
 
     generateHelpAndSyntaxCommands(parcelsAddress)
-}.getDispatcher().also {
-    RootCommandAddress.debugChildren(it as ModifiableCommandAddress)
-}
+}.getDispatcher()
 
 private inline fun CommandBuilder.group(name: String, vararg aliases: String, config: CommandBuilder.() -> Unit) {
     group(name, *aliases)
