@@ -71,8 +71,8 @@ Database
 -
 Find and patch ways to add new useless entries (for regular players at least)
 
-Prevent invalid player names from being saved to the database. 
-Here, invalid player names mean names that contain invalid characters.
+~~Prevent invalid player names from being saved to the database. 
+Here, invalid player names mean names that contain invalid characters.~~
 
 Use an atomic GET OR INSERT query so that parallel execution doesn't cause problems
 (as is currently the case when migrating).
@@ -87,17 +87,17 @@ Implement a container that doesn't require loading all parcel data on startup (C
 After testing on Redstoner
 -
 
-Clear (and swap) entities on /p clear etc  
-Fix command lag  
-Chorus fruit can grow outside plots  
-Vines can grow outside plots  
-Ghasts, bats, phantoms and magma cubes can be spawned with eggs  
-ParcelTarget doesn't report a world that wasn't found correctly  
-Jumping on turtle eggs is considered as interacting with pressure plates  
+~~Clear (and swap) entities on /p clear etc~~
+~~Fix command lag~~  
+Chorus fruit can grow outside plots -- not detectable?  
+~~Vines can grow outside plots~~  
+~~Ghasts, bats, phantoms and magma cubes can be spawned with eggs~~  
+ParcelTarget doesn't report a world that wasn't found correctly -- ??  
+~~Jumping on turtle eggs is considered as interacting with pressure plates~~  
 Setbiome internal error when progress reporting is attached  
-Unclaim doesn't clear the plot. It probably should.  
-Players can shoot boats and minecarts.  
-You can use disabled items by rightclicking air.  
-Tab complete isn't working correctly.  
+~~Unclaim doesn't clear the plot. It probably should.~~ removed    
+Players can shoot boats and minecarts. -- ??   
+~~You can use disabled items by rightclicking air.~~  
+Tab complete isn't working correctly. -- disabled much of it now 
 ~~Bed use in nether and end might not have to be blocked.~~
 

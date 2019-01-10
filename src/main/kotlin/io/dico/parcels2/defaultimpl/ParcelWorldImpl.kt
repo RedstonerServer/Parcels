@@ -69,7 +69,7 @@ class ParcelWorldImpl(
 
     override fun getParcelById(id: ParcelId): Parcel? = container.getParcelById(id)
 
-    override fun nextEmptyParcel(): Parcel? = container.nextEmptyParcel()
+    override suspend fun nextEmptyParcel(): Parcel? = container.nextEmptyParcel()
 
     override fun toString() = parcelWorldIdToString()
 }

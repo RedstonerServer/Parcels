@@ -89,6 +89,8 @@ public class ContextParser {
             m_curRepeatingList = null;
             assignDefaultValuesToUncomputedParams();
             arrayifyRepeatedParamValue();
+
+            m_done = true;
         }
     }
 

@@ -11,6 +11,8 @@ data class Vec3d(
     constructor(loc: Location) : this(loc.x, loc.y, loc.z)
 
     operator fun plus(o: Vec3d) = Vec3d(x + o.x, y + o.y, z + o.z)
+    operator fun plus(o: Vec3i) = Vec3d(x + o.x, y + o.y, z + o.z)
+    operator fun minus(o: Vec3d) = Vec3d(x - o.x, y - o.y, z - o.z)
     operator fun minus(o: Vec3i) = Vec3d(x - o.x, y - o.y, z - o.z)
     infix fun addX(o: Double) = Vec3d(x + o, y, z)
     infix fun addY(o: Double) = Vec3d(x, y + o, z)
@@ -50,4 +52,10 @@ data class Vec3d(
             Dimension.Y -> addY(value)
             Dimension.Z -> addZ(value)
         }
+
+    fun copyInto(loc: Location) {
+        loc.x = x
+        loc.y = y
+        loc.z = z
+    }
 }

@@ -1,16 +1,14 @@
 # Parcels
 
-Plot management and world generator plugin inspired by [PlotMe](https://github.com/WorldCretornica/PlotMe-Core).
+Plot management and world generator plugin inspired by [PlotMe](https://github.com/WorldCretornica/PlotMe-Core).  
+Newer version of discontinued [Parcels](https://github.com/Dico200/Parcels-Java).  
 
-Newer version of the discontinued [Parcels-Java](https://github.com/Dico200/Parcels-Java).
-
-Written in Kotlin.
-This project is WIP. 
+Written in Kotlin.  
+This project is WIP.  
 
 ![world screenshot](https://i.imgur.com/tpbKrQI.png)
 
 ## Build
 
-1. Add `worldedit-bukkit-7.0.0-beta-01.jar` to `/debug/plugins` directory
-2. Run `gradle releaseJar`
-3. Kotlin stdlib classpath is placed in `/debug/lib` directory and artifact can be found in `/debug/plugins` directory
+1. Run `gradle releaseJar`
+1. Kotlin stdlib classpath is placed in `/debug/lib` directory and artifact can be found in `/debug/plugins` directory

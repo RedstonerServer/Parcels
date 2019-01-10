@@ -113,6 +113,7 @@ class CommandsGeneral(plugin: ParcelsPlugin, parent: SpecialCommandAddress) : Ab
         return "Enjoy your new parcel!"
     }
 
+    /*
     @Cmd("unclaim")
     @Desc("Unclaims this parcel")
     @RequireParcelPrivilege(Privilege.OWNER)
@@ -120,7 +121,7 @@ class CommandsGeneral(plugin: ParcelsPlugin, parent: SpecialCommandAddress) : Ab
         checkConnected("be unclaimed")
         parcel.dispose()
         return "Your parcel has been disposed"
-    }
+    }*/
 
     @Cmd("clear")
     @RequireParcelPrivilege(Privilege.OWNER)

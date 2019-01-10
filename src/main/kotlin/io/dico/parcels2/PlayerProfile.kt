@@ -3,11 +3,13 @@
 package io.dico.parcels2
 
 import io.dico.parcels2.storage.Storage
+import io.dico.parcels2.util.checkPlayerNameValid
 import io.dico.parcels2.util.ext.PLAYER_NAME_PLACEHOLDER
 import io.dico.parcels2.util.ext.isValid
 import io.dico.parcels2.util.ext.uuid
 import io.dico.parcels2.util.getOfflinePlayer
 import io.dico.parcels2.util.getPlayerName
+import io.dico.parcels2.util.isPlayerNameValid
 import org.bukkit.Bukkit
 import org.bukkit.OfflinePlayer
 import java.util.UUID
@@ -32,7 +34,7 @@ interface PlayerProfile {
 
     companion object {
         fun safe(uuid: UUID?, name: String?): PlayerProfile? {
-            if (uuid != null) return Real(uuid, name)
+            if (uuid != null) return Real(uuid, if (name != null && !isPlayerNameValid(name)) null else name)
             if (name != null) return invoke(name)
             return null
         }
@@ -47,7 +49,7 @@ interface PlayerProfile {
         }
 
         operator fun invoke(name: String): PlayerProfile {
-            if (name == Star.name) return Star
+            if (name equalsIgnoreCase Star.name) return Star
             return Fake(name)
         }
 
@@ -60,9 +62,14 @@ interface PlayerProfile {
             return RealImpl(player.uuid, null)
         }
 
-        fun byName(input: String, allowReal: Boolean = true, allowFake: Boolean = false): PlayerProfile {
+        fun byName(input: String, allowReal: Boolean = true, allowFake: Boolean = false): PlayerProfile? {
             if (!allowReal) {
                 if (!allowFake) throw IllegalArgumentException("at least one of allowReal and allowFake must be true")
+                return Fake(input)
+            }
+
+            if (!isPlayerNameValid(input)) {
+                if (!allowFake) return null
                 return Fake(input)
             }
 
@@ -92,19 +99,19 @@ interface PlayerProfile {
 
         companion object {
             fun byName(name: String): PlayerProfile {
-                if (name == Star.name) return Star
+                if (name equalsIgnoreCase Star.name) return Star
                 return Unresolved(name)
             }
 
             operator fun invoke(uuid: UUID, name: String?): Real {
-                if (name == Star.name || uuid == Star.uuid) return Star
+                if (name equalsIgnoreCase Star.name || uuid == Star.uuid) return Star
                 return RealImpl(uuid, name)
             }
 
             fun safe(uuid: UUID?, name: String?): Real? {
-                if (name == Star.name || uuid == Star.uuid) return Star
+                if (name equalsIgnoreCase Star.name || uuid == Star.uuid) return Star
                 if (uuid == null) return null
-                return RealImpl(uuid, name)
+                return RealImpl(uuid, if (name != null && !isPlayerNameValid(name)) null else name)
             }
 
         }
@@ -130,7 +137,7 @@ interface PlayerProfile {
         override val nameOrBukkitName: String get() = name
 
         override fun matches(player: OfflinePlayer, allowNameMatch: Boolean): Boolean {
-            return allowNameMatch && player.name == name
+            return allowNameMatch && player.name equalsIgnoreCase name
         }
 
         override fun toString() = "${javaClass.simpleName}($name)"
@@ -138,13 +145,17 @@ interface PlayerProfile {
 
     class Fake(name: String) : NameOnly(name) {
         override fun equals(other: PlayerProfile): Boolean {
-            return other is Fake && other.name == name
+            return other is Fake && other.name equalsIgnoreCase name
         }
     }
 
     class Unresolved(name: String) : NameOnly(name) {
+        init {
+            checkPlayerNameValid(name)
+        }
+
         override fun equals(other: PlayerProfile): Boolean {
-            return other is Unresolved && name == other.name
+            return other is Unresolved && name equalsIgnoreCase other.name
         }
 
         suspend fun tryResolveSuspendedly(storage: Storage): Real? {
@@ -171,9 +182,22 @@ interface PlayerProfile {
     }
 
     private class RealImpl(override val uuid: UUID, override val name: String?) : BaseImpl(), Real {
+        init {
+            name?.let { checkPlayerNameValid(it) }
+        }
+
         override fun toString() = "Real($notNullName)"
     }
 
+}
+
+private infix fun String?.equalsIgnoreCase(other: String): Boolean {
+    if (this == null) return false
+    if (length != other.length) return false
+    repeat(length) { i ->
+        if (this[i].toLowerCase() != other[i].toLowerCase()) return false
+    }
+    return true
 }
 
 suspend fun PlayerProfile.resolved(storage: Storage, resolveToFake: Boolean = false): PlayerProfile? =

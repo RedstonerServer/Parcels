@@ -76,7 +76,7 @@ public class RootCommandAddress extends ModifiableCommandAddress implements ICom
 
     }
 
-    private static void debugChildren(ModifiableCommandAddress address) {
+    public static void debugChildren(ModifiableCommandAddress address) {
         Collection<String> keys = address.getChildrenMainKeys();
         for (String key : keys) {
             ChildCommandAddress child = address.getChild(key);
@@ -233,18 +233,19 @@ public class RootCommandAddress extends ModifiableCommandAddress implements ICom
     @Override
     public List<String> getTabCompletions(CommandSender sender, Location location, ArgumentBuffer buffer) {
         ExecutionContext context = new ExecutionContext(sender, buffer, true);
+        long start = System.currentTimeMillis();
 
         try {
             ICommandAddress target = getCommandTarget(context, buffer);
 
-            List<String> out;
-            if (target.hasCommand()) {
+            List<String> out = Collections.emptyList();
+            /*if (target.hasCommand()) {
                 context.setCommand(target.getCommand());
                 target.getCommand().initializeAndFilterContext(context);
                 out = target.getCommand().tabComplete(sender, context, location);
             } else {
                 out = Collections.emptyList();
-            }
+            }*/
 
             int cursor = buffer.getCursor();
             String input;
@@ -269,6 +270,11 @@ public class RootCommandAddress extends ModifiableCommandAddress implements ICom
 
         } catch (CommandException ex) {
             return Collections.emptyList();
+        } finally {
+            long duration = System.currentTimeMillis() - start;
+            if (duration > 2) {
+                System.out.println(String.format("Complete took %.3f seconds", duration / 1000.0));
+            }
         }
 
     }

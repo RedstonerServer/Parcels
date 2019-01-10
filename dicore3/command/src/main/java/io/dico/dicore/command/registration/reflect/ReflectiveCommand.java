@@ -4,6 +4,8 @@ import io.dico.dicore.command.*;
 import io.dico.dicore.command.annotation.Cmd;
 import io.dico.dicore.command.annotation.GenerateCommands;
 import io.dico.dicore.command.parameter.type.IParameterTypeSelector;
+import io.dico.dicore.exceptions.checkedfunctions.CheckedSupplier;
+import kotlin.coroutines.CoroutineContext;
 import org.bukkit.command.CommandSender;
 
 import java.lang.reflect.InvocationTargetException;
@@ -11,14 +13,11 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 
 public final class ReflectiveCommand extends Command {
-    private static final int continuationMask = 1 << 3;
     private final Cmd cmdAnnotation;
     private final Method method;
     private final Object instance;
     private String[] parameterOrder;
-
-    // hasContinuation | hasContext | hasSender | hasReceiver
-    private final int flags;
+    private final int callFlags;
 
     ReflectiveCommand(IParameterTypeSelector selector, Method method, Object instance) throws CommandParseException {
         if (!method.isAnnotationPresent(Cmd.class)) {
@@ -48,7 +47,7 @@ public final class ReflectiveCommand extends Command {
 
         this.method = method;
         this.instance = instance;
-        this.flags = ReflectiveRegistration.parseCommandAttributes(selector, method, this, parameters);
+        this.callFlags = ReflectiveRegistration.parseCommandAttributes(selector, method, this, parameters);
     }
 
     public Method getMethod() {
@@ -59,10 +58,20 @@ public final class ReflectiveCommand extends Command {
         return instance;
     }
 
-    public String getCmdName() { return cmdAnnotation.value(); }
+    public String getCmdName() {
+        return cmdAnnotation.value();
+    }
+
+    public int getCallFlags() {
+        return callFlags;
+    }
 
     void setParameterOrder(String[] parameterOrder) {
         this.parameterOrder = parameterOrder;
+    }
+
+    public int getParameterNum() {
+        return parameterOrder.length;
     }
 
     ICommandAddress getAddress() {
@@ -86,54 +95,24 @@ public final class ReflectiveCommand extends Command {
 
     @Override
     public String execute(CommandSender sender, ExecutionContext context) throws CommandException {
-        String[] parameterOrder = this.parameterOrder;
-        int extraArgumentCount = Integer.bitCount(flags);
-        int parameterStartIndex = Integer.bitCount(flags & ~continuationMask);
 
-        Object[] args = new Object[parameterOrder.length + extraArgumentCount];
-
-        int i = 0;
-
-        int mask = 1;
-        if ((flags & mask) != 0) {
-            // Has receiver
+        CheckedSupplier<Object, CommandException> receiverFunction = () -> {
             try {
-                args[i++] = ((ICommandInterceptor) instance).getReceiver(context, method, getCmdName());
+                return ((ICommandInterceptor) instance).getReceiver(context, method, getCmdName());
             } catch (Exception ex) {
                 handleException(ex);
                 return null; // unreachable
             }
+        };
+
+        Object[] callArgs = ReflectiveCallFlags.getCallArgs(callFlags, context, parameterOrder, receiverFunction);
+
+        if (ReflectiveCallFlags.hasCallArg(callFlags, ReflectiveCallFlags.CONTINUATION_BIT)) {
+            // If it has a continuation, call as coroutine
+            return callAsCoroutine(context, callArgs);
         }
 
-        mask <<= 1;
-        if ((flags & mask) != 0) {
-            // Has sender
-            args[i++] = sender;
-        }
-
-        mask <<= 1;
-        if ((flags & mask) != 0) {
-            // Has context
-            args[i++] = context;
-        }
-
-        mask <<= 1;
-        if ((flags & mask) != 0) {
-            // Has continuation
-
-            extraArgumentCount--;
-        }
-
-        for (int n = args.length; i < n; i++) {
-            args[i] = context.get(parameterOrder[i - extraArgumentCount]);
-        }
-
-        if ((flags & mask) != 0) {
-            // Since it has continuation, call as coroutine
-            return callAsCoroutine(context, args);
-        }
-
-        return callSynchronously(args);
+        return callSynchronously(callArgs);
     }
 
     private boolean isSuspendFunction() {
@@ -180,8 +159,11 @@ public final class ReflectiveCommand extends Command {
         throw new CommandException("An internal error occurred while executing this command.", ex);
     }
 
-    private String callAsCoroutine(ExecutionContext context, Object[] args) {
-        return KotlinReflectiveRegistrationKt.callAsCoroutine(this, (ICommandInterceptor) instance, context, args);
+    private String callAsCoroutine(ExecutionContext executionContext, Object[] args) throws CommandException {
+        ICommandInterceptor factory = (ICommandInterceptor) instance;
+        CoroutineContext coroutineContext = (CoroutineContext) factory.getCoroutineContext(executionContext, method, getCmdName());
+        int continuationIndex = ReflectiveCallFlags.getCallArgIndex(callFlags, ReflectiveCallFlags.CONTINUATION_BIT, parameterOrder.length);
+        return KotlinReflectiveRegistrationKt.callCommandAsCoroutine(executionContext, coroutineContext, continuationIndex, method, instance, args);
     }
 
 }

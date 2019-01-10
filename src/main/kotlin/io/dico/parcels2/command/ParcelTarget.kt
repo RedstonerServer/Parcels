@@ -25,7 +25,8 @@ sealed class ParcelTarget(val world: ParcelWorld, val parsedKind: Int, val isDef
 
     abstract suspend fun getParcelSuspend(storage: Storage): Parcel?
 
-    class ByID(world: ParcelWorld, val id: Vec2i?, parsedKind: Int, isDefault: Boolean) : ParcelTarget(world, parsedKind, isDefault) {
+    class ByID(world: ParcelWorld, val id: Vec2i?, parsedKind: Int, isDefault: Boolean) :
+        ParcelTarget(world, parsedKind, isDefault) {
         override suspend fun getParcelSuspend(storage: Storage): Parcel? = getParcel()
         fun getParcel() = id?.let { world.getParcelById(it) }
         val isPath: Boolean get() = id == null
@@ -78,7 +79,8 @@ sealed class ParcelTarget(val world: ParcelWorld, val parsedKind: Int, val isDef
 
             const val DEFAULT_KIND = REAL
 
-            const val PREFER_OWNED_FOR_DEFAULT = 8 // if the kind can be ID and OWNER_REAL, prefer OWNER_REAL for default
+            const val PREFER_OWNED_FOR_DEFAULT =
+                8 // if the kind can be ID and OWNER_REAL, prefer OWNER_REAL for default
             // instead of parcel that the player is in
 
             override fun toParameterInfo(annotation: TargetKind): Int {
@@ -90,7 +92,11 @@ sealed class ParcelTarget(val world: ParcelWorld, val parsedKind: Int, val isDef
     class PType(val parcelProvider: ParcelProvider, val parcelAddress: SpecialCommandAddress? = null) :
         ParameterType<ParcelTarget, Int>(ParcelTarget::class.java, TargetKind) {
 
-        override fun parse(parameter: Parameter<ParcelTarget, Int>, sender: CommandSender, buffer: ArgumentBuffer): ParcelTarget {
+        override fun parse(
+            parameter: Parameter<ParcelTarget, Int>,
+            sender: CommandSender,
+            buffer: ArgumentBuffer
+        ): ParcelTarget {
             var input = buffer.next()!!
             val worldString = input.substringBefore("/", missingDelimiterValue = "")
             input = input.substringAfter("/")
@@ -100,18 +106,26 @@ sealed class ParcelTarget(val world: ParcelWorld, val parsedKind: Int, val isDef
                 parcelProvider.getWorld(player.world)
                     ?: invalidInput(parameter, "You cannot omit the world if you're not in a parcel world")
             } else {
-                parcelProvider.getWorld(worldString) ?: invalidInput(parameter, "$worldString is not a parcel world")
+                parcelProvider.getWorld(worldString)
+                    ?: invalidInput(parameter, "$worldString is not a parcel world")
             }
 
             val kind = parameter.paramInfo ?: DEFAULT_KIND
             if (input.contains(',')) {
-                if (kind and ID == 0) invalidInput(parameter, "You must specify a parcel by OWNER, that is, an owner and index")
+                if (kind and ID == 0) invalidInput(parameter,
+                    "You must specify a parcel by OWNER, that is, an owner and index")
                 return ByID(world, getId(parameter, input), kind, false)
             }
 
-            if (kind and OWNER == 0) invalidInput(parameter, "You must specify a parcel by ID, that is, the x and z component separated by a comma")
+            if (kind and OWNER == 0) invalidInput(parameter,
+                "You must specify a parcel by ID, that is, the x and z component separated by a comma")
             val (owner, index) = getHomeIndex(parameter, kind, sender, input)
-            return ByOwner(world, owner, index, kind, false, onResolveFailure = { invalidInput(parameter, "The player $input does not exist") })
+            return ByOwner(world,
+                owner,
+                index,
+                kind,
+                false,
+                onResolveFailure = { invalidInput(parameter, "The player $input does not exist") })
         }
 
         private fun getId(parameter: Parameter<*, *>, input: String): Vec2i {
@@ -124,7 +138,12 @@ sealed class ParcelTarget(val world: ParcelWorld, val parsedKind: Int, val isDef
             return Vec2i(x, z)
         }
 
-        private fun getHomeIndex(parameter: Parameter<*, *>, kind: Int, sender: CommandSender, input: String): Pair<PlayerProfile, Int> {
+        private fun getHomeIndex(
+            parameter: Parameter<*, *>,
+            kind: Int,
+            sender: CommandSender,
+            input: String
+        ): Pair<PlayerProfile, Int> {
             val splitIdx = input.indexOf(':')
             val ownerString: String
             val index: Int?
@@ -155,10 +174,11 @@ sealed class ParcelTarget(val world: ParcelWorld, val parsedKind: Int, val isDef
                     ?: invalidInput(parameter, "The home index must be an integer, $indexString is not an integer")
             }
 
-            val owner = if (ownerString.isEmpty())
+            val owner = (if (ownerString.isEmpty())
                 PlayerProfile(requirePlayer(sender, parameter, "the player"))
             else
-                PlayerProfile.byName(ownerString, allowReal = kind and OWNER_REAL != 0, allowFake = kind and OWNER_FAKE != 0)
+                PlayerProfile.byName(ownerString, allowReal = kind and OWNER_REAL != 0, allowFake = kind and OWNER_FAKE != 0))
+                ?: invalidInput(parameter, "\'$ownerString\' is not a valid player name")
 
             return owner to (index ?: 0)
         }
@@ -168,7 +188,11 @@ sealed class ParcelTarget(val world: ParcelWorld, val parsedKind: Int, val isDef
             return sender
         }
 
-        override fun getDefaultValue(parameter: Parameter<ParcelTarget, Int>, sender: CommandSender, buffer: ArgumentBuffer): ParcelTarget? {
+        override fun getDefaultValue(
+            parameter: Parameter<ParcelTarget, Int>,
+            sender: CommandSender,
+            buffer: ArgumentBuffer
+        ): ParcelTarget? {
             val kind = parameter.paramInfo ?: DEFAULT_KIND
             val useLocation = when {
                 kind and REAL == REAL -> kind and PREFER_OWNED_FOR_DEFAULT == 0
@@ -178,7 +202,8 @@ sealed class ParcelTarget(val world: ParcelWorld, val parsedKind: Int, val isDef
             }
 
             val player = requirePlayer(sender, parameter, "the parcel")
-            val world = parcelProvider.getWorld(player.world) ?: invalidInput(parameter, "You must be in a parcel world to omit the parcel")
+            val world = parcelProvider.getWorld(player.world) ?: invalidInput(parameter,
+                "You must be in a parcel world to omit the parcel")
             if (useLocation) {
                 val id = player.location.let { world.getParcelIdAt(it.x.floor(), it.z.floor())?.pos }
                 return ByID(world, id, kind, true)

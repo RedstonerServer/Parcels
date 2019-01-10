@@ -72,9 +72,11 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource, val poolSi
     override fun init() {
         synchronized {
             if (isShutdown || isConnected) throw IllegalStateException()
-            dataSource = dataSourceFactory()
-            database = Database.connect(dataSource!!)
-            transaction(database!!) {
+            val dataSource = dataSourceFactory()
+            this.dataSource = dataSource
+            val database = Database.connect(dataSource)
+            this.database = database
+            transaction(database) {
                 create(WorldsT, ProfilesT, ParcelsT, ParcelOptionsT, PrivilegesLocalT, PrivilegesGlobalT)
             }
         }
@@ -84,7 +86,7 @@ class ExposedBacking(private val dataSourceFactory: () -> DataSource, val poolSi
         synchronized {
             if (isShutdown) throw IllegalStateException()
             isShutdown = true
-            coroutineContext[Job]!!.cancel(CancellationException("ExposedBacking shutdown"))
+            coroutineContext.cancel(CancellationException("ExposedBacking shutdown"))
             dataSource?.let {
                 (it as? HikariDataSource)?.close()
             }

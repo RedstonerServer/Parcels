@@ -83,7 +83,7 @@ interface ParcelContainer {
 
     fun getParcelById(id: ParcelId): Parcel?
 
-    fun nextEmptyParcel(): Parcel?
+    suspend fun nextEmptyParcel(): Parcel?
 
 }
 

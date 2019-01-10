@@ -22,6 +22,8 @@ import java.util.function.Consumer;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
+import static io.dico.dicore.command.registration.reflect.ReflectiveCallFlags.*;
+
 /**
  * Takes care of turning a reflection {@link Method} into a command and more.
  */
@@ -196,47 +198,43 @@ public class ReflectiveRegistration {
         return new ReflectiveCommand(selector, method, instance).getAddress();
     }
 
-    static int parseCommandAttributes(IParameterTypeSelector selector, Method method, ReflectiveCommand command, java.lang.reflect.Parameter[] parameters) throws CommandParseException {
+    static int parseCommandAttributes(IParameterTypeSelector selector, Method method, ReflectiveCommand command, java.lang.reflect.Parameter[] callParameters) throws CommandParseException {
         ParameterList list = command.getParameterList();
 
-        boolean hasReceiverParameter = false;
-        boolean hasSenderParameter = false;
-        boolean hasContextParameter = false;
-        boolean hasContinuationParameter = false;
-
-        int start = 0;
-        int end = parameters.length;
-
         Class<?> senderParameterType = null;
+        int flags = 0;
+        int start = 0;
+        int end = callParameters.length;
 
-        if (parameters.length > start
+        if (callParameters.length > start
             && command.getInstance() instanceof ICommandInterceptor
-            && ICommandReceiver.class.isAssignableFrom(parameters[start].getType())) {
-            hasReceiverParameter = true;
-            start++;
+            && ICommandReceiver.class.isAssignableFrom(callParameters[start].getType())) {
+            flags |= RECEIVER_BIT;
+            ++start;
         }
 
-        if (parameters.length > start && CommandSender.class.isAssignableFrom(senderParameterType = parameters[start].getType())) {
-            hasSenderParameter = true;
-            start++;
+        if (callParameters.length > start && CommandSender.class.isAssignableFrom(senderParameterType = callParameters[start].getType())) {
+            flags |= SENDER_BIT;
+            ++start;
         }
 
-        if (parameters.length > start && parameters[start].getType() == ExecutionContext.class) {
-            hasContextParameter = true;
-            start++;
+        if (callParameters.length > start && callParameters[start].getType() == ExecutionContext.class) {
+            flags |= CONTEXT_BIT;
+            ++start;
         }
 
-        if (parameters.length > start && parameters[end - 1].getType().getName().equals("kotlin.coroutines.Continuation")) {
-            hasContinuationParameter = true;
-            end--;
+        if (callParameters.length > start && callParameters[end - 1].getType().getName().equals("kotlin.coroutines.Continuation")) {
+            flags |= CONTINUATION_BIT;
+            --end;
         }
 
-        String[] parameterNames = lookupParameterNames(method, parameters, start);
+        String[] parameterNames = lookupParameterNames(method, callParameters, start);
         for (int i = start, n = end; i < n; i++) {
-            Parameter<?, ?> parameter = parseParameter(selector, method, parameters[i], parameterNames[i - start]);
+            Parameter<?, ?> parameter = parseParameter(selector, method, callParameters[i], parameterNames[i - start]);
             list.addParameter(parameter);
         }
-        command.setParameterOrder(hasContinuationParameter ? Arrays.copyOfRange(parameterNames, 0, parameterNames.length - 1) : parameterNames);
+
+        command.setParameterOrder(hasCallArg(flags, CONTINUATION_BIT) ? Arrays.copyOfRange(parameterNames, 0, parameterNames.length - 1) : parameterNames);
 
         RequirePermissions cmdPermissions = method.getAnnotation(RequirePermissions.class);
         if (cmdPermissions != null) {
@@ -277,6 +275,7 @@ public class ReflectiveRegistration {
             command.setDescription();
         }
 
+        boolean hasSenderParameter = hasCallArg(flags, SENDER_BIT);
         if (hasSenderParameter && Player.class.isAssignableFrom(senderParameterType)) {
             command.addContextFilter(IContextFilter.PLAYER_ONLY);
         } else if (hasSenderParameter && ConsoleCommandSender.class.isAssignableFrom(senderParameterType)) {
@@ -287,17 +286,9 @@ public class ReflectiveRegistration {
             command.addContextFilter(IContextFilter.CONSOLE_ONLY);
         }
 
-        list.setRepeatFinalParameter(parameters.length > start && parameters[parameters.length - 1].isVarArgs());
+        list.setRepeatFinalParameter(callParameters.length > start && callParameters[callParameters.length - 1].isVarArgs());
         list.setFinalParameterMayBeFlag(true);
 
-        int flags = 0;
-        if (hasContinuationParameter) flags |= 1;
-        flags <<= 1;
-        if (hasContextParameter) flags |= 1;
-        flags <<= 1;
-        if (hasSenderParameter) flags |= 1;
-        flags <<= 1;
-        if (hasReceiverParameter) flags |= 1;
         return flags;
     }
 

@@ -13,9 +13,10 @@ import io.dico.parcels2.options.Options
 import io.dico.parcels2.options.optionsMapper
 import io.dico.parcels2.storage.Storage
 import io.dico.parcels2.util.MainThreadDispatcher
-import io.dico.parcels2.util.PluginScheduler
+import io.dico.parcels2.util.PluginAware
 import io.dico.parcels2.util.ext.tryCreate
 import io.dico.parcels2.util.isServerThread
+import io.dico.parcels2.util.scheduleRepeating
 import kotlinx.coroutines.CoroutineScope
 import org.bukkit.Bukkit
 import org.bukkit.generator.ChunkGenerator
@@ -29,7 +30,7 @@ import kotlin.coroutines.CoroutineContext
 val logger: Logger = LoggerFactory.getLogger("ParcelsPlugin")
 private inline val plogger get() = logger
 
-class ParcelsPlugin : JavaPlugin(), CoroutineScope, PluginScheduler {
+class ParcelsPlugin : JavaPlugin(), CoroutineScope, PluginAware {
     lateinit var optionsFile: File; private set
     lateinit var options: Options; private set
     lateinit var parcelProvider: ParcelProvider; private set
@@ -43,7 +44,7 @@ class ParcelsPlugin : JavaPlugin(), CoroutineScope, PluginScheduler {
 
     override val coroutineContext: CoroutineContext = MainThreadDispatcher(this)
     override val plugin: Plugin get() = this
-    val jobDispatcher: JobDispatcher by lazy { BukkitJobDispatcher(this, options.tickJobtime) }
+    val jobDispatcher: JobDispatcher by lazy { BukkitJobDispatcher(this, this, options.tickJobtime) }
 
     override fun onEnable() {
         plogger.info("Is server thread: ${isServerThread()}")
@@ -147,7 +148,7 @@ class ParcelsPlugin : JavaPlugin(), CoroutineScope, PluginScheduler {
             }
         }
 
-        scheduleRepeating(100, 5, entityTracker::tick)
+        scheduleRepeating(5, delay = 100, task = entityTracker::tick)
     }
 
 }

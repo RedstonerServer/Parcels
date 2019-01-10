@@ -15,7 +15,9 @@ data class Vec3i(
 
     fun toVec2i() = Vec2i(x, z)
     operator fun plus(o: Vec3i) = Vec3i(x + o.x, y + o.y, z + o.z)
+    operator fun plus(o: Vec3d) = Vec3d(x + o.x, y + o.y, z + o.z)
     operator fun minus(o: Vec3i) = Vec3i(x - o.x, y - o.y, z - o.z)
+    operator fun minus(o: Vec3d) = Vec3d(x - o.x, y - o.y, z - o.z)
     infix fun addX(o: Int) = Vec3i(x + o, y, z)
     infix fun addY(o: Int) = Vec3i(x, y + o, z)
     infix fun addZ(o: Int) = Vec3i(x, y, z + o)
